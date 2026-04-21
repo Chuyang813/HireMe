@@ -1,0 +1,73 @@
+"use server";
+
+import { redirect } from "next/navigation";
+import { z } from "zod";
+import { getSupabaseServer } from "@/lib/supabase/server";
+
+const credentialsSchema = z.object({
+  email: z.string().email("Enter a valid email address."),
+  password: z.string().min(8, "Password must be at least 8 characters."),
+});
+
+const signupSchema = credentialsSchema.extend({
+  displayName: z
+    .string()
+    .min(1, "Name is required.")
+    .max(80, "Name is too long."),
+});
+
+export type FormState = { error?: string } | undefined;
+
+export async function loginAction(
+  _prev: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const parsed = credentialsSchema.safeParse({
+    email: formData.get("email"),
+    password: formData.get("password"),
+  });
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Invalid input." };
+  }
+
+  const supabase = await getSupabaseServer();
+  const { error } = await supabase.auth.signInWithPassword(parsed.data);
+  if (error) return { error: error.message };
+
+  const next = (formData.get("next") as string) || "/dashboard";
+  redirect(next.startsWith("/") ? next : "/dashboard");
+}
+
+export async function signupAction(
+  _prev: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const parsed = signupSchema.safeParse({
+    email: formData.get("email"),
+    password: formData.get("password"),
+    displayName: formData.get("displayName"),
+  });
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Invalid input." };
+  }
+
+  const supabase = await getSupabaseServer();
+  const { data, error } = await supabase.auth.signUp({
+    email: parsed.data.email,
+    password: parsed.data.password,
+    options: {
+      data: { display_name: parsed.data.displayName },
+      emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL ?? ""}/auth/callback`,
+    },
+  });
+  if (error) return { error: error.message };
+
+  if (data.session) redirect("/dashboard");
+  redirect("/signup/check-email");
+}
+
+export async function signoutAction() {
+  const supabase = await getSupabaseServer();
+  await supabase.auth.signOut();
+  redirect("/");
+}

@@ -1,0 +1,67 @@
+@import "tailwindcss";
+
+/* Monochromatic warm-neutral palette — paper / ink / pencil.
+   Never hardcode hex in components; extend this file. */
+:root {
+  --background: #faf8f3;        /* paper */
+  --foreground: #1f1d1a;        /* ink */
+  --muted: #efece4;             /* stationery panel */
+  --muted-foreground: #6b6559;  /* pencil */
+  --border: #d9d4c7;            /* envelope edge */
+  --accent: #2b2824;             /* stamp ink */
+  --accent-foreground: #faf8f3;
+  --danger: #8a2a1f;             /* muted stamp red */
+  --success: #3a5a40;            /* muted postal green */
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-danger: var(--danger);
+  --color-success: var(--success);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+  --font-serif: var(--font-instrument-serif);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #1b1917;        /* dark ink */
+    --foreground: #efece4;        /* paper */
+    --muted: #262320;
+    --muted-foreground: #a8a195;
+    --border: #3a352f;
+    --accent: #efece4;
+    --accent-foreground: #1b1917;
+    --danger: #c97a6f;
+    --success: #8fae8f;
+  }
+}
+
+body {
+  font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+}
+
+.font-display {
+  font-family: var(--font-serif), ui-serif, Georgia, serif;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+}
+
+.label-caps {
+  font-size: 0.6875rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+
+hr,
+.rule {
+  border: 0;
+  border-top: 1px solid var(--border);
+}
