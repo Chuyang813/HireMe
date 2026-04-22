@@ -2,10 +2,25 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { requireUser } from "@/lib/auth/current-user";
-import type { JobApplication, Profile } from "@/lib/db/types";
+import type { ApplicationStatus, ApplicationTimelineEvent, JobApplication, Profile } from "@/lib/db/types";
 import { APPLICATION_STATUS_LABEL } from "@/lib/db/types";
 
 export const metadata = { title: "Dashboard" };
+
+const INACTIVE_STATUSES: ApplicationStatus[] = ["rejected", "offer", "withdrawn"];
+
+const EVENT_TYPE_LABEL: Record<string, string> = {
+  created: "Application created",
+  status_changed: "Status updated",
+  document_generated: "Document generated",
+  assessment_added: "Assessment uploaded",
+  interview_prep_generated: "Interview prep generated",
+  note_added: "Notes updated",
+};
+
+type TimelineEventWithApp = ApplicationTimelineEvent & {
+  job_applications: { role_title: string | null; company_name: string | null } | null;
+};
 
 export default async function DashboardPage() {
   const { supabase, user } = await requireUser();
@@ -20,14 +35,36 @@ export default async function DashboardPage() {
   if (!(profile as Profile | null)?.onboarding_complete) {
     redirect("/onboarding");
   }
-  const { data } = await supabase
-    .from("job_applications")
-    .select("*")
-    .eq("user_id", user.id)
-    .order("updated_at", { ascending: false })
-    .limit(10);
 
-  const applications: JobApplication[] = (data ?? []) as JobApplication[];
+  const [{ data: allAppsData }, { data: recentData }, { data: eventsData }] = await Promise.all([
+    supabase
+      .from("job_applications")
+      .select("id, current_status")
+      .eq("user_id", user.id),
+    supabase
+      .from("job_applications")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("updated_at", { ascending: false })
+      .limit(10),
+    supabase
+      .from("application_timeline_events")
+      .select("*, job_applications(role_title, company_name)")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(5),
+  ]);
+
+  const allApps = (allAppsData ?? []) as Pick<JobApplication, "id" | "current_status">[];
+  const applications: JobApplication[] = (recentData ?? []) as JobApplication[];
+  const events = (eventsData ?? []) as TimelineEventWithApp[];
+
+  const activeCount = allApps.filter(
+    (a) => !INACTIVE_STATUSES.includes(a.current_status),
+  ).length;
+
+  const statusCount = (status: ApplicationStatus) =>
+    allApps.filter((a) => a.current_status === status).length;
 
   return (
     <div className="mx-auto w-full max-w-5xl px-6 py-12">
@@ -37,6 +74,70 @@ export default async function DashboardPage() {
         <span className="label-caps hidden sm:inline">{user.email}</span>
       </div>
 
+      {/* Stats row */}
+      <div className="mt-8">
+        <div className="label-caps mb-3">{t("statsLabel")}</div>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
+          {(
+            [
+              { key: "active", value: activeCount },
+              { key: "applied", status: "applied" as ApplicationStatus },
+              { key: "assessment", status: "assessment" as ApplicationStatus },
+              { key: "interview", status: "interview" as ApplicationStatus },
+              { key: "offer", status: "offer" as ApplicationStatus },
+            ] as Array<{ key: string; value?: number; status?: ApplicationStatus }>
+          ).map(({ key, value, status }) => (
+            <div
+              key={key}
+              className="rounded-sm border border-border bg-background p-4 text-center"
+            >
+              <p className="font-display text-3xl">
+                {value !== undefined ? value : statusCount(status!)}
+              </p>
+              <p className="label-caps mt-1 text-muted-foreground">{t(key as Parameters<typeof t>[0])}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Recent activity */}
+      <div className="mt-10">
+        <div className="label-caps mb-3">{t("recentActivityLabel")}</div>
+        {events.length === 0 ? (
+          <p className="text-sm text-muted-foreground">{t("noActivity")}</p>
+        ) : (
+          <ul className="flex flex-col gap-2">
+            {events.map((ev) => {
+              const appName =
+                ev.job_applications?.role_title ??
+                ev.job_applications?.company_name ??
+                "an application";
+              return (
+                <li
+                  key={ev.id}
+                  className="flex items-baseline justify-between gap-4 rounded-sm border border-border px-4 py-3"
+                >
+                  <span className="text-sm">
+                    <span className="text-muted-foreground">
+                      {EVENT_TYPE_LABEL[ev.event_type] ?? ev.event_type}
+                    </span>
+                    {" · "}
+                    <span className="font-medium">{appName}</span>
+                    {ev.new_value ? (
+                      <span className="ml-1 text-muted-foreground">({ev.new_value})</span>
+                    ) : null}
+                  </span>
+                  <span className="label-caps shrink-0 text-muted-foreground">
+                    {new Date(ev.created_at).toLocaleDateString()}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </div>
+
+      {/* Recent applications */}
       <div className="mt-10">
         <div className="flex items-baseline justify-between gap-4 mb-4">
           <h2 className="label-caps">

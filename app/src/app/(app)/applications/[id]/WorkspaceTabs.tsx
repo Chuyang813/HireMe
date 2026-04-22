@@ -6,6 +6,8 @@ import {
   analyzeAssessmentAction,
   generateInterviewPrepAction,
   scoreResumeAction,
+  getDocumentVersionsAction,
+  type DocumentVersion,
 } from "@/app/actions/ai";
 import { updateNotesAction } from "@/app/actions/applications";
 import { Button } from "@/components/ui/Button";
@@ -89,6 +91,66 @@ async function exportDOCX(content: string, filename: string) {
   a.download = `${filename}.docx`;
   a.click();
   URL.revokeObjectURL(url);
+}
+
+// ---------------------------------------------------------------------------
+// HistoryDropdown — lists saved versions and allows restoring
+// ---------------------------------------------------------------------------
+
+function HistoryDropdown({
+  documentId,
+  onRestore,
+}: {
+  documentId: string;
+  onRestore: (content: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [versions, setVersions] = useState<DocumentVersion[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  async function handleOpen() {
+    if (open) { setOpen(false); return; }
+    setOpen(true);
+    if (versions.length > 0) return;
+    setLoading(true);
+    setError("");
+    const res = await getDocumentVersionsAction(documentId);
+    setLoading(false);
+    if ("error" in res) { setError(res.error); return; }
+    setVersions(res.versions);
+  }
+
+  if (!documentId) return null;
+
+  return (
+    <div className="relative">
+      <Button variant="outline" onClick={handleOpen}>
+        History
+      </Button>
+      {open && (
+        <div className="absolute right-0 top-full z-20 mt-1 w-72 rounded-sm border border-border bg-background shadow-md">
+          {loading && <p className="px-4 py-3 text-sm text-muted-foreground">Loading…</p>}
+          {error && <p className="px-4 py-3 text-sm text-danger">{error}</p>}
+          {!loading && !error && versions.length === 0 && (
+            <p className="px-4 py-3 text-sm text-muted-foreground">No previous versions.</p>
+          )}
+          {versions.map((v) => (
+            <button
+              key={v.id}
+              onClick={() => { onRestore(v.content); setOpen(false); }}
+              className="flex w-full flex-col gap-0.5 px-4 py-3 text-left hover:bg-muted border-b border-border last:border-0"
+            >
+              <span className="text-xs text-muted-foreground">
+                {new Date(v.created_at).toLocaleString()}
+              </span>
+              <span className="truncate text-sm">{v.content.slice(0, 80)}…</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -221,6 +283,15 @@ function DocumentPanel({
           >
             {generating ? "Generating…" : "Generate with AI"}
           </Button>
+          {docId && (
+            <HistoryDropdown
+              documentId={docId}
+              onRestore={(restored) => {
+                setContent(restored);
+                setSaveStatus("idle");
+              }}
+            />
+          )}
           {content && (
             <>
               <Button variant="outline" onClick={handleCopy} disabled={!content}>

@@ -115,6 +115,19 @@ export async function saveDocumentAction(
   if (!applicationId || !documentType) return { error: "Missing required fields." };
 
   if (existingId) {
+    // Archive the current content before overwriting.
+    const { data: existing } = await supabase
+      .from("application_documents")
+      .select("text_content")
+      .eq("id", existingId)
+      .eq("user_id", user.id)
+      .single();
+    if (existing?.text_content) {
+      await supabase
+        .from("document_versions")
+        .insert({ document_id: existingId, content: existing.text_content });
+    }
+
     const { error } = await supabase
       .from("application_documents")
       .update({ text_content: content })
@@ -351,4 +364,35 @@ Return ONLY valid JSON with this exact shape:
   }
 
   return { result };
+}
+
+// ---------------------------------------------------------------------------
+// Fetch document version history
+// ---------------------------------------------------------------------------
+
+export interface DocumentVersion {
+  id: string;
+  content: string;
+  created_at: string;
+}
+
+export type GetDocumentVersionsState =
+  | { versions: DocumentVersion[] }
+  | { error: string };
+
+export async function getDocumentVersionsAction(
+  documentId: string,
+): Promise<GetDocumentVersionsState> {
+  const { supabase } = await requireUser();
+  const { data, error } = await supabase
+    .from("document_versions")
+    .select("id, content, created_at")
+    .eq("document_id", documentId)
+    .order("created_at", { ascending: false })
+    .limit(20);
+  if (error) {
+    console.error("[getDocumentVersionsAction] Error:", error);
+    return { error: "Failed to load history." };
+  }
+  return { versions: (data ?? []) as DocumentVersion[] };
 }
