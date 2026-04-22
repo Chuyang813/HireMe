@@ -142,7 +142,21 @@
     "jobDescriptionPlaceholder": "在此粘贴完整的岗位描述…",
     "jobDescriptionHint": "Claude 将提取要求、技能和职位摘要。",
     "analyzing": "分析中…",
-    "analyzeWithAI": "AI 分析 →"
+    "analyzeWithAI": "AI 分析 →",
+    "jobDescriptionRequired": "请粘贴岗位描述。",
+    "jobUrlInvalid": "职位链接必须以 http:// 或 https:// 开头。",
+    "reviewSub": "请检查以下 AI 提取的信息，如有错误请在保存前修正。",
+    "location": "工作地点",
+    "roleSummary": "职位摘要",
+    "roleSummaryHint": "如有需要，可编辑 AI 生成的摘要。",
+    "requiredSkills": "必要技能",
+    "desiredSkills": "加分技能（可选）",
+    "skillsHint": "用逗号分隔。",
+    "responsibilities": "工作职责",
+    "responsibilitiesHint": "每行填写一项职责。",
+    "backButton": "← 返回",
+    "confirmSave": "确认无误，保存 →",
+    "saving": "保存中…"
   },
   "Insights": {
     "analyticsLabel": "数据分析",

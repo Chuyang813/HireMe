@@ -142,7 +142,21 @@
     "jobDescriptionPlaceholder": "Paste the full job description here…",
     "jobDescriptionHint": "Claude will extract requirements, skills, and role summary.",
     "analyzing": "Analyzing…",
-    "analyzeWithAI": "Analyze with AI →"
+    "analyzeWithAI": "Analyze with AI →",
+    "jobDescriptionRequired": "Please paste the job description.",
+    "jobUrlInvalid": "Job URL must start with http:// or https://.",
+    "reviewSub": "Review the AI-extracted details below and correct any mistakes before saving.",
+    "location": "Location",
+    "roleSummary": "Role summary",
+    "roleSummaryHint": "Edit the AI-generated summary if needed.",
+    "requiredSkills": "Required skills",
+    "desiredSkills": "Desired skills (nice to have)",
+    "skillsHint": "Comma-separated list.",
+    "responsibilities": "Responsibilities",
+    "responsibilitiesHint": "One responsibility per line.",
+    "backButton": "← Back",
+    "confirmSave": "Looks good, save →",
+    "saving": "Saving…"
   },
   "Insights": {
     "analyticsLabel": "Analytics",

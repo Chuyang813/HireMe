@@ -8,6 +8,32 @@ const AI_TIMEOUT_MS = 30_000;
 const AI_AUDIT_NOTE = `model=${DEFAULT_MODEL} prompt_version=${PROMPT_VERSION}`;
 
 // ---------------------------------------------------------------------------
+// Per-user rate limiter: max 10 streaming requests per user per minute
+// ---------------------------------------------------------------------------
+
+const RATE_LIMIT_MAX = 10;
+const RATE_LIMIT_WINDOW_MS = 60_000;
+
+const rateLimitStore = new Map<string, { count: number; resetAt: number }>();
+
+function checkRateLimit(userId: string): { allowed: boolean; retryAfterSec: number } {
+  const now = Date.now();
+  const entry = rateLimitStore.get(userId);
+
+  if (!entry || now >= entry.resetAt) {
+    rateLimitStore.set(userId, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS });
+    return { allowed: true, retryAfterSec: 0 };
+  }
+
+  if (entry.count >= RATE_LIMIT_MAX) {
+    return { allowed: false, retryAfterSec: Math.ceil((entry.resetAt - now) / 1000) };
+  }
+
+  entry.count += 1;
+  return { allowed: true, retryAfterSec: 0 };
+}
+
+// ---------------------------------------------------------------------------
 // System prompts (mirroring lib/ai/ modules, adapted for plain-text streaming)
 // ---------------------------------------------------------------------------
 
@@ -119,6 +145,17 @@ export async function POST(req: NextRequest) {
   const { supabase, user } = await getOptionalUser();
   if (!user) {
     return Response.json({ error: "Unauthorized." }, { status: 401 });
+  }
+
+  const rateLimit = checkRateLimit(user.id);
+  if (!rateLimit.allowed) {
+    return Response.json(
+      { error: "Too many requests. Please wait before generating again." },
+      {
+        status: 429,
+        headers: { "Retry-After": String(rateLimit.retryAfterSec) },
+      },
+    );
   }
 
   const [{ data: app }, { data: resumeRow }] = await Promise.all([

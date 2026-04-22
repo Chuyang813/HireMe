@@ -56,34 +56,145 @@ async function exportPDF(content: string, filename: string) {
   const { jsPDF } = await import("jspdf");
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
   const pageW = doc.internal.pageSize.getWidth();
-  const margin = 18;
-  const maxW = pageW - margin * 2;
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(10);
-  const lines = doc.splitTextToSize(content, maxW) as string[];
-  const lineH = 5;
-  let y = margin;
-  for (const line of lines) {
-    if (y + lineH > doc.internal.pageSize.getHeight() - margin) {
+  const pageH = doc.internal.pageSize.getHeight();
+  const marginX = 20;
+  const marginY = 24;
+  const maxW = pageW - marginX * 2;
+  let y = marginY;
+
+  function checkPage(needed: number) {
+    if (y + needed > pageH - marginY) {
       doc.addPage();
-      y = margin;
+      y = marginY;
     }
-    doc.text(line, margin, y);
-    y += lineH;
   }
+
+  for (const raw of content.split("\n")) {
+    const line = raw.trimEnd();
+
+    if (line.startsWith("# ")) {
+      checkPage(12);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(18);
+      doc.text(line.slice(2), marginX, y);
+      y += 9;
+      doc.setDrawColor(180, 180, 180);
+      doc.setLineWidth(0.3);
+      doc.line(marginX, y, pageW - marginX, y);
+      y += 5;
+      doc.setDrawColor(0, 0, 0);
+    } else if (line.startsWith("## ")) {
+      checkPage(10);
+      y += 3;
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(11);
+      doc.text(line.slice(3).toUpperCase(), marginX, y);
+      y += 5;
+      doc.setDrawColor(200, 200, 200);
+      doc.setLineWidth(0.2);
+      doc.line(marginX, y, pageW - marginX, y);
+      y += 4;
+      doc.setDrawColor(0, 0, 0);
+    } else if (line.startsWith("- ") || line.startsWith("* ")) {
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10);
+      const text = line.slice(2);
+      const wrapped = doc.splitTextToSize(text, maxW - 6) as string[];
+      checkPage(wrapped.length * 5 + 1);
+      doc.text("•", marginX + 2, y);
+      doc.text(wrapped, marginX + 7, y);
+      y += wrapped.length * 5 + 1;
+    } else if (line === "") {
+      y += 3;
+    } else {
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10);
+      const wrapped = doc.splitTextToSize(line, maxW) as string[];
+      checkPage(wrapped.length * 5 + 1);
+      doc.text(wrapped, marginX, y);
+      y += wrapped.length * 5 + 1;
+    }
+  }
+
   doc.save(`${filename}.pdf`);
 }
 
 async function exportDOCX(content: string, filename: string) {
-  const { Document, Packer, Paragraph, TextRun } = await import("docx");
-  const paragraphs = content.split("\n").map(
-    (line) =>
-      new Paragraph({
-        children: [new TextRun({ text: line, font: "Calibri", size: 22 })],
-        spacing: { after: 120 },
-      }),
-  );
-  const doc = new Document({ sections: [{ children: paragraphs }] });
+  const {
+    Document,
+    Packer,
+    Paragraph,
+    TextRun,
+    HeadingLevel,
+    AlignmentType,
+    BorderStyle,
+  } = await import("docx");
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const paragraphs: InstanceType<typeof Paragraph>[] = [];
+
+  for (const raw of content.split("\n")) {
+    const line = raw.trimEnd();
+
+    if (line.startsWith("# ")) {
+      paragraphs.push(
+        new Paragraph({
+          text: line.slice(2),
+          heading: HeadingLevel.TITLE,
+          spacing: { after: 120 },
+          border: {
+            bottom: { style: BorderStyle.SINGLE, size: 6, color: "AAAAAA", space: 4 },
+          },
+        }),
+      );
+    } else if (line.startsWith("## ")) {
+      paragraphs.push(
+        new Paragraph({
+          text: line.slice(3),
+          heading: HeadingLevel.HEADING_2,
+          spacing: { before: 240, after: 80 },
+        }),
+      );
+    } else if (line.startsWith("- ") || line.startsWith("* ")) {
+      paragraphs.push(
+        new Paragraph({
+          children: [new TextRun({ text: line.slice(2), font: "Calibri", size: 22 })],
+          bullet: { level: 0 },
+          spacing: { after: 80 },
+        }),
+      );
+    } else if (line === "") {
+      paragraphs.push(new Paragraph({ spacing: { after: 80 } }));
+    } else {
+      paragraphs.push(
+        new Paragraph({
+          children: [new TextRun({ text: line, font: "Calibri", size: 22 })],
+          spacing: { after: 100 },
+          alignment: AlignmentType.LEFT,
+        }),
+      );
+    }
+  }
+
+  const doc = new Document({
+    styles: {
+      default: {
+        document: {
+          run: { font: "Calibri", size: 22 },
+        },
+      },
+    },
+    sections: [
+      {
+        properties: {
+          page: {
+            margin: { top: 1080, bottom: 1080, left: 1080, right: 1080 },
+          },
+        },
+        children: paragraphs,
+      },
+    ],
+  });
   const blob = await Packer.toBlob(doc);
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");

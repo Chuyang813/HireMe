@@ -1,10 +1,37 @@
 // Next.js 16 renamed `middleware` -> `proxy`. Runtime is nodejs only.
-// This refreshes Supabase auth session cookies on every request.
+// Refreshes Supabase auth session cookies and logs all requests.
 
 import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 
+// ---------------------------------------------------------------------------
+// Request logger — structured JSON, easy to pipe to any log aggregator
+// ---------------------------------------------------------------------------
+
+function extractUserIdFromCookies(req: NextRequest): string | null {
+  for (const [name, cookie] of req.cookies) {
+    if (!name.startsWith("sb-") || !name.endsWith("-auth-token")) continue;
+    try {
+      const parsed = JSON.parse(decodeURIComponent(cookie.value)) as unknown;
+      const accessToken = Array.isArray(parsed)
+        ? (parsed[0] as string | undefined)
+        : (parsed as Record<string, unknown>)?.access_token;
+      if (typeof accessToken !== "string") continue;
+      const payloadB64 = accessToken.split(".")[1];
+      if (!payloadB64) continue;
+      const payload = JSON.parse(
+        atob(payloadB64.replace(/-/g, "+").replace(/_/g, "/"))
+      ) as Record<string, unknown>;
+      if (typeof payload.sub === "string") return payload.sub;
+    } catch {
+      // Malformed cookie — skip
+    }
+  }
+  return null;
+}
+
 export async function proxy(request: NextRequest) {
+  const start = Date.now();
   let response = NextResponse.next({ request });
 
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -55,6 +82,16 @@ export async function proxy(request: NextRequest) {
     redirect.search = "";
     return NextResponse.redirect(redirect);
   }
+
+  console.log(
+    JSON.stringify({
+      timestamp: new Date().toISOString(),
+      method: request.method,
+      path: request.nextUrl.pathname,
+      userId: extractUserIdFromCookies(request) ?? "anonymous",
+      duration_ms: Date.now() - start,
+    }),
+  );
 
   return response;
 }

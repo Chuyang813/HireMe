@@ -4,10 +4,10 @@ Execution-ready checklist for improving security, reliability, product quality, 
 
 ## 1) Critical Security Fixes (P0)
 
-- [ ] Fix open redirect in login flow (`next` parameter must allow safe internal paths only).
-- [ ] Validate `job_url` scheme before rendering links (allow only `http`/`https`).
-- [ ] Prevent cross-user record association at DB level for `application_documents`.
-- [ ] Replace raw internal error exposure with generic user-safe errors.
+- [x] Fix open redirect in login flow (`next` parameter must allow safe internal paths only).
+- [x] Validate `job_url` scheme before rendering links (allow only `http`/`https`).
+- [x] Prevent cross-user record association at DB level for `application_documents`.
+- [x] Replace raw internal error exposure with generic user-safe errors.
 
 ## 2) Data and Access Controls (P0-P1)
 
@@ -18,27 +18,27 @@ Execution-ready checklist for improving security, reliability, product quality, 
 
 ## 3) AI Reliability and Quality (P1)
 
-- [ ] Add request timeouts for all AI calls.
-- [ ] Add bounded retries with backoff for transient provider failures.
+- [x] Add request timeouts for all AI calls.
+- [x] Add bounded retries with backoff for transient provider failures.
 - [ ] Add idempotency keys for generation endpoints.
 - [ ] Add post-generation non-fabrication checks.
-- [ ] Enforce schema validation for structured AI outputs.
-- [ ] Version prompts and model configurations for traceability.
+- [x] Enforce schema validation for structured AI outputs.
+- [x] Version prompts and model configurations for traceability.
 
 ## 4) Product and UX Improvements (P1-P2)
 
 - [ ] Provide editable parsed resume fields before generation.
-- [ ] Provide editable parsed job fields before generation.
-- [ ] Improve document version management (history/restore).
+- [x] Provide editable parsed job fields before generation.
+- [x] Improve document version management (history/restore).
 - [ ] Add action-driven dashboard widgets (next steps, due items).
-- [ ] Improve PDF/DOCX export formatting quality.
+- [x] Improve PDF/DOCX export formatting quality.
 
 ## 5) Engineering Quality and Ops (P1)
 
 - [ ] Add E2E tests for the critical user flow.
 - [ ] Add API contract tests for core server actions/routes.
-- [ ] Add observability (error tracking + latency/success metrics).
-- [ ] Add per-user rate limiting on generation/upload endpoints.
+- [x] Add observability (error tracking + latency/success metrics).
+- [x] Add per-user rate limiting on generation/upload endpoints.
 - [ ] Define staged rollout and rollback procedure.
 
 ## 6) Documentation Alignment (P1)
@@ -50,10 +50,10 @@ Execution-ready checklist for improving security, reliability, product quality, 
 
 ## 7) Suggested Execution Order (2 Weeks)
 
-- [ ] Day 1-2: Complete all P0 security fixes.
+- [x] Day 1-2: Complete all P0 security fixes.
 - [ ] Day 3-5: Add DB integrity checks + RLS verification + key tests.
 - [ ] Day 6-8: Implement AI reliability guardrails.
-- [ ] Day 9-12: UX improvements for parse-edit-generate flow.
+- [x] Day 9-12: UX improvements for parse-edit-generate flow.
 - [ ] Day 13-14: Documentation sync, pre-release validation, staging signoff.
 
 ## Definition of Done
@@ -63,4 +63,3 @@ Execution-ready checklist for improving security, reliability, product quality, 
 - [ ] AI policy constraints are implemented and testable.
 - [ ] Core E2E flow is green in CI.
 - [ ] Product plan and implementation state are aligned.
-
