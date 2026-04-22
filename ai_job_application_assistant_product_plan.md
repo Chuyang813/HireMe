@@ -980,3 +980,14 @@ The product should begin as a responsive web application that supports the highe
 
 This MVP is realistic, valuable, and expandable. After launch, the strongest next features are URL job import, assessment analysis, interview preparation, reminders, and advanced AI assistance.
 
+---
+
+## 28. Related Governance Documents
+
+To keep planning, implementation, and AI behavior aligned, maintain these companion documents in the project root:
+
+- `IMPLEMENTATION_CHECKLIST.md` — execution checklist for security, reliability, UX, and release readiness.
+- `AI_AGENT_POLICY.md` — mandatory constraints for AI agent behavior, safety, privacy, and auditability.
+
+Both documents should be reviewed and updated whenever MVP scope, architecture, or AI workflows change.
+
