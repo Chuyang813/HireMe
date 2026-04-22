@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 import { requireUser } from "@/lib/auth/current-user";
 import { APPLICATION_STATUS_LABEL } from "@/lib/db/types";
 import { StatusSelect } from "@/components/StatusSelect";
@@ -16,6 +17,8 @@ function statusColor(s: ApplicationStatus): string {
 
 export default async function TrackerPage() {
   const { supabase, user } = await requireUser();
+  const t = await getTranslations("Tracker");
+
   const { data } = await supabase
     .from("job_applications")
     .select("*")
@@ -35,21 +38,21 @@ export default async function TrackerPage() {
 
   return (
     <div className="mx-auto w-full max-w-5xl px-6 py-12">
-      <div className="label-caps mb-2">Pipeline</div>
+      <div className="label-caps mb-2">{t("pipelineLabel")}</div>
       <div className="flex items-baseline justify-between gap-4">
-        <h1 className="font-display text-4xl leading-tight">Tracker</h1>
+        <h1 className="font-display text-4xl leading-tight">{t("heading")}</h1>
         <Link
           href="/applications/new"
           className="rounded-sm bg-accent px-4 py-1.5 text-sm font-medium text-accent-foreground hover:opacity-90"
         >
-          New application
+          {t("newApplication")}
         </Link>
       </div>
 
       {applications.length > 0 && (
         <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-5">
           <div className="rounded-sm border border-border p-4">
-            <p className="label-caps text-muted-foreground">Active</p>
+            <p className="label-caps text-muted-foreground">{t("active")}</p>
             <p className="mt-1 font-display text-3xl">{active}</p>
           </div>
           {PIPELINE_STATS.map((s) => (
@@ -67,16 +70,14 @@ export default async function TrackerPage() {
         {applications.length === 0 ? (
           <div className="rounded-sm border border-dashed border-border p-12 text-center">
             <p className="font-display text-2xl text-muted-foreground">
-              No applications yet.
+              {t("noAppsHeading")}
             </p>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Add your first job to start tracking your pipeline.
-            </p>
+            <p className="mt-2 text-sm text-muted-foreground">{t("noAppsSub")}</p>
             <Link
               href="/applications/new"
               className="mt-6 inline-flex h-10 items-center justify-center rounded-sm bg-accent px-5 text-sm font-medium text-accent-foreground hover:opacity-90"
             >
-              Add application
+              {t("addApplication")}
             </Link>
           </div>
         ) : (
@@ -85,16 +86,16 @@ export default async function TrackerPage() {
               <thead>
                 <tr className="border-b border-border bg-muted/40">
                   <th className="label-caps px-5 py-3 text-left font-normal text-muted-foreground">
-                    Company
+                    {t("colCompany")}
                   </th>
                   <th className="label-caps px-5 py-3 text-left font-normal text-muted-foreground">
-                    Position
+                    {t("colPosition")}
                   </th>
                   <th className="label-caps hidden px-5 py-3 text-left font-normal text-muted-foreground sm:table-cell">
-                    Added
+                    {t("colAdded")}
                   </th>
                   <th className="label-caps px-5 py-3 text-left font-normal text-muted-foreground">
-                    Status
+                    {t("colStatus")}
                   </th>
                 </tr>
               </thead>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/Button";
 import { Field } from "@/components/ui/Field";
 import {
@@ -45,6 +46,7 @@ function StepIndicator({ current, total }: { current: number; total: number }) {
 // ---------------------------------------------------------------------------
 
 function Step1({ onSuccess }: { onSuccess: () => void }) {
+  const t = useTranslations("Onboarding");
   const [state, action, pending] = useActionState<SaveProfileState, FormData>(
     saveProfileStep1Action,
     undefined,
@@ -57,16 +59,16 @@ function Step1({ onSuccess }: { onSuccess: () => void }) {
 
   return (
     <form action={action} className="flex flex-col gap-5">
-      <Field label="Full name" name="full_name" placeholder="Alex Chen" required />
+      <Field label={t("fullName")} name="full_name" placeholder={t("fullNamePlaceholder")} required />
       <Field
-        label="Target role"
+        label={t("targetRole")}
         name="target_role"
-        placeholder="e.g. Software Engineer, Product Manager"
+        placeholder={t("targetRolePlaceholder")}
         required
       />
       <div className="flex flex-col gap-1.5">
         <label className="label-caps" htmlFor="years_experience">
-          Years of experience
+          {t("yearsExperience")}
         </label>
         <input
           id="years_experience"
@@ -81,7 +83,7 @@ function Step1({ onSuccess }: { onSuccess: () => void }) {
       {state?.error && <p className="text-sm text-danger">{state.error}</p>}
       <div className="flex justify-end">
         <Button type="submit" disabled={pending}>
-          {pending ? "Saving…" : "Next →"}
+          {pending ? t("saving") : t("next")}
         </Button>
       </div>
     </form>
@@ -93,6 +95,7 @@ function Step1({ onSuccess }: { onSuccess: () => void }) {
 // ---------------------------------------------------------------------------
 
 function Step2({ onSuccess, onSkip }: { onSuccess: () => void; onSkip: () => void }) {
+  const t = useTranslations("Onboarding");
   const [state, action, pending] = useActionState<UploadOnboardingResumeState, FormData>(
     uploadOnboardingResumeAction,
     undefined,
@@ -105,12 +108,9 @@ function Step2({ onSuccess, onSkip }: { onSuccess: () => void; onSkip: () => voi
 
   return (
     <form action={action} className="flex flex-col gap-5">
-      <p className="text-sm text-muted-foreground">
-        Upload your base resume — we&rsquo;ll parse and store it so AI can tailor
-        it for each application.
-      </p>
+      <p className="text-sm text-muted-foreground">{t("resumeUploadSub")}</p>
       <label className="flex flex-col gap-1.5" htmlFor="onboarding-file">
-        <span className="label-caps">Resume file</span>
+        <span className="label-caps">{t("resumeFile")}</span>
         <input
           id="onboarding-file"
           name="file"
@@ -118,7 +118,7 @@ function Step2({ onSuccess, onSkip }: { onSuccess: () => void; onSkip: () => voi
           accept=".pdf,.docx,.txt,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain"
           className="h-10 rounded-sm border border-border bg-background px-3 text-sm file:mr-3 file:rounded-sm file:border-0 file:bg-muted file:px-3 file:py-1.5 file:text-sm"
         />
-        <span className="text-xs text-muted-foreground">PDF, DOCX, or plain text. Up to 10 MB.</span>
+        <span className="text-xs text-muted-foreground">{t("resumeFileHint")}</span>
       </label>
       {state?.error && <p className="text-sm text-danger">{state.error}</p>}
       <div className="flex items-center justify-between">
@@ -127,10 +127,10 @@ function Step2({ onSuccess, onSkip }: { onSuccess: () => void; onSkip: () => voi
           onClick={onSkip}
           className="text-sm text-muted-foreground underline underline-offset-2 hover:text-foreground"
         >
-          Skip for now
+          {t("skipForNow")}
         </button>
         <Button type="submit" disabled={pending}>
-          {pending ? "Uploading…" : "Upload and continue →"}
+          {pending ? t("uploading") : t("uploadAndContinue")}
         </Button>
       </div>
     </form>
@@ -142,6 +142,7 @@ function Step2({ onSuccess, onSkip }: { onSuccess: () => void; onSkip: () => voi
 // ---------------------------------------------------------------------------
 
 function Step3() {
+  const t = useTranslations("Onboarding");
   const [state, action, pending] = useActionState<SaveProfileState, FormData>(
     completeOnboardingAction,
     undefined,
@@ -149,39 +150,37 @@ function Step3() {
 
   return (
     <form action={action} className="flex flex-col gap-5">
-      <p className="text-sm text-muted-foreground">
-        Tell us what you&rsquo;re targeting — this helps us personalise insights.
-      </p>
+      <p className="text-sm text-muted-foreground">{t("targetIndustriesSub")}</p>
       <div className="flex flex-col gap-1.5">
         <label className="label-caps" htmlFor="target_industries">
-          Target industries
+          {t("targetIndustries")}
         </label>
         <input
           id="target_industries"
           name="target_industries"
           type="text"
-          placeholder="e.g. Fintech, Healthcare, SaaS"
+          placeholder={t("targetIndustriesPlaceholder")}
           className="h-10 w-full rounded-sm border border-border bg-background px-3 text-sm outline-none focus:border-foreground"
         />
-        <span className="text-xs text-muted-foreground">Comma-separated.</span>
+        <span className="text-xs text-muted-foreground">{t("commaSeparated")}</span>
       </div>
       <div className="flex flex-col gap-1.5">
         <label className="label-caps" htmlFor="target_companies">
-          Dream companies
+          {t("dreamCompanies")}
         </label>
         <input
           id="target_companies"
           name="target_companies"
           type="text"
-          placeholder="e.g. Stripe, Figma, Notion"
+          placeholder={t("dreamCompaniesPlaceholder")}
           className="h-10 w-full rounded-sm border border-border bg-background px-3 text-sm outline-none focus:border-foreground"
         />
-        <span className="text-xs text-muted-foreground">Comma-separated.</span>
+        <span className="text-xs text-muted-foreground">{t("commaSeparated")}</span>
       </div>
       {state?.error && <p className="text-sm text-danger">{state.error}</p>}
       <div className="flex justify-end">
         <Button type="submit" disabled={pending}>
-          {pending ? "Finishing…" : "Finish setup →"}
+          {pending ? t("finishing") : t("finishSetup")}
         </Button>
       </div>
     </form>
@@ -192,22 +191,21 @@ function Step3() {
 // Page root
 // ---------------------------------------------------------------------------
 
-const STEP_LABELS = ["Basic info", "Resume", "Preferences"];
-
 export default function OnboardingPage() {
+  const t = useTranslations("Onboarding");
   const [step, setStep] = useState(1);
+
+  const stepLabels = [t("stepBasicInfo"), t("stepResume"), t("stepPreferences")];
 
   return (
     <div className="mx-auto w-full max-w-lg px-6 py-16">
-      <div className="label-caps mb-2">Setup</div>
-      <h1 className="font-display text-4xl leading-tight">Welcome to HireMe</h1>
-      <p className="mt-2 text-muted-foreground text-sm">
-        Let&rsquo;s get your profile ready in 3 quick steps.
-      </p>
+      <div className="label-caps mb-2">{t("setupLabel")}</div>
+      <h1 className="font-display text-4xl leading-tight">{t("heading")}</h1>
+      <p className="mt-2 text-muted-foreground text-sm">{t("sub")}</p>
 
       <div className="mt-8 flex items-center justify-between">
         <StepIndicator current={step} total={3} />
-        <span className="label-caps text-muted-foreground">{STEP_LABELS[step - 1]}</span>
+        <span className="label-caps text-muted-foreground">{stepLabels[step - 1]}</span>
       </div>
 
       <div className="mt-8 rounded-sm border border-border bg-background p-6">
@@ -221,9 +219,7 @@ export default function OnboardingPage() {
         {step === 3 && <Step3 />}
       </div>
 
-      <p className="mt-4 text-center text-xs text-muted-foreground">
-        You can update these settings any time from your profile.
-      </p>
+      <p className="mt-4 text-center text-xs text-muted-foreground">{t("profileNote")}</p>
     </div>
   );
 }

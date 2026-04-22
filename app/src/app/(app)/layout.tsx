@@ -1,14 +1,8 @@
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 import { requireUser } from "@/lib/auth/current-user";
 import { signoutAction } from "@/lib/auth/actions";
-
-const navItems = [
-  { href: "/dashboard", label: "Dashboard" },
-  { href: "/applications", label: "Applications" },
-  { href: "/tracker", label: "Tracker" },
-  { href: "/resumes", label: "Resumes" },
-  { href: "/insights", label: "Insights" },
-];
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 
 export default async function AppLayout({
   children,
@@ -16,6 +10,16 @@ export default async function AppLayout({
   children: React.ReactNode;
 }) {
   const { user } = await requireUser();
+  const t = await getTranslations("Nav");
+
+  const navItems = [
+    { href: "/dashboard", label: t("dashboard") },
+    { href: "/applications", label: t("applications") },
+    { href: "/tracker", label: t("tracker") },
+    { href: "/resumes", label: t("resumes") },
+    { href: "/insights", label: t("insights") },
+  ];
+
   return (
     <div className="flex flex-1 flex-col">
       <header className="border-b border-border">
@@ -35,16 +39,15 @@ export default async function AppLayout({
               </Link>
             ))}
           </nav>
-          <div className="flex items-center gap-3 text-sm">
-            <span className="label-caps hidden sm:inline">
-              {user.email}
-            </span>
+          <div className="flex items-center gap-2 text-sm">
+            <LanguageSwitcher />
+            <span className="label-caps hidden sm:inline">{user.email}</span>
             <form action={signoutAction}>
               <button
                 type="submit"
                 className="rounded-sm border border-border px-3 py-1.5 text-sm hover:bg-muted"
               >
-                Sign out
+                {t("signOut")}
               </button>
             </form>
           </div>
