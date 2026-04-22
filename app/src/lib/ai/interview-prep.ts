@@ -1,4 +1,5 @@
 import { claudeJson } from "./anthropic";
+import { interviewPrepSchema } from "./schemas";
 import type { InterviewPrep, ParsedJob, ParsedResume } from "@/lib/db/types";
 
 const SYSTEM = `You are an interview preparation assistant.
@@ -34,7 +35,7 @@ export async function generateInterviewPrep({
   job: ParsedJob;
   interviewStage?: string;
 }): Promise<InterviewPrep> {
-  return claudeJson<InterviewPrep>({
+  const raw = await claudeJson<InterviewPrep>({
     system: SYSTEM,
     messages: [
       {
@@ -51,4 +52,10 @@ export async function generateInterviewPrep({
     ],
     maxTokens: 3000,
   });
+  const validated = interviewPrepSchema.safeParse(raw);
+  if (!validated.success) {
+    console.error("[generateInterviewPrep] Schema validation failed:", validated.error);
+    throw new Error("AI returned an unexpected response format.");
+  }
+  return validated.data;
 }

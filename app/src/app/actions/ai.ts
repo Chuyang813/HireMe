@@ -9,7 +9,8 @@ import { analyzeAssessment } from "@/lib/ai/assessment";
 import { generateInterviewPrep } from "@/lib/ai/interview-prep";
 import { extractTextFromUpload } from "@/lib/parsers/resume-text";
 import { logTimelineEvent } from "@/lib/db/timeline";
-import { claudeJson } from "@/lib/ai/anthropic";
+import { claudeJson, DEFAULT_MODEL, PROMPT_VERSION } from "@/lib/ai/anthropic";
+import { resumeScoreSchema } from "@/lib/ai/schemas";
 import type {
   AssessmentAnalysis,
   DocumentType,
@@ -18,6 +19,8 @@ import type {
   ParsedResume,
   ResumeScore,
 } from "@/lib/db/types";
+
+const AI_AUDIT_NOTE = `model=${DEFAULT_MODEL} prompt_version=${PROMPT_VERSION}`;
 
 // ---------------------------------------------------------------------------
 // Generate document (non-streaming fallback — kept for types; streaming is via
@@ -74,7 +77,8 @@ export async function generateDocumentAction(
       return { error: `Unsupported document type: ${documentType}` };
     }
   } catch (e) {
-    return { error: e instanceof Error ? e.message : "AI generation failed." };
+    console.error("[generateDocumentAction] AI error:", e);
+    return { error: "AI generation failed. Please try again." };
   }
 
   await logTimelineEvent(supabase, {
@@ -82,6 +86,7 @@ export async function generateDocumentAction(
     user_id: user.id,
     event_type: "document_generated",
     new_value: documentType,
+    note: AI_AUDIT_NOTE,
   });
 
   return { content, documentType };
@@ -115,7 +120,10 @@ export async function saveDocumentAction(
       .update({ text_content: content })
       .eq("id", existingId)
       .eq("user_id", user.id);
-    if (error) return { error: error.message };
+    if (error) {
+      console.error("[saveDocumentAction] Update error:", error);
+      return { error: "Failed to save document. Please try again." };
+    }
     revalidatePath(`/applications/${applicationId}`);
     return { ok: true, documentId: existingId };
   }
@@ -132,7 +140,10 @@ export async function saveDocumentAction(
     .select("id")
     .single();
 
-  if (error || !data) return { error: error?.message ?? "Save failed." };
+  if (error || !data) {
+    console.error("[saveDocumentAction] Insert error:", error);
+    return { error: "Failed to save document. Please try again." };
+  }
 
   revalidatePath(`/applications/${applicationId}`);
   return { ok: true, documentId: data.id };
@@ -177,7 +188,8 @@ export async function analyzeAssessmentAction(
     const extracted = await extractTextFromUpload(bytes, file.type, file.name);
     assessmentText = extracted.rawText;
   } catch (e) {
-    return { error: e instanceof Error ? e.message : "Failed to read file." };
+    console.error("[analyzeAssessmentAction] File extraction error:", e);
+    return { error: "Failed to read the file. Please try a different format." };
   }
 
   if (!assessmentText.trim())
@@ -190,13 +202,15 @@ export async function analyzeAssessmentAction(
       job: app.parsed_job_json as ParsedJob | null,
     });
   } catch (e) {
-    return { error: e instanceof Error ? e.message : "Analysis failed." };
+    console.error("[analyzeAssessmentAction] AI error:", e);
+    return { error: "Analysis failed. Please try again." };
   }
 
   await logTimelineEvent(supabase, {
     application_id: applicationId,
     user_id: user.id,
     event_type: "assessment_added",
+    note: AI_AUDIT_NOTE,
   });
 
   return { result };
@@ -246,13 +260,15 @@ export async function generateInterviewPrepAction(
   try {
     result = await generateInterviewPrep({ resume: parsedResume, job });
   } catch (e) {
-    return { error: e instanceof Error ? e.message : "Generation failed." };
+    console.error("[generateInterviewPrepAction] AI error:", e);
+    return { error: "Generation failed. Please try again." };
   }
 
   await logTimelineEvent(supabase, {
     application_id: applicationId,
     user_id: user.id,
     event_type: "interview_prep_generated",
+    note: AI_AUDIT_NOTE,
   });
 
   return { result };
@@ -313,7 +329,7 @@ Return ONLY valid JSON with this exact shape:
 
   let result: ResumeScore;
   try {
-    result = await claudeJson<ResumeScore>({
+    const raw = await claudeJson<ResumeScore>({
       system,
       messages: [
         {
@@ -323,8 +339,15 @@ Return ONLY valid JSON with this exact shape:
       ],
       maxTokens: 1024,
     });
+    const validated = resumeScoreSchema.safeParse(raw);
+    if (!validated.success) {
+      console.error("[scoreResumeAction] Schema validation failed:", validated.error);
+      return { error: "Something went wrong. Please try again." };
+    }
+    result = validated.data;
   } catch (e) {
-    return { error: e instanceof Error ? e.message : "Scoring failed." };
+    console.error("[scoreResumeAction] AI error:", e);
+    return { error: "Something went wrong. Please try again." };
   }
 
   return { result };

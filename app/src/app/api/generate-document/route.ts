@@ -1,8 +1,11 @@
 import { type NextRequest } from "next/server";
 import { getOptionalUser } from "@/lib/auth/current-user";
-import { getAnthropic, DEFAULT_MODEL } from "@/lib/ai/anthropic";
+import { getAnthropic, DEFAULT_MODEL, PROMPT_VERSION } from "@/lib/ai/anthropic";
 import { logTimelineEvent } from "@/lib/db/timeline";
 import type { DocumentType, ParsedJob, ParsedResume } from "@/lib/db/types";
+
+const AI_TIMEOUT_MS = 30_000;
+const AI_AUDIT_NOTE = `model=${DEFAULT_MODEL} prompt_version=${PROMPT_VERSION}`;
 
 // ---------------------------------------------------------------------------
 // System prompts (mirroring lib/ai/ modules, adapted for plain-text streaming)
@@ -157,12 +160,15 @@ export async function POST(req: NextRequest) {
   const readable = new ReadableStream({
     async start(controller) {
       try {
-        const stream = client.messages.stream({
-          model: DEFAULT_MODEL,
-          max_tokens: 4096,
-          system: prompt.system,
-          messages: [{ role: "user", content: prompt.userMessage }],
-        });
+        const stream = client.messages.stream(
+          {
+            model: DEFAULT_MODEL,
+            max_tokens: 4096,
+            system: prompt.system,
+            messages: [{ role: "user", content: prompt.userMessage }],
+          },
+          { signal: AbortSignal.timeout(AI_TIMEOUT_MS) },
+        );
 
         for await (const event of stream) {
           if (
@@ -178,10 +184,11 @@ export async function POST(req: NextRequest) {
           user_id: user.id,
           event_type: "document_generated",
           new_value: documentType,
+          note: AI_AUDIT_NOTE,
         });
       } catch (e) {
-        const msg = e instanceof Error ? e.message : "Streaming failed.";
-        controller.enqueue(encoder.encode(`\n\n[Error: ${msg}]`));
+        console.error("[generate-document] Streaming error:", e);
+        controller.enqueue(encoder.encode("\n\n[Error: Generation failed. Please try again.]"));
       } finally {
         controller.close();
       }
