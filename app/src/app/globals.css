@@ -1,17 +1,17 @@
 @import "tailwindcss";
 
-/* Monochromatic warm-neutral palette — paper / ink / pencil.
-   Never hardcode hex in components; extend this file. */
+/* Clean light theme — white canvas, charcoal ink, professional blue accent. */
 :root {
-  --background: #faf8f3;        /* paper */
-  --foreground: #1f1d1a;        /* ink */
-  --muted: #efece4;             /* stationery panel */
-  --muted-foreground: #6b6559;  /* pencil */
-  --border: #d9d4c7;            /* envelope edge */
-  --accent: #2b2824;             /* stamp ink */
-  --accent-foreground: #faf8f3;
-  --danger: #8a2a1f;             /* muted stamp red */
-  --success: #3a5a40;            /* muted postal green */
+  --background: #ffffff;
+  --foreground: #1a1a2e;
+  --muted: #f8f9fa;
+  --muted-foreground: #6b7280;
+  --border: #e5e7eb;
+  --accent: #2563eb;
+  --accent-foreground: #ffffff;
+  --danger: #dc2626;
+  --success: #16a34a;
+  --card-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 @theme inline {
@@ -29,23 +29,11 @@
   --font-serif: var(--font-playfair);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #1b1917;        /* dark ink */
-    --foreground: #efece4;        /* paper */
-    --muted: #262320;
-    --muted-foreground: #a8a195;
-    --border: #3a352f;
-    --accent: #efece4;
-    --accent-foreground: #1b1917;
-    --danger: #c97a6f;
-    --success: #8fae8f;
-  }
-}
-
 body {
   font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
-  font-size: 0.9375rem; /* 15px — ensures comfortable reading above 14px minimum */
+  font-size: 0.9375rem;
+  background-color: var(--background);
+  color: var(--foreground);
 }
 
 .font-display {
@@ -55,8 +43,8 @@ body {
 }
 
 .label-caps {
-  font-size: 0.8125rem; /* 13px — up from 11px for readability */
-  letter-spacing: 0.10em;
+  font-size: 0.8125rem;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--muted-foreground);
 }
@@ -65,4 +53,11 @@ hr,
 .rule {
   border: 0;
   border-top: 1px solid var(--border);
+}
+
+.card {
+  background: var(--background);
+  border: 1px solid var(--border);
+  box-shadow: var(--card-shadow);
+  border-radius: 0.375rem;
 }

@@ -20,7 +20,14 @@ export async function analyzeJobAction(
     const parsed = await parseJobPosting(rawJobText);
     return { parsed };
   } catch (e) {
-    console.error("[analyzeJobAction]", e);
+    const msg = e instanceof Error ? e.message : String(e);
+    console.error("[analyzeJobAction] parseJobPosting failed:", msg, e);
+    if (msg.includes("ANTHROPIC_API_KEY")) {
+      return { error: "AI service is not configured. Please contact support." };
+    }
+    if (msg.includes("Rate limit")) {
+      return { error: msg };
+    }
     return { error: "AI analysis failed. Please try again." };
   }
 }

@@ -9,8 +9,17 @@ export const metadata = { title: "Tracker" };
 
 const PIPELINE_STATS: ApplicationStatus[] = ["applied", "assessment", "interview", "offer"];
 
+const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+
+function isStale(app: JobApplication): boolean {
+  return (
+    app.current_status === "saved" &&
+    Date.now() - new Date(app.created_at).getTime() > ONE_DAY_MS
+  );
+}
+
 function statusColor(s: ApplicationStatus): string {
-  if (s === "offer") return "text-[var(--success)]";
+  if (s === "offer") return "text-success";
   if (s === "rejected" || s === "withdrawn") return "opacity-50";
   return "";
 }
@@ -43,7 +52,7 @@ export default async function TrackerPage() {
         <h1 className="font-display text-4xl leading-tight">{t("heading")}</h1>
         <Link
           href="/applications/new"
-          className="rounded-sm bg-accent px-4 py-1.5 text-sm font-medium text-accent-foreground hover:opacity-90"
+          className="rounded-md bg-accent px-4 py-1.5 text-sm font-medium text-accent-foreground hover:opacity-90 shadow-sm"
         >
           {t("newApplication")}
         </Link>
@@ -51,12 +60,12 @@ export default async function TrackerPage() {
 
       {applications.length > 0 && (
         <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-5">
-          <div className="rounded-sm border border-border p-4">
+          <div className="rounded-md border border-border p-4 shadow-sm bg-white">
             <p className="label-caps text-muted-foreground">{t("active")}</p>
             <p className="mt-1 font-display text-3xl">{active}</p>
           </div>
           {PIPELINE_STATS.map((s) => (
-            <div key={s} className="rounded-sm border border-border p-4">
+            <div key={s} className="rounded-md border border-border p-4 shadow-sm bg-white">
               <p className="label-caps text-muted-foreground">
                 {APPLICATION_STATUS_LABEL[s]}
               </p>
@@ -68,20 +77,20 @@ export default async function TrackerPage() {
 
       <div className="mt-10">
         {applications.length === 0 ? (
-          <div className="rounded-sm border border-dashed border-border p-12 text-center">
+          <div className="rounded-md border border-dashed border-border p-12 text-center">
             <p className="font-display text-2xl text-muted-foreground">
               {t("noAppsHeading")}
             </p>
             <p className="mt-2 text-sm text-muted-foreground">{t("noAppsSub")}</p>
             <Link
               href="/applications/new"
-              className="mt-6 inline-flex h-10 items-center justify-center rounded-sm bg-accent px-5 text-sm font-medium text-accent-foreground hover:opacity-90"
+              className="mt-6 inline-flex h-10 items-center justify-center rounded-md bg-accent px-5 text-sm font-medium text-accent-foreground hover:opacity-90 shadow-sm"
             >
               {t("addApplication")}
             </Link>
           </div>
         ) : (
-          <div className="overflow-x-auto rounded-sm border border-border">
+          <div className="overflow-x-auto rounded-md border border-border shadow-sm">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border bg-muted/40">
@@ -103,15 +112,26 @@ export default async function TrackerPage() {
                 {applications.map((app) => (
                   <tr
                     key={app.id}
-                    className={`border-b border-border last:border-0 ${statusColor(app.current_status)}`}
+                    className={`border-b border-border last:border-0 bg-white ${statusColor(app.current_status)}`}
                   >
                     <td className="px-5 py-4">
-                      <Link
-                        href={`/applications/${app.id}`}
-                        className="font-medium hover:underline underline-offset-2"
-                      >
-                        {app.company_name ?? "—"}
-                      </Link>
+                      <div className="flex items-center gap-2">
+                        <Link
+                          href={`/applications/${app.id}`}
+                          className="font-medium hover:underline underline-offset-2"
+                        >
+                          {app.company_name ?? "—"}
+                        </Link>
+                        {isStale(app) && (
+                          <span
+                            className="inline-flex items-center gap-1 rounded-full bg-yellow-100 px-2 py-0.5 text-[10px] font-medium text-yellow-700"
+                            title="Saved over 1 day ago — did you apply?"
+                          >
+                            <span className="h-1.5 w-1.5 rounded-full bg-yellow-400" />
+                            Update status
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className="px-5 py-4 text-muted-foreground">
                       <Link

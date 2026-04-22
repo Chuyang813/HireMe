@@ -6,6 +6,15 @@ import type { JobApplication } from "@/lib/db/types";
 
 export const metadata = { title: "Applications" };
 
+const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+
+function isStale(app: JobApplication): boolean {
+  return (
+    app.current_status === "saved" &&
+    Date.now() - new Date(app.created_at).getTime() > ONE_DAY_MS
+  );
+}
+
 export default async function ApplicationsPage() {
   const { supabase, user } = await requireUser();
   const t = await getTranslations("Applications");
@@ -25,7 +34,7 @@ export default async function ApplicationsPage() {
         <h1 className="font-display text-4xl leading-tight">{t("heading")}</h1>
         <Link
           href="/applications/new"
-          className="rounded-sm bg-accent px-4 py-1.5 text-sm font-medium text-accent-foreground hover:opacity-90"
+          className="rounded-md bg-accent px-4 py-1.5 text-sm font-medium text-accent-foreground hover:opacity-90 shadow-sm"
         >
           {t("newApplication")}
         </Link>
@@ -33,14 +42,14 @@ export default async function ApplicationsPage() {
 
       <div className="mt-10">
         {applications.length === 0 ? (
-          <div className="rounded-sm border border-dashed border-border p-12 text-center">
+          <div className="rounded-md border border-dashed border-border p-12 text-center">
             <p className="font-display text-2xl text-muted-foreground">
               {t("noAppsHeading")}
             </p>
             <p className="mt-2 text-sm text-muted-foreground">{t("noAppsSub")}</p>
             <Link
               href="/applications/new"
-              className="mt-6 inline-flex h-10 items-center justify-center rounded-sm bg-accent px-5 text-sm font-medium text-accent-foreground hover:opacity-90"
+              className="mt-6 inline-flex h-10 items-center justify-center rounded-md bg-accent px-5 text-sm font-medium text-accent-foreground hover:opacity-90 shadow-sm"
             >
               {t("addApplication")}
             </Link>
@@ -51,7 +60,7 @@ export default async function ApplicationsPage() {
               <li key={app.id}>
                 <Link
                   href={`/applications/${app.id}`}
-                  className="block rounded-sm border border-border bg-background p-5 transition-colors hover:border-foreground/30"
+                  className="block rounded-md border border-border bg-white p-5 transition-colors hover:border-accent/50 shadow-sm"
                 >
                   <div className="flex items-baseline justify-between gap-4">
                     <div>
@@ -63,9 +72,20 @@ export default async function ApplicationsPage() {
                         {app.location ? ` · ${app.location}` : ""}
                       </p>
                     </div>
-                    <span className="label-caps whitespace-nowrap rounded-sm border border-border px-1.5 py-0.5">
-                      {APPLICATION_STATUS_LABEL[app.current_status]}
-                    </span>
+                    <div className="flex items-center gap-2 shrink-0">
+                      {isStale(app) && (
+                        <span
+                          className="inline-flex items-center gap-1 rounded-full bg-yellow-100 px-2 py-0.5 text-[10px] font-medium text-yellow-700"
+                          title="Saved over 1 day ago — did you apply?"
+                        >
+                          <span className="h-1.5 w-1.5 rounded-full bg-yellow-400" />
+                          Update status
+                        </span>
+                      )}
+                      <span className="label-caps whitespace-nowrap rounded-md border border-border px-1.5 py-0.5">
+                        {APPLICATION_STATUS_LABEL[app.current_status]}
+                      </span>
+                    </div>
                   </div>
                   <p className="mt-2 text-xs text-muted-foreground">
                     {t("updatedPrefix")} {new Date(app.updated_at).toLocaleDateString()}

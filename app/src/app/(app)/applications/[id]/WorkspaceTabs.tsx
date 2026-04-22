@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useEffect } from "react";
 import {
   saveDocumentAction,
   analyzeAssessmentAction,
@@ -9,7 +9,6 @@ import {
   getDocumentVersionsAction,
   type DocumentVersion,
 } from "@/app/actions/ai";
-import { updateNotesAction } from "@/app/actions/applications";
 import { Button } from "@/components/ui/Button";
 import type {
   ApplicationDocument,
@@ -20,14 +19,13 @@ import type {
 } from "@/lib/db/types";
 
 // ---------------------------------------------------------------------------
-// Tab config
+// Tab config — Notes tab removed
 // ---------------------------------------------------------------------------
 
 type TabId =
   | "resume"
   | "cover_letter"
   | "email"
-  | "notes"
   | "assessment"
   | "interview_prep";
 
@@ -35,7 +33,6 @@ const TABS: { id: TabId; label: string }[] = [
   { id: "resume", label: "Resume" },
   { id: "cover_letter", label: "Cover letter" },
   { id: "email", label: "Email draft" },
-  { id: "notes", label: "Notes" },
   { id: "assessment", label: "Assessment" },
   { id: "interview_prep", label: "Interview prep" },
 ];
@@ -44,11 +41,11 @@ const TABS: { id: TabId; label: string }[] = [
 // Export helpers (browser-only, loaded lazily)
 // ---------------------------------------------------------------------------
 
-function slugify(s: string) {
+function sanitizeName(s: string) {
   return s
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/(^-|-$)/g, "")
+    .replace(/[^a-zA-Z0-9\s]/g, "")
+    .trim()
+    .replace(/\s+/g, "_")
     .slice(0, 40);
 }
 
@@ -205,6 +202,102 @@ async function exportDOCX(content: string, filename: string) {
 }
 
 // ---------------------------------------------------------------------------
+// MarkdownViewer — renders markdown as formatted HTML
+// ---------------------------------------------------------------------------
+
+function applyInline(text: string): React.ReactNode[] {
+  // Handle **bold** and *italic* inline
+  const parts = text.split(/(\*\*[^*]+\*\*|\*[^*]+\*)/g);
+  return parts.map((part, i) => {
+    if (part.startsWith("**") && part.endsWith("**")) {
+      return <strong key={i}>{part.slice(2, -2)}</strong>;
+    }
+    if (part.startsWith("*") && part.endsWith("*")) {
+      return <em key={i}>{part.slice(1, -1)}</em>;
+    }
+    return part;
+  });
+}
+
+function MarkdownViewer({ content }: { content: string }) {
+  if (!content.trim()) {
+    return (
+      <p className="text-sm text-muted-foreground italic">
+        No content yet. Click &ldquo;Generate&rdquo; to create content.
+      </p>
+    );
+  }
+
+  const lines = content.split("\n");
+  const nodes: React.ReactNode[] = [];
+  let listItems: string[] = [];
+
+  function flushList() {
+    if (listItems.length === 0) return;
+    nodes.push(
+      <ul key={`ul-${nodes.length}`} className="my-1 space-y-0.5 pl-4">
+        {listItems.map((item, i) => (
+          <li key={i} className="flex items-start gap-2 text-sm leading-relaxed">
+            <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-muted-foreground" />
+            <span>{applyInline(item)}</span>
+          </li>
+        ))}
+      </ul>,
+    );
+    listItems = [];
+  }
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+
+    if (line.startsWith("# ")) {
+      flushList();
+      nodes.push(
+        <h1 key={i} className="font-display text-2xl leading-tight mt-2 mb-1">
+          {line.slice(2)}
+        </h1>,
+      );
+    } else if (line.startsWith("## ")) {
+      flushList();
+      nodes.push(
+        <h2
+          key={i}
+          className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mt-5 mb-1.5 border-b border-border pb-1"
+        >
+          {line.slice(3)}
+        </h2>,
+      );
+    } else if (line.startsWith("### ")) {
+      flushList();
+      nodes.push(
+        <h3 key={i} className="text-sm font-semibold mt-3 mb-1">
+          {line.slice(4)}
+        </h3>,
+      );
+    } else if (line.startsWith("- ") || line.startsWith("* ")) {
+      listItems.push(line.slice(2));
+    } else if (line.trim() === "") {
+      flushList();
+      nodes.push(<div key={i} className="h-1.5" />);
+    } else {
+      flushList();
+      nodes.push(
+        <p key={i} className="text-sm leading-relaxed">
+          {applyInline(line)}
+        </p>,
+      );
+    }
+  }
+  flushList();
+
+  return (
+    <div className="rounded-md border border-border bg-white p-6 min-h-[28rem] shadow-sm">
+      {nodes}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // HistoryDropdown — lists saved versions and allows restoring
 // ---------------------------------------------------------------------------
 
@@ -240,7 +333,7 @@ function HistoryDropdown({
         History
       </Button>
       {open && (
-        <div className="absolute right-0 top-full z-20 mt-1 w-72 rounded-sm border border-border bg-background shadow-md">
+        <div className="absolute right-0 top-full z-20 mt-1 w-72 rounded-md border border-border bg-background shadow-lg">
           {loading && <p className="px-4 py-3 text-sm text-muted-foreground">Loading…</p>}
           {error && <p className="px-4 py-3 text-sm text-danger">{error}</p>}
           {!loading && !error && versions.length === 0 && (
@@ -265,7 +358,7 @@ function HistoryDropdown({
 }
 
 // ---------------------------------------------------------------------------
-// DocumentPanel — streaming AI generation + copy + save + export
+// DocumentPanel — rendered view + generate/save/export
 // ---------------------------------------------------------------------------
 
 function DocumentPanel({
@@ -274,12 +367,14 @@ function DocumentPanel({
   existingDoc,
   hasResume,
   exportFilename,
+  showEmail,
 }: {
   applicationId: string;
   documentType: DocumentType;
   existingDoc: ApplicationDocument | null;
   hasResume: boolean;
   exportFilename: string;
+  showEmail?: boolean;
 }) {
   const [content, setContent] = useState(existingDoc?.text_content ?? "");
   const [docId, setDocId] = useState(existingDoc?.id ?? "");
@@ -374,13 +469,82 @@ function DocumentPanel({
     }
   }
 
+  if (showEmail) {
+    // Email draft — styled copyable card, no download
+    return (
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          {!hasResume && (
+            <p className="text-sm text-muted-foreground">
+              Upload a base resume in{" "}
+              <a href="/resumes" className="underline underline-offset-2 text-accent">
+                Resumes
+              </a>{" "}
+              to enable AI generation.
+            </p>
+          )}
+          <div className="ml-auto flex flex-wrap gap-2">
+            <Button
+              variant="outline"
+              onClick={handleGenerate}
+              disabled={generating || !hasResume}
+            >
+              {generating ? "Generating…" : "Generate"}
+            </Button>
+            {docId && (
+              <HistoryDropdown
+                documentId={docId}
+                onRestore={(restored) => {
+                  setContent(restored);
+                  setSaveStatus("idle");
+                }}
+              />
+            )}
+            {content && (
+              <Button variant="outline" onClick={handleCopy}>
+                {copied ? "Copied!" : "Copy to clipboard"}
+              </Button>
+            )}
+            <Button onClick={handleSave} disabled={saving || !content.trim()}>
+              {saving ? "Saving…" : "Save"}
+            </Button>
+          </div>
+        </div>
+
+        {generateError && (
+          <p className="rounded-md border border-danger/30 bg-danger/5 px-4 py-3 text-sm text-danger">
+            {generateError}
+          </p>
+        )}
+
+        {content ? (
+          <div className="rounded-xl border border-border bg-blue-50 p-6 shadow-sm">
+            <p className="text-xs font-medium text-blue-600 mb-3 uppercase tracking-wider">Email Draft</p>
+            <div className="whitespace-pre-wrap text-sm leading-relaxed text-foreground">
+              {content}
+            </div>
+          </div>
+        ) : (
+          <div className="rounded-xl border border-dashed border-border bg-muted/30 p-8 text-center">
+            <p className="text-sm text-muted-foreground">
+              Click &ldquo;Generate&rdquo; to create your email draft.
+            </p>
+          </div>
+        )}
+
+        {saveStatus === "saved" && <p className="text-xs text-success">Saved.</p>}
+        {saveStatus === "error" && <p className="text-xs text-danger">Save failed. Please try again.</p>}
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         {!hasResume && (
           <p className="text-sm text-muted-foreground">
             Upload a base resume in{" "}
-            <a href="/resumes" className="underline underline-offset-2">
+            <a href="/resumes" className="underline underline-offset-2 text-accent">
               Resumes
             </a>{" "}
             to enable AI generation.
@@ -392,7 +556,7 @@ function DocumentPanel({
             onClick={handleGenerate}
             disabled={generating || !hasResume}
           >
-            {generating ? "Generating…" : "Generate with AI"}
+            {generating ? "Generating…" : "Generate"}
           </Button>
           {docId && (
             <HistoryDropdown
@@ -405,7 +569,7 @@ function DocumentPanel({
           )}
           {content && (
             <>
-              <Button variant="outline" onClick={handleCopy} disabled={!content}>
+              <Button variant="outline" onClick={handleCopy}>
                 {copied ? "Copied!" : "Copy"}
               </Button>
               <Button
@@ -414,7 +578,7 @@ function DocumentPanel({
                 disabled={exporting || !content.trim()}
                 title="Download as PDF"
               >
-                PDF ↓
+                Download PDF
               </Button>
               <Button
                 variant="outline"
@@ -422,7 +586,7 @@ function DocumentPanel({
                 disabled={exporting || !content.trim()}
                 title="Download as Word document"
               >
-                DOCX ↓
+                Download DOCX
               </Button>
             </>
           )}
@@ -432,77 +596,22 @@ function DocumentPanel({
         </div>
       </div>
 
-      {generateError ? (
-        <p className="rounded-sm border border-danger/30 bg-danger/5 px-4 py-3 text-sm text-danger">
+      {generateError && (
+        <p className="rounded-md border border-danger/30 bg-danger/5 px-4 py-3 text-sm text-danger">
           {generateError}
         </p>
-      ) : null}
-
-      <textarea
-        value={content}
-        onChange={(e) => {
-          setContent(e.target.value);
-          setSaveStatus("idle");
-        }}
-        className="min-h-[28rem] w-full rounded-sm border border-border bg-background p-4 font-mono text-xs outline-none focus:border-foreground"
-        placeholder="Click 'Generate with AI' or write directly…"
-      />
-
-      {saveStatus === "saved" && (
-        <p className="text-xs text-[var(--success)]">Saved.</p>
       )}
-      {saveStatus === "error" && (
-        <p className="text-xs text-danger">Save failed. Please try again.</p>
+
+      {generating && (
+        <div className="rounded-md border border-border bg-white p-6 min-h-[28rem] shadow-sm">
+          <p className="text-sm text-muted-foreground animate-pulse">Generating…</p>
+          {content && <MarkdownViewer content={content} />}
+        </div>
       )}
-    </div>
-  );
-}
+      {!generating && <MarkdownViewer content={content} />}
 
-// ---------------------------------------------------------------------------
-// NotesPanel
-// ---------------------------------------------------------------------------
-
-function NotesPanel({
-  applicationId,
-  initialNotes,
-}: {
-  applicationId: string;
-  initialNotes: string;
-}) {
-  const [notes, setNotes] = useState(initialNotes);
-  const [saveStatus, setSaveStatus] = useState<"idle" | "saved" | "error">("idle");
-  const [saving, startSave] = useTransition();
-
-  function handleSave() {
-    setSaveStatus("idle");
-    const fd = new FormData();
-    fd.set("application_id", applicationId);
-    fd.set("notes", notes);
-    startSave(async () => {
-      await updateNotesAction(fd);
-      setSaveStatus("saved");
-    });
-  }
-
-  return (
-    <div className="flex flex-col gap-4">
-      <div className="flex justify-end">
-        <Button onClick={handleSave} disabled={saving}>
-          {saving ? "Saving…" : "Save notes"}
-        </Button>
-      </div>
-      <textarea
-        value={notes}
-        onChange={(e) => {
-          setNotes(e.target.value);
-          setSaveStatus("idle");
-        }}
-        className="min-h-[28rem] w-full rounded-sm border border-border bg-background p-4 text-sm outline-none focus:border-foreground"
-        placeholder="Add your notes, follow-up tasks, contacts, or anything else…"
-      />
-      {saveStatus === "saved" && (
-        <p className="text-xs text-[var(--success)]">Saved.</p>
-      )}
+      {saveStatus === "saved" && <p className="text-xs text-success">Saved.</p>}
+      {saveStatus === "error" && <p className="text-xs text-danger">Save failed. Please try again.</p>}
     </div>
   );
 }
@@ -531,14 +640,14 @@ function AssessmentChecklist({ items, label }: { items: string[]; label: string 
 function AssessmentResults({ result }: { result: AssessmentAnalysis }) {
   return (
     <div className="mt-6 space-y-6">
-      <div className="rounded-sm border border-border p-4">
+      <div className="rounded-md border border-border p-4 shadow-sm">
         <div className="flex items-start justify-between gap-4">
           <div>
             <p className="label-caps mb-1.5">Summary</p>
             <p className="text-sm leading-relaxed">{result.summary}</p>
           </div>
           {result.estimated_effort_hours != null && (
-            <span className="shrink-0 rounded-sm border border-border px-2 py-0.5 text-xs text-muted-foreground">
+            <span className="shrink-0 rounded-md border border-border px-2 py-0.5 text-xs text-muted-foreground">
               ~{result.estimated_effort_hours}h
             </span>
           )}
@@ -603,12 +712,11 @@ function AssessmentPanel({ applicationId }: { applicationId: string }) {
   return (
     <div className="flex flex-col gap-4">
       <p className="text-sm text-muted-foreground">
-        Upload the take-home or assessment brief and Claude will break it down
-        for you.
+        Upload the take-home or assessment brief and Claude will break it down for you.
       </p>
 
       <div className="flex flex-wrap items-center gap-3">
-        <label className="flex cursor-pointer items-center gap-2 rounded-sm border border-border px-4 py-2.5 text-sm hover:bg-muted">
+        <label className="flex cursor-pointer items-center gap-2 rounded-md border border-border px-4 py-2.5 text-sm hover:bg-muted shadow-sm">
           <span>{file ? file.name : "Choose file…"}</span>
           <input
             type="file"
@@ -626,13 +734,13 @@ function AssessmentPanel({ applicationId }: { applicationId: string }) {
         </Button>
       </div>
 
-      {error ? (
-        <p className="rounded-sm border border-danger/30 bg-danger/5 px-4 py-3 text-sm text-danger">
+      {error && (
+        <p className="rounded-md border border-danger/30 bg-danger/5 px-4 py-3 text-sm text-danger">
           {error}
         </p>
-      ) : null}
+      )}
 
-      {result ? <AssessmentResults result={result} /> : null}
+      {result && <AssessmentResults result={result} />}
     </div>
   );
 }
@@ -658,7 +766,7 @@ function QuestionCard({
   onToggle: () => void;
 }) {
   return (
-    <div className="rounded-sm border border-border">
+    <div className="rounded-md border border-border shadow-sm">
       <button
         onClick={onToggle}
         className="flex w-full items-start justify-between gap-4 px-4 py-3 text-left"
@@ -675,7 +783,7 @@ function QuestionCard({
       </button>
 
       {isOpen && (
-        <div className="border-t border-border px-4 py-3">
+        <div className="border-t border-border px-4 py-3 bg-muted/30">
           {q.star_answer ? (
             <>
               <p className="label-caps mb-2">Suggested answer</p>
@@ -732,7 +840,7 @@ function InterviewPrepPanel({
         {!hasResume && (
           <p className="text-sm text-muted-foreground">
             Upload a base resume in{" "}
-            <a href="/resumes" className="underline underline-offset-2">
+            <a href="/resumes" className="underline underline-offset-2 text-accent">
               Resumes
             </a>{" "}
             to enable AI generation.
@@ -747,11 +855,11 @@ function InterviewPrepPanel({
         </Button>
       </div>
 
-      {error ? (
-        <p className="rounded-sm border border-danger/30 bg-danger/5 px-4 py-3 text-sm text-danger">
+      {error && (
+        <p className="rounded-md border border-danger/30 bg-danger/5 px-4 py-3 text-sm text-danger">
           {error}
         </p>
-      ) : null}
+      )}
 
       {result && (
         <div className="space-y-6">
@@ -777,9 +885,7 @@ function InterviewPrepPanel({
               <ul className="space-y-1.5">
                 {result.preparation_checklist.map((item, i) => (
                   <li key={i} className="flex items-start gap-2.5 text-sm">
-                    <span className="mt-0.5 shrink-0 text-muted-foreground">
-                      ◻
-                    </span>
+                    <span className="mt-0.5 shrink-0 text-muted-foreground">◻</span>
                     <span>{item}</span>
                   </li>
                 ))}
@@ -810,15 +916,15 @@ function InterviewPrepPanel({
 // ---------------------------------------------------------------------------
 
 function scoreColor(score: number) {
-  if (score >= 75) return "var(--color-success, #34d399)";
-  if (score >= 50) return "#f59e0b";
-  return "var(--color-danger, #f87171)";
+  if (score >= 75) return "#16a34a";
+  if (score >= 50) return "#d97706";
+  return "#dc2626";
 }
 
 function ScoreCard({ result }: { result: ResumeScore }) {
   const color = scoreColor(result.score);
   return (
-    <div className="mt-4 rounded-sm border border-border bg-background p-5 space-y-5">
+    <div className="mt-4 rounded-md border border-border bg-white p-5 shadow-sm space-y-5">
       <div className="flex items-center gap-5">
         <div
           className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full border-2 text-xl font-bold"
@@ -830,7 +936,7 @@ function ScoreCard({ result }: { result: ResumeScore }) {
           <p className="label-caps text-muted-foreground mb-0.5">Match score</p>
           <div className="h-2 w-48 rounded-full bg-muted overflow-hidden">
             <div
-              className="h-full rounded-full"
+              className="h-full rounded-full transition-all duration-500"
               style={{ width: `${result.score}%`, backgroundColor: color }}
             />
           </div>
@@ -843,7 +949,7 @@ function ScoreCard({ result }: { result: ResumeScore }) {
           <ul className="space-y-1">
             {result.strengths.map((s, i) => (
               <li key={i} className="flex items-start gap-2 text-sm">
-                <span className="mt-0.5 shrink-0" style={{ color: "#34d399" }}>✓</span>
+                <span className="mt-0.5 shrink-0 text-success">✓</span>
                 <span>{s}</span>
               </li>
             ))}
@@ -885,15 +991,17 @@ function ScoreCard({ result }: { result: ResumeScore }) {
 function ScorePanel({
   applicationId,
   hasResume,
+  autoFetch,
 }: {
   applicationId: string;
   hasResume: boolean;
+  autoFetch?: boolean;
 }) {
   const [scoreResult, setScoreResult] = useState<ResumeScore | null>(null);
   const [error, setError] = useState("");
   const [scoring, startScore] = useTransition();
 
-  function handleScore() {
+  function runScore() {
     setError("");
     const fd = new FormData();
     fd.set("application_id", applicationId);
@@ -907,28 +1015,38 @@ function ScorePanel({
     });
   }
 
+  useEffect(() => {
+    if (autoFetch && hasResume && !scoreResult) {
+      runScore();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoFetch, hasResume]);
+
   return (
     <div className="mt-2">
       <div className="flex flex-wrap items-center gap-3">
         <Button
           variant="outline"
-          onClick={handleScore}
+          onClick={runScore}
           disabled={scoring || !hasResume}
         >
-          {scoring ? "Scoring…" : "Score Resume"}
+          {scoring ? "Scoring…" : scoreResult ? "Re-score" : "Score Resume"}
         </Button>
         {!hasResume && (
           <p className="text-sm text-muted-foreground">
             Upload a base resume to enable scoring.
           </p>
         )}
+        {scoring && (
+          <p className="text-sm text-muted-foreground animate-pulse">Analyzing match…</p>
+        )}
       </div>
-      {error ? (
-        <p className="mt-3 rounded-sm border border-danger/30 bg-danger/5 px-4 py-3 text-sm text-danger">
+      {error && (
+        <p className="mt-3 rounded-md border border-danger/30 bg-danger/5 px-4 py-3 text-sm text-danger">
           {error}
         </p>
-      ) : null}
-      {scoreResult ? <ScoreCard result={scoreResult} /> : null}
+      )}
+      {scoreResult && <ScoreCard result={scoreResult} />}
     </div>
   );
 }
@@ -941,9 +1059,8 @@ export function WorkspaceTabs({
   applicationId,
   hasResume,
   documents,
-  notes,
+  userFirstName,
   companyName,
-  roleTitle,
 }: {
   applicationId: string;
   hasResume: boolean;
@@ -952,13 +1069,16 @@ export function WorkspaceTabs({
     cover_letter: ApplicationDocument | null;
     email_draft: ApplicationDocument | null;
   };
-  notes: string;
+  userFirstName?: string;
   companyName?: string;
-  roleTitle?: string;
 }) {
   const [activeTab, setActiveTab] = useState<TabId>("resume");
 
-  const base = slugify(`${companyName ?? "company"}-${roleTitle ?? "role"}`);
+  const firstName = sanitizeName(userFirstName ?? "Resume");
+  const company = sanitizeName(companyName ?? "Company");
+
+  const resumeFilename = `${firstName}_${company}_Resume`;
+  const coverFilename = `${firstName}_${company}_CoverLetter`;
 
   return (
     <div>
@@ -969,7 +1089,7 @@ export function WorkspaceTabs({
             onClick={() => setActiveTab(tab.id)}
             className={`px-4 py-2.5 text-sm transition-colors ${
               activeTab === tab.id
-                ? "border-b-2 border-foreground font-medium text-foreground"
+                ? "border-b-2 border-accent font-medium text-accent"
                 : "text-muted-foreground hover:text-foreground"
             }`}
           >
@@ -986,14 +1106,14 @@ export function WorkspaceTabs({
               documentType="tailored_resume"
               existingDoc={documents.tailored_resume}
               hasResume={hasResume}
-              exportFilename={`resume-${base}`}
+              exportFilename={resumeFilename}
             />
             <div className="mt-6 border-t border-border pt-6">
               <p className="label-caps mb-1">Resume scoring</p>
               <p className="text-xs text-muted-foreground mb-3">
                 Compare your base resume against this job description.
               </p>
-              <ScorePanel applicationId={applicationId} hasResume={hasResume} />
+              <ScorePanel applicationId={applicationId} hasResume={hasResume} autoFetch />
             </div>
           </>
         )}
@@ -1003,7 +1123,7 @@ export function WorkspaceTabs({
             documentType="cover_letter"
             existingDoc={documents.cover_letter}
             hasResume={hasResume}
-            exportFilename={`cover-letter-${base}`}
+            exportFilename={coverFilename}
           />
         )}
         {activeTab === "email" && (
@@ -1012,11 +1132,9 @@ export function WorkspaceTabs({
             documentType="email_draft"
             existingDoc={documents.email_draft}
             hasResume={hasResume}
-            exportFilename={`email-${base}`}
+            exportFilename=""
+            showEmail
           />
-        )}
-        {activeTab === "notes" && (
-          <NotesPanel applicationId={applicationId} initialNotes={notes} />
         )}
         {activeTab === "assessment" && (
           <AssessmentPanel applicationId={applicationId} />

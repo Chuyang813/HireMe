@@ -7,6 +7,7 @@ import type {
   ApplicationStatus,
   JobApplication,
   ParsedJob,
+  Profile,
   TimelineEventType,
 } from "@/lib/db/types";
 import { APPLICATION_STATUS_LABEL } from "@/lib/db/types";
@@ -123,34 +124,44 @@ export default async function ApplicationPage({
   const { id } = await params;
   const { supabase, user } = await requireUser();
 
-  const [{ data: app }, { data: docs }, { data: resume }, { data: timeline }] =
-    await Promise.all([
-      supabase
-        .from("job_applications")
-        .select("*")
-        .eq("id", id)
-        .eq("user_id", user.id)
-        .single(),
-      supabase
-        .from("application_documents")
-        .select("*")
-        .eq("application_id", id)
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false }),
-      supabase
-        .from("base_resumes")
-        .select("id")
-        .eq("user_id", user.id)
-        .eq("is_default", true)
-        .single(),
-      supabase
-        .from("application_timeline_events")
-        .select("*")
-        .eq("application_id", id)
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false })
-        .limit(30),
-    ]);
+  const [
+    { data: app },
+    { data: docs },
+    { data: resume },
+    { data: timeline },
+    { data: profile },
+  ] = await Promise.all([
+    supabase
+      .from("job_applications")
+      .select("*")
+      .eq("id", id)
+      .eq("user_id", user.id)
+      .single(),
+    supabase
+      .from("application_documents")
+      .select("*")
+      .eq("application_id", id)
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("base_resumes")
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("is_default", true)
+      .single(),
+    supabase
+      .from("application_timeline_events")
+      .select("*")
+      .eq("application_id", id)
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(30),
+    supabase
+      .from("profiles")
+      .select("full_name, display_name")
+      .eq("id", user.id)
+      .single(),
+  ]);
 
   if (!app) notFound();
 
@@ -158,11 +169,21 @@ export default async function ApplicationPage({
   const documents = (docs ?? []) as ApplicationDocument[];
   const events = (timeline ?? []) as ApplicationTimelineEvent[];
   const job = application.parsed_job_json as ParsedJob | null;
+  const profileData = profile as Pick<Profile, "full_name" | "display_name"> | null;
+
+  const fullName = profileData?.full_name ?? profileData?.display_name ?? "";
+  const userFirstName = fullName.split(" ")[0] || undefined;
 
   const docMap = new Map<string, ApplicationDocument>();
   for (const doc of documents) {
     if (!docMap.has(doc.document_type)) docMap.set(doc.document_type, doc);
   }
+
+  // Show reminder banner if status is "saved" and created > 1 day ago
+  const oneDayMs = 24 * 60 * 60 * 1000;
+  const isStaleSaved =
+    application.current_status === "saved" &&
+    Date.now() - new Date(application.created_at).getTime() > oneDayMs;
 
   return (
     <div className="mx-auto w-full max-w-6xl px-6 py-12">
@@ -172,6 +193,18 @@ export default async function ApplicationPage({
         </Link>{" "}
         / {application.company_name ?? "Application"}
       </div>
+
+      {isStaleSaved && (
+        <div className="mb-6 flex items-start gap-3 rounded-md border border-yellow-300 bg-yellow-50 px-4 py-3">
+          <span className="mt-0.5 shrink-0 text-yellow-500">⚠</span>
+          <p className="text-sm text-yellow-800">
+            <strong>Reminder:</strong> You haven&apos;t updated the status of this application. Did you apply?{" "}
+            <span className="text-yellow-700 opacity-75">
+              Update the status above once you&apos;ve submitted your application.
+            </span>
+          </p>
+        </div>
+      )}
 
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
@@ -204,7 +237,7 @@ export default async function ApplicationPage({
       </div>
 
       {job && (
-        <div className="mt-8 rounded-sm border border-border bg-muted/40 p-5">
+        <div className="mt-8 rounded-md border border-border bg-muted/40 p-5 shadow-sm">
           <h2 className="label-caps mb-3">Job analysis</h2>
           <div className="grid gap-5 sm:grid-cols-2">
             {job.role_summary ? (
@@ -222,7 +255,7 @@ export default async function ApplicationPage({
                   {job.required_skills.map((s) => (
                     <span
                       key={s}
-                      className="rounded-sm border border-border px-1.5 py-0.5 text-xs"
+                      className="rounded-md border border-border px-1.5 py-0.5 text-xs bg-white shadow-sm"
                     >
                       {s}
                     </span>
@@ -239,7 +272,7 @@ export default async function ApplicationPage({
                   {job.desired_skills.map((s) => (
                     <span
                       key={s}
-                      className="rounded-sm border border-border bg-muted px-1.5 py-0.5 text-xs"
+                      className="rounded-md border border-border bg-muted px-1.5 py-0.5 text-xs"
                     >
                       {s}
                     </span>
@@ -272,9 +305,8 @@ export default async function ApplicationPage({
             cover_letter: docMap.get("cover_letter") ?? null,
             email_draft: docMap.get("email_draft") ?? null,
           }}
-          notes={application.notes ?? ""}
+          userFirstName={userFirstName}
           companyName={application.company_name ?? undefined}
-          roleTitle={application.role_title ?? undefined}
         />
         <TimelineSidebar events={events} />
       </div>
