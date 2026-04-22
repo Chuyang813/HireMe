@@ -33,9 +33,8 @@ export async function uploadResumeAction(
     rawText = extracted.rawText;
     sourceType = extracted.sourceType;
   } catch (e) {
-    return {
-      error: e instanceof Error ? e.message : "Failed to read the file.",
-    };
+    console.error("[uploadResumeAction] File extraction error:", e);
+    return { error: "Failed to read the file. Please try a different format." };
   }
 
   if (!rawText.trim()) {
@@ -51,7 +50,8 @@ export async function uploadResumeAction(
       upsert: false,
     });
   if (upload.error) {
-    return { error: `Upload failed: ${upload.error.message}` };
+    console.error("[uploadResumeAction] Storage upload error:", upload.error);
+    return { error: "Upload failed. Please try again." };
   }
 
   let parsed = null;
@@ -78,7 +78,10 @@ export async function uploadResumeAction(
     parsed_resume_json: parsed,
     is_default: makeDefault,
   });
-  if (error) return { error: error.message };
+  if (error) {
+    console.error("[uploadResumeAction] DB insert error:", error);
+    return { error: "Failed to save resume. Please try again." };
+  }
 
   revalidatePath("/resumes");
   redirect("/resumes");

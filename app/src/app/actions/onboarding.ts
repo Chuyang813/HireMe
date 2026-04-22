@@ -36,7 +36,10 @@ export async function saveProfileStep1Action(
       updated_at: new Date().toISOString(),
     });
 
-  if (error) return { error: error.message };
+  if (error) {
+    console.error("[saveProfileStep1Action] DB error:", error);
+    return { error: "Something went wrong. Please try again." };
+  }
   revalidatePath("/onboarding");
   return { ok: true };
 }
@@ -72,7 +75,8 @@ export async function uploadOnboardingResumeAction(
     rawText = extracted.rawText;
     sourceType = extracted.sourceType;
   } catch (e) {
-    return { error: e instanceof Error ? e.message : "Failed to read the file." };
+    console.error("[uploadOnboardingResumeAction] File extraction error:", e);
+    return { error: "Failed to read the file. Please try a different format." };
   }
 
   if (!rawText.trim()) return { error: "Could not extract any text from this file." };
@@ -85,7 +89,10 @@ export async function uploadOnboardingResumeAction(
       contentType: file.type || "application/octet-stream",
       upsert: false,
     });
-  if (uploadError) return { error: `Upload failed: ${uploadError.message}` };
+  if (uploadError) {
+    console.error("[uploadOnboardingResumeAction] Storage error:", uploadError);
+    return { error: "Upload failed. Please try again." };
+  }
 
   let parsed = null;
   try {
@@ -111,7 +118,10 @@ export async function uploadOnboardingResumeAction(
     is_default: true,
   });
 
-  if (insertError) return { error: insertError.message };
+  if (insertError) {
+    console.error("[uploadOnboardingResumeAction] DB insert error:", insertError);
+    return { error: "Failed to save resume. Please try again." };
+  }
   return { ok: true };
 }
 
@@ -147,7 +157,10 @@ export async function completeOnboardingAction(
       updated_at: new Date().toISOString(),
     });
 
-  if (error) return { error: error.message };
+  if (error) {
+    console.error("[completeOnboardingAction] DB error:", error);
+    return { error: "Something went wrong. Please try again." };
+  }
 
   revalidatePath("/dashboard");
   redirect("/dashboard");

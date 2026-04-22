@@ -1,6 +1,9 @@
 import Anthropic from "@anthropic-ai/sdk";
 
 export const DEFAULT_MODEL = process.env.ANTHROPIC_MODEL || "claude-sonnet-4-6";
+export const PROMPT_VERSION = "1.0";
+
+const AI_TIMEOUT_MS = 30_000;
 
 let cached: Anthropic | null = null;
 
@@ -46,12 +49,15 @@ export async function claudeJson<T>({
   maxTokens?: number;
 }): Promise<T> {
   const client = getAnthropic();
-  const resp = await client.messages.create({
-    model,
-    max_tokens: maxTokens,
-    system,
-    messages: messages.map((m) => ({ role: m.role, content: m.content })),
-  });
+  const resp = await client.messages.create(
+    {
+      model,
+      max_tokens: maxTokens,
+      system,
+      messages: messages.map((m) => ({ role: m.role, content: m.content })),
+    },
+    { signal: AbortSignal.timeout(AI_TIMEOUT_MS) },
+  );
   const text = resp.content
     .filter((b): b is Anthropic.TextBlock => b.type === "text")
     .map((b) => b.text)
@@ -71,12 +77,15 @@ export async function claudeText({
   maxTokens?: number;
 }): Promise<string> {
   const client = getAnthropic();
-  const resp = await client.messages.create({
-    model,
-    max_tokens: maxTokens,
-    system,
-    messages: messages.map((m) => ({ role: m.role, content: m.content })),
-  });
+  const resp = await client.messages.create(
+    {
+      model,
+      max_tokens: maxTokens,
+      system,
+      messages: messages.map((m) => ({ role: m.role, content: m.content })),
+    },
+    { signal: AbortSignal.timeout(AI_TIMEOUT_MS) },
+  );
   return resp.content
     .filter((b): b is Anthropic.TextBlock => b.type === "text")
     .map((b) => b.text)

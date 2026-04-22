@@ -1,4 +1,5 @@
 import { claudeJson } from "./anthropic";
+import { parsedJobSchema } from "./schemas";
 import type { ParsedJob } from "@/lib/db/types";
 
 const SYSTEM = `You are a job posting parsing assistant.
@@ -29,7 +30,7 @@ Rules:
 - Output a single JSON object, no prose, no code fences.`;
 
 export async function parseJobPosting(rawText: string): Promise<ParsedJob> {
-  return claudeJson<ParsedJob>({
+  const raw = await claudeJson<ParsedJob>({
     system: SYSTEM,
     messages: [
       {
@@ -39,4 +40,10 @@ export async function parseJobPosting(rawText: string): Promise<ParsedJob> {
     ],
     maxTokens: 2048,
   });
+  const validated = parsedJobSchema.safeParse(raw);
+  if (!validated.success) {
+    console.error("[parseJobPosting] Schema validation failed:", validated.error);
+    return raw; // best-effort: return raw if schema doesn't match
+  }
+  return validated.data;
 }

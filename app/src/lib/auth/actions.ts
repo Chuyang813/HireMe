@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { getSupabaseServer } from "@/lib/supabase/server";
+import { safeRedirectTarget } from "@/lib/auth/safe-redirect";
 
 const credentialsSchema = z.object({
   email: z.string().email("Enter a valid email address."),
@@ -34,8 +35,8 @@ export async function loginAction(
   const { error } = await supabase.auth.signInWithPassword(parsed.data);
   if (error) return { error: error.message };
 
-  const next = (formData.get("next") as string) || "/dashboard";
-  redirect(next.startsWith("/") ? next : "/dashboard");
+  const next = safeRedirectTarget(formData.get("next") as string);
+  redirect(next);
 }
 
 export async function signupAction(

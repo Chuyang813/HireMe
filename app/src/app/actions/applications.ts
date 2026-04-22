@@ -22,6 +22,10 @@ export async function createApplicationAction(
 
   if (!rawJobText) return { error: "Please paste the job description." };
 
+  if (jobUrl && !/^https?:\/\//i.test(jobUrl)) {
+    return { error: "Job URL must start with http:// or https://." };
+  }
+
   let parsedJob = null;
   try {
     parsedJob = await parseJobPosting(rawJobText);
@@ -44,7 +48,10 @@ export async function createApplicationAction(
     .select("id")
     .single();
 
-  if (error || !data) return { error: error?.message ?? "Failed to create application." };
+  if (error || !data) {
+    console.error("[createApplicationAction] DB insert error:", error);
+    return { error: "Something went wrong. Please try again." };
+  }
 
   await logTimelineEvent(supabase, {
     application_id: data.id,

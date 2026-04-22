@@ -1,4 +1,5 @@
 import { claudeJson } from "./anthropic";
+import { assessmentAnalysisSchema } from "./schemas";
 import type { AssessmentAnalysis, ParsedJob } from "@/lib/db/types";
 
 const SYSTEM = `You are an assessment analysis assistant.
@@ -26,7 +27,7 @@ export async function analyzeAssessment({
   assessmentText: string;
   job?: ParsedJob | null;
 }): Promise<AssessmentAnalysis> {
-  return claudeJson<AssessmentAnalysis>({
+  const raw = await claudeJson<AssessmentAnalysis>({
     system: SYSTEM,
     messages: [
       {
@@ -44,4 +45,10 @@ export async function analyzeAssessment({
     ],
     maxTokens: 2500,
   });
+  const validated = assessmentAnalysisSchema.safeParse(raw);
+  if (!validated.success) {
+    console.error("[analyzeAssessment] Schema validation failed:", validated.error);
+    throw new Error("AI returned an unexpected response format.");
+  }
+  return validated.data;
 }
