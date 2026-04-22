@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { requireUser } from "@/lib/auth/current-user";
 import type { JobApplication, Profile } from "@/lib/db/types";
 import { APPLICATION_STATUS_LABEL } from "@/lib/db/types";
@@ -8,6 +9,7 @@ export const metadata = { title: "Dashboard" };
 
 export default async function DashboardPage() {
   const { supabase, user } = await requireUser();
+  const t = await getTranslations("Dashboard");
 
   const { data: profile } = await supabase
     .from("profiles")
@@ -29,34 +31,36 @@ export default async function DashboardPage() {
 
   return (
     <div className="mx-auto w-full max-w-5xl px-6 py-12">
-      <div className="label-caps mb-2">Overview</div>
+      <div className="label-caps mb-2">{t("overviewLabel")}</div>
       <div className="flex items-baseline justify-between gap-4">
-        <h1 className="font-display text-4xl leading-tight">Dashboard</h1>
+        <h1 className="font-display text-4xl leading-tight">{t("heading")}</h1>
         <span className="label-caps hidden sm:inline">{user.email}</span>
       </div>
 
       <div className="mt-10">
         <div className="flex items-baseline justify-between gap-4 mb-4">
-          <h2 className="label-caps">Recent applications · {applications.length}</h2>
+          <h2 className="label-caps">
+            {t("recentApplications", { count: applications.length })}
+          </h2>
           <Link
             href="/applications/new"
             className="rounded-sm bg-accent px-4 py-1.5 text-sm font-medium text-accent-foreground hover:opacity-90"
           >
-            Add application
+            {t("addApplication")}
           </Link>
         </div>
 
         {applications.length === 0 ? (
           <div className="rounded-sm border border-dashed border-border p-12 text-center">
-            <p className="font-display text-2xl text-muted-foreground">No applications yet.</p>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Add your first job application to get started.
+            <p className="font-display text-2xl text-muted-foreground">
+              {t("noAppsHeading")}
             </p>
+            <p className="mt-2 text-sm text-muted-foreground">{t("noAppsSub")}</p>
             <Link
               href="/applications/new"
               className="mt-6 inline-flex h-10 items-center justify-center rounded-sm bg-accent px-5 text-sm font-medium text-accent-foreground hover:opacity-90"
             >
-              Add application
+              {t("addApplication")}
             </Link>
           </div>
         ) : (
@@ -78,7 +82,7 @@ export default async function DashboardPage() {
                   </span>
                 </div>
                 <p className="mt-2 text-xs text-muted-foreground">
-                  Updated {new Date(app.updated_at).toLocaleDateString()}
+                  {t("updatedPrefix")} {new Date(app.updated_at).toLocaleDateString()}
                 </p>
               </li>
             ))}

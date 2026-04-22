@@ -24,9 +24,9 @@
   --color-accent-foreground: var(--accent-foreground);
   --color-danger: var(--danger);
   --color-success: var(--success);
-  --font-sans: var(--font-geist-sans);
+  --font-sans: var(--font-inter);
   --font-mono: var(--font-geist-mono);
-  --font-serif: var(--font-instrument-serif);
+  --font-serif: var(--font-playfair);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -45,6 +45,7 @@
 
 body {
   font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+  font-size: 0.9375rem; /* 15px — ensures comfortable reading above 14px minimum */
 }
 
 .font-display {
@@ -54,8 +55,8 @@ body {
 }
 
 .label-caps {
-  font-size: 0.6875rem;
-  letter-spacing: 0.14em;
+  font-size: 0.8125rem; /* 13px — up from 11px for readability */
+  letter-spacing: 0.10em;
   text-transform: uppercase;
   color: var(--muted-foreground);
 }

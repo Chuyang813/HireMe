@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 import { requireUser } from "@/lib/auth/current-user";
 import { APPLICATION_STATUS_LABEL } from "@/lib/db/types";
 import type { JobApplication } from "@/lib/db/types";
@@ -7,6 +8,8 @@ export const metadata = { title: "Applications" };
 
 export default async function ApplicationsPage() {
   const { supabase, user } = await requireUser();
+  const t = await getTranslations("Applications");
+
   const { data } = await supabase
     .from("job_applications")
     .select("*")
@@ -17,29 +20,29 @@ export default async function ApplicationsPage() {
 
   return (
     <div className="mx-auto w-full max-w-5xl px-6 py-12">
-      <div className="label-caps mb-2">Dossier</div>
+      <div className="label-caps mb-2">{t("dossierLabel")}</div>
       <div className="flex items-baseline justify-between gap-4">
-        <h1 className="font-display text-4xl leading-tight">Applications</h1>
+        <h1 className="font-display text-4xl leading-tight">{t("heading")}</h1>
         <Link
           href="/applications/new"
           className="rounded-sm bg-accent px-4 py-1.5 text-sm font-medium text-accent-foreground hover:opacity-90"
         >
-          New application
+          {t("newApplication")}
         </Link>
       </div>
 
       <div className="mt-10">
         {applications.length === 0 ? (
           <div className="rounded-sm border border-dashed border-border p-12 text-center">
-            <p className="font-display text-2xl text-muted-foreground">No applications yet.</p>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Start by adding a job you're interested in.
+            <p className="font-display text-2xl text-muted-foreground">
+              {t("noAppsHeading")}
             </p>
+            <p className="mt-2 text-sm text-muted-foreground">{t("noAppsSub")}</p>
             <Link
               href="/applications/new"
               className="mt-6 inline-flex h-10 items-center justify-center rounded-sm bg-accent px-5 text-sm font-medium text-accent-foreground hover:opacity-90"
             >
-              Add application
+              {t("addApplication")}
             </Link>
           </div>
         ) : (
@@ -65,7 +68,7 @@ export default async function ApplicationsPage() {
                     </span>
                   </div>
                   <p className="mt-2 text-xs text-muted-foreground">
-                    Updated {new Date(app.updated_at).toLocaleDateString()}
+                    {t("updatedPrefix")} {new Date(app.updated_at).toLocaleDateString()}
                   </p>
                 </Link>
               </li>

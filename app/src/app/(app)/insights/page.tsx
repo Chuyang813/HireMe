@@ -1,3 +1,4 @@
+import { getTranslations } from "next-intl/server";
 import { requireUser } from "@/lib/auth/current-user";
 import type { JobApplication, ApplicationStatus } from "@/lib/db/types";
 import { APPLICATION_STATUS_LABEL } from "@/lib/db/types";
@@ -10,7 +11,6 @@ export const metadata = { title: "Insights" };
 
 function weekKey(iso: string) {
   const d = new Date(iso);
-  // ISO week: Monday-based, returns "YYYY-Www"
   const day = d.getDay() === 0 ? 7 : d.getDay();
   const thursday = new Date(d);
   thursday.setDate(d.getDate() - day + 4);
@@ -21,7 +21,6 @@ function weekKey(iso: string) {
 }
 
 function shortWeekLabel(key: string) {
-  // e.g. "2025-W03" → "Jan W3"
   const [year, wPart] = key.split("-W");
   const weekNum = Number(wPart);
   const jan1 = new Date(Number(year), 0, 1);
@@ -88,7 +87,6 @@ function FunnelChart({ counts }: { counts: Record<string, number> }) {
               x={LABEL_W - 8}
               y={y + BAR_H / 2 + 4}
               textAnchor="end"
-              className="fill-muted-foreground text-[10px]"
               fontSize="10"
               fill="currentColor"
               style={{ fill: "var(--color-muted-foreground)" }}
@@ -119,7 +117,7 @@ function FunnelChart({ counts }: { counts: Record<string, number> }) {
 }
 
 // ---------------------------------------------------------------------------
-// Status donut (simple horizontal stacked bar)
+// Status breakdown (horizontal stacked bar)
 // ---------------------------------------------------------------------------
 
 const STATUS_COLORS: Partial<Record<ApplicationStatus, string>> = {
@@ -136,17 +134,18 @@ const STATUS_COLORS: Partial<Record<ApplicationStatus, string>> = {
 function StatusBreakdown({
   counts,
   total,
+  noDataLabel,
 }: {
   counts: Record<string, number>;
   total: number;
+  noDataLabel: string;
 }) {
-  if (total === 0) return <p className="text-sm text-muted-foreground">No data yet.</p>;
+  if (total === 0) return <p className="text-sm text-muted-foreground">{noDataLabel}</p>;
 
   const statuses = Object.entries(counts).filter(([, c]) => c > 0) as [ApplicationStatus, number][];
 
   return (
     <div className="space-y-2">
-      {/* stacked bar */}
       <div className="flex h-5 w-full overflow-hidden rounded-sm">
         {statuses.map(([status, count]) => (
           <div
@@ -159,7 +158,6 @@ function StatusBreakdown({
           />
         ))}
       </div>
-      {/* legend */}
       <div className="flex flex-wrap gap-x-4 gap-y-1.5">
         {statuses.map(([status, count]) => (
           <div key={status} className="flex items-center gap-1.5 text-xs">
@@ -182,9 +180,15 @@ function StatusBreakdown({
 // Applications over time (sparkline)
 // ---------------------------------------------------------------------------
 
-function SparkLine({ weeklyData }: { weeklyData: { label: string; count: number }[] }) {
+function SparkLine({
+  weeklyData,
+  noDataLabel,
+}: {
+  weeklyData: { label: string; count: number }[];
+  noDataLabel: string;
+}) {
   if (weeklyData.length === 0)
-    return <p className="text-sm text-muted-foreground">No data yet.</p>;
+    return <p className="text-sm text-muted-foreground">{noDataLabel}</p>;
 
   const W = 400;
   const H = 80;
@@ -197,8 +201,6 @@ function SparkLine({ weeklyData }: { weeklyData: { label: string; count: number 
     const y = PAD + (1 - d.count / max) * (H - PAD * 2);
     return `${x},${y}`;
   });
-
-  const polyline = points.join(" ");
 
   const area =
     `M ${PAD},${H - PAD} ` +
@@ -214,7 +216,7 @@ function SparkLine({ weeklyData }: { weeklyData: { label: string; count: number 
       <svg viewBox={`0 0 ${W} ${H}`} className="w-full" aria-label="Applications over time">
         <path d={area} style={{ fill: "var(--color-accent)", opacity: 0.15 }} />
         <polyline
-          points={polyline}
+          points={points.join(" ")}
           fill="none"
           strokeWidth="1.5"
           style={{ stroke: "var(--color-accent)" }}
@@ -249,6 +251,7 @@ function SparkLine({ weeklyData }: { weeklyData: { label: string; count: number 
 
 export default async function InsightsPage() {
   const { supabase, user } = await requireUser();
+  const t = await getTranslations("Insights");
 
   const { data } = await supabase
     .from("job_applications")
@@ -270,13 +273,11 @@ export default async function InsightsPage() {
   const offers = apps.filter((a) => a.current_status === "offer").length;
   const offerRate = total > 0 ? Math.round((offers / total) * 100) : 0;
 
-  // Status counts
   const statusCounts: Record<string, number> = {};
   for (const app of apps) {
     statusCounts[app.current_status] = (statusCounts[app.current_status] ?? 0) + 1;
   }
 
-  // Top companies
   const companyCounts: Record<string, number> = {};
   for (const app of apps) {
     const co = app.company_name ?? "Unknown";
@@ -286,7 +287,6 @@ export default async function InsightsPage() {
     .sort((a, b) => b[1] - a[1])
     .slice(0, 5);
 
-  // Applications over time (by week)
   const weekMap: Record<string, number> = {};
   for (const app of apps) {
     const key = weekKey(app.created_at);
@@ -300,52 +300,47 @@ export default async function InsightsPage() {
 
   return (
     <div className="mx-auto w-full max-w-5xl px-6 py-12">
-      <div className="label-caps mb-2">Analytics</div>
-      <h1 className="font-display text-4xl leading-tight">Insights</h1>
+      <div className="label-caps mb-2">{t("analyticsLabel")}</div>
+      <h1 className="font-display text-4xl leading-tight">{t("heading")}</h1>
 
-      {/* Stat cards */}
       <div className="mt-10 grid grid-cols-2 gap-4 sm:grid-cols-4">
-        <StatCard label="Total applied" value={total} />
-        <StatCard label="Interview rate" value={`${interviewRate}%`} sub="applied → interview" />
-        <StatCard label="Offer rate" value={`${offerRate}%`} sub="applied → offer" />
-        <StatCard label="Active" value={active} sub="in-flight applications" />
+        <StatCard label={t("totalApplied")} value={total} />
+        <StatCard label={t("interviewRate")} value={`${interviewRate}%`} sub={t("interviewRateSub")} />
+        <StatCard label={t("offerRate")} value={`${offerRate}%`} sub={t("offerRateSub")} />
+        <StatCard label={t("active")} value={active} sub={t("activeSub")} />
       </div>
 
       <div className="mt-10 grid gap-8 lg:grid-cols-2">
-        {/* Funnel */}
         <section>
-          <h2 className="label-caps mb-4">Application funnel</h2>
+          <h2 className="label-caps mb-4">{t("funnelHeading")}</h2>
           <div className="rounded-sm border border-border bg-background p-5">
             <FunnelChart counts={statusCounts} />
           </div>
         </section>
 
-        {/* Status breakdown */}
         <section>
-          <h2 className="label-caps mb-4">Status breakdown</h2>
+          <h2 className="label-caps mb-4">{t("statusBreakdownHeading")}</h2>
           <div className="rounded-sm border border-border bg-background p-5">
-            <StatusBreakdown counts={statusCounts} total={total} />
+            <StatusBreakdown counts={statusCounts} total={total} noDataLabel={t("noData")} />
           </div>
         </section>
 
-        {/* Over time */}
         <section className="lg:col-span-2">
-          <h2 className="label-caps mb-4">Applications over time</h2>
+          <h2 className="label-caps mb-4">{t("overTimeHeading")}</h2>
           <div className="rounded-sm border border-border bg-background p-5">
             {weeklyData.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No applications yet.</p>
+              <p className="text-sm text-muted-foreground">{t("noApps")}</p>
             ) : (
-              <SparkLine weeklyData={weeklyData} />
+              <SparkLine weeklyData={weeklyData} noDataLabel={t("noData")} />
             )}
           </div>
         </section>
 
-        {/* Top companies */}
         <section>
-          <h2 className="label-caps mb-4">Top companies applied to</h2>
+          <h2 className="label-caps mb-4">{t("topCompaniesHeading")}</h2>
           <div className="rounded-sm border border-border bg-background p-5">
             {topCompanies.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No data yet.</p>
+              <p className="text-sm text-muted-foreground">{t("noData")}</p>
             ) : (
               <ul className="space-y-3">
                 {topCompanies.map(([company, count]) => {

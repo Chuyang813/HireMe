@@ -1,11 +1,13 @@
 "use client";
 
 import { useActionState } from "react";
+import { useTranslations } from "next-intl";
 import { createApplicationAction } from "@/app/actions/applications";
 import { Button } from "@/components/ui/Button";
 import { Field, TextareaField } from "@/components/ui/Field";
 
 export function NewApplicationForm() {
+  const t = useTranslations("Applications");
   const [state, action, pending] = useActionState(createApplicationAction, undefined);
 
   return (
@@ -13,33 +15,33 @@ export function NewApplicationForm() {
       <div className="grid gap-4 sm:grid-cols-2">
         <Field
           name="company_name"
-          label="Company name"
-          placeholder="Acme Corp"
-          hint="Leave blank to auto-detect from job description"
+          label={t("companyName")}
+          placeholder={t("companyNamePlaceholder")}
+          hint={t("companyNameHint")}
         />
         <Field
           name="role_title"
-          label="Position title"
-          placeholder="Senior Engineer"
-          hint="Leave blank to auto-detect from job description"
+          label={t("positionTitle")}
+          placeholder={t("positionTitlePlaceholder")}
+          hint={t("positionTitleHint")}
         />
       </div>
 
       <Field
         name="job_url"
-        label="Job URL"
+        label={t("jobUrl")}
         type="url"
-        placeholder="https://..."
-        hint="Optional — saved for your reference"
+        placeholder={t("jobUrlPlaceholder")}
+        hint={t("jobUrlHint")}
       />
 
       <TextareaField
         name="raw_job_text"
-        label="Job description"
+        label={t("jobDescription")}
         required
         rows={16}
-        placeholder="Paste the full job description here…"
-        hint="Claude will extract requirements, skills, and role summary."
+        placeholder={t("jobDescriptionPlaceholder")}
+        hint={t("jobDescriptionHint")}
         className="min-h-72 font-mono text-xs"
       />
 
@@ -51,7 +53,7 @@ export function NewApplicationForm() {
 
       <div className="flex justify-end">
         <Button type="submit" disabled={pending}>
-          {pending ? "Analyzing…" : "Analyze with AI →"}
+          {pending ? t("analyzing") : t("analyzeWithAI")}
         </Button>
       </div>
     </form>
