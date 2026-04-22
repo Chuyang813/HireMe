@@ -991,3 +991,62 @@ To keep planning, implementation, and AI behavior aligned, maintain these compan
 
 Both documents should be reviewed and updated whenever MVP scope, architecture, or AI workflows change.
 
+---
+
+## 29. Implemented Stack
+
+The MVP was built with the following actual stack (deviations from the original plan are noted):
+
+### Frontend & Backend (unified)
+- **Next.js 16** (App Router) with TypeScript and Tailwind CSS v4
+- **Server Actions** replace the originally proposed FastAPI backend — all AI calls, DB writes, and file parsing run as Next.js server actions in the same deployment unit
+- **next-intl** for EN/中文 internationalisation (not in original plan)
+- **shadcn/ui**-compatible utility classes; no third-party component library imported directly
+
+### Database & Auth
+- **Supabase** for both PostgreSQL (RLS-enabled) and Auth (email/password + session cookies via `@supabase/ssr`)
+- Row-Level Security enforces per-user data isolation at the DB layer
+- Supabase Storage for resume file uploads
+
+### AI
+- **Google Gemini** (`@anthropic-ai/sdk` is present in `package.json` but the active generation layer uses Gemini) for: job parsing, resume tailoring, cover letter generation, email drafts, assessment analysis, and interview prep
+- Prompts are versioned in server action files under `src/app/actions/`
+
+### File Handling
+- `mammoth` for DOCX → plain-text extraction
+- `jspdf` + `docx` for PDF/DOCX export
+- `zod` for structured AI output schema validation
+
+### Hosting
+- **Vercel** (frontend + serverless server actions)
+- **Supabase** managed cloud (DB, Auth, Storage)
+
+---
+
+## 30. Current Status
+
+### Done (as of 2026-04)
+- User authentication (sign up, sign in, sign out, session persistence)
+- Base resume upload, parsing, and storage
+- Job description text input and AI parsing
+- Tailored resume generation (Gemini, source-grounded)
+- Cover letter generation
+- Email draft generation
+- Application workspace CRUD with status tracking and timeline events
+- Document versioning (create / view versions per document type)
+- Live dashboard with application counts, stage breakdown, and recent activity
+- Tracker page with status filters and quick-update
+- EN / 中文 language switcher
+- Playwright E2E test suite (11 tests in `e2e/auth.spec.ts`: landing page content + navigation, login form validation, signup form validation, /dashboard + /resumes unauthenticated redirects — all passing)
+- Deployed to Vercel
+
+### Planned / Not Yet Implemented
+- Job URL scraping (currently paste-only)
+- Editable parsed resume/job fields before generation
+- PDF/DOCX export quality improvements
+- Per-user rate limiting on generation endpoints
+- Account data export and deletion workflows
+- Observability (error tracking, latency metrics)
+- Assessment file upload (text paste works; file upload is post-MVP)
+- Native mobile apps, browser extension, voice interview simulator
+
