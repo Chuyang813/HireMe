@@ -156,7 +156,9 @@
     "responsibilitiesHint": "每行填写一条职责。",
     "backButton": "← 返回",
     "confirmSave": "确认无误，保存 →",
-    "saving": "保存中…"
+    "saving": "保存中…",
+    "analyzeNetworkError": "网络错误，请重试。",
+    "saveNetworkError": "网络错误，请重试。"
   },
   "Insights": {
     "analyticsLabel": "数据分析",

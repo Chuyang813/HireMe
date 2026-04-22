@@ -156,7 +156,9 @@
     "responsibilitiesHint": "One responsibility per line.",
     "backButton": "← Back",
     "confirmSave": "Looks good, save →",
-    "saving": "Saving…"
+    "saving": "Saving…",
+    "analyzeNetworkError": "Network error — please try again.",
+    "saveNetworkError": "Network error — please try again."
   },
   "Insights": {
     "analyticsLabel": "Analytics",

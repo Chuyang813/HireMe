@@ -50,7 +50,13 @@ export function NewApplicationForm() {
     const fd = new FormData();
     fd.set("raw_job_text", rawJobText);
     startAnalyze(async () => {
-      const result = await analyzeJobAction(undefined, fd);
+      let result;
+      try {
+        result = await analyzeJobAction(undefined, fd);
+      } catch {
+        setError(t("analyzeNetworkError"));
+        return;
+      }
       if (result?.error) {
         setError(result.error);
       } else if (result?.parsed) {
@@ -94,7 +100,13 @@ export function NewApplicationForm() {
     fd.set("raw_job_text", rawJobText);
     fd.set("parsed_job_json", JSON.stringify(mergedJob));
     startSave(async () => {
-      const result = await createApplicationAction(undefined, fd);
+      let result;
+      try {
+        result = await createApplicationAction(undefined, fd);
+      } catch {
+        setError(t("saveNetworkError"));
+        return;
+      }
       if (result?.error) setError(result.error);
       // on success, createApplicationAction redirects — no client-side navigation needed
     });
