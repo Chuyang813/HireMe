@@ -51,13 +51,14 @@ Absolute rules:
 
 const COVER_LETTER_SYSTEM = `You are a cover letter writing assistant.
 
-Given the candidate's parsed resume and a parsed job description, write a concise, role-specific cover letter.
+Given the candidate's parsed resume and a parsed job description, write a concise, role-specific cover letter of exactly 3 paragraphs, maximum 350 words, designed to fit on one page.
 
 Rules:
-- 3 to 4 short paragraphs.
-- Open with why the candidate is interested in this specific company/role.
-- Second paragraph: 2-3 concrete examples from the candidate's actual experience that align with the posting.
-- Third paragraph: fit / working style / what they'd bring.
+- Exactly 3 short paragraphs — opening, evidence, close. No fourth paragraph.
+- Maximum 350 words total. Be concise and impactful; every sentence must earn its place.
+- Open with why the candidate is interested in this specific company/role (not a generic opener).
+- Second paragraph: 2 concrete examples from the candidate's actual experience that align with the posting.
+- Third paragraph: one sentence on fit/working style + one sentence close.
 - Never fabricate details, metrics, employers, or accomplishments not present in the resume.
 - Warm but professional. No clichés like "I'm excited to apply for this opportunity".
 - Output plain text only, no subject line, no markdown, no signature block beyond "Sincerely, {Name}".`;
@@ -83,13 +84,14 @@ function buildPrompt(
   documentType: DocumentType,
   resume: ParsedResume,
   job: ParsedJob,
-): { system: string; userMessage: string } | null {
+): { system: string; userMessage: string; maxTokens: number } | null {
   const resumeJson = JSON.stringify(resume, null, 2);
   const jobJson = JSON.stringify(job, null, 2);
 
   if (documentType === "tailored_resume") {
     return {
       system: RESUME_SYSTEM,
+      maxTokens: 4096,
       userMessage: [
         `Candidate parsed resume (JSON):\n${resumeJson}`,
         `Parsed job posting (JSON):\n${jobJson}`,
@@ -101,10 +103,11 @@ function buildPrompt(
   if (documentType === "cover_letter") {
     return {
       system: COVER_LETTER_SYSTEM,
+      maxTokens: 600,
       userMessage: [
         `Candidate parsed resume (JSON):\n${resumeJson}`,
         `Parsed job posting (JSON):\n${jobJson}`,
-        "Write the cover letter.",
+        "Write the cover letter. Maximum 350 words.",
       ].join("\n\n"),
     };
   }
@@ -112,6 +115,7 @@ function buildPrompt(
   if (documentType === "email_draft") {
     return {
       system: EMAIL_SYSTEM,
+      maxTokens: 512,
       userMessage: [
         `Candidate parsed resume (JSON):\n${resumeJson}`,
         `Parsed job posting (JSON):\n${jobJson}`,
@@ -215,7 +219,7 @@ export async function POST(req: NextRequest) {
         console.log(`[generate-document] Starting Anthropic stream for ${documentType}`);
         const stream = anthropicClient.messages.stream({
           model: DEFAULT_MODEL,
-          max_tokens: 4096,
+          max_tokens: prompt.maxTokens,
           system: prompt.system,
           messages: [{ role: "user", content: prompt.userMessage }],
         });

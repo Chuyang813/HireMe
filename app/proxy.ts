@@ -83,6 +83,20 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(redirect);
   }
 
+  // Gate /applications/new: require at least one uploaded resume.
+  if (user && pathname === "/applications/new") {
+    const { count } = await supabase
+      .from("base_resumes")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", user.id);
+    if ((count ?? 0) === 0) {
+      const redirect = request.nextUrl.clone();
+      redirect.pathname = "/resumes";
+      redirect.search = "?needResume=1";
+      return NextResponse.redirect(redirect);
+    }
+  }
+
   console.log(
     JSON.stringify({
       timestamp: new Date().toISOString(),
