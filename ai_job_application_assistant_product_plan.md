@@ -1009,7 +1009,7 @@ The MVP was built with the following actual stack (deviations from the original 
 - Supabase Storage for resume file uploads
 
 ### AI
-- **Google Gemini** (`@anthropic-ai/sdk` is present in `package.json` but the active generation layer uses Gemini) for: job parsing, resume tailoring, cover letter generation, email drafts, assessment analysis, and interview prep
+- **Anthropic Claude** (`@anthropic-ai/sdk`, default model `claude-3-5-sonnet-latest`) for: job parsing, resume tailoring, cover letter generation, email drafts, assessment analysis, interview prep, and PDF text extraction
 - Prompts are versioned in server action files under `src/app/actions/`
 
 ### File Handling
@@ -1029,7 +1029,7 @@ The MVP was built with the following actual stack (deviations from the original 
 - User authentication (sign up, sign in, sign out, session persistence)
 - Base resume upload, parsing, and storage
 - Job description text input and AI parsing
-- Tailored resume generation (Gemini, source-grounded)
+- Tailored resume generation (Claude, source-grounded)
 - Cover letter generation
 - Email draft generation
 - Application workspace CRUD with status tracking and timeline events
