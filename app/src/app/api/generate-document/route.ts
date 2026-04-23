@@ -1,6 +1,6 @@
 import { type NextRequest } from "next/server";
 import { getOptionalUser } from "@/lib/auth/current-user";
-import { getAnthropic, DEFAULT_MODEL, PROMPT_VERSION } from "@/lib/ai/anthropic";
+import { getGemini, DEFAULT_MODEL, PROMPT_VERSION } from "@/lib/ai/anthropic";
 import { logTimelineEvent } from "@/lib/db/timeline";
 import type { DocumentType, ParsedJob, ParsedResume } from "@/lib/db/types";
 
@@ -34,7 +34,7 @@ function checkRateLimit(userId: string): { allowed: boolean; retryAfterSec: numb
 }
 
 // ---------------------------------------------------------------------------
-// System prompts (mirroring lib/ai/ modules, adapted for plain-text streaming)
+// System prompts
 // ---------------------------------------------------------------------------
 
 const RESUME_SYSTEM = `You are a resume tailoring assistant.
@@ -191,30 +191,46 @@ export async function POST(req: NextRequest) {
     return Response.json({ error: `Unsupported document type: ${documentType}` }, { status: 400 });
   }
 
-  const client = getAnthropic();
+  // Verify API key is configured before starting the stream
+  let geminiClient;
+  try {
+    geminiClient = getGemini();
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error("[generate-document] Gemini init failed:", msg);
+    return Response.json({ error: msg }, { status: 500 });
+  }
+
+  const genModel = geminiClient.getGenerativeModel({
+    model: DEFAULT_MODEL,
+    systemInstruction: prompt.system,
+  });
+
   const encoder = new TextEncoder();
 
   const readable = new ReadableStream({
     async start(controller) {
-      try {
-        const stream = client.messages.stream(
-          {
-            model: DEFAULT_MODEL,
-            max_tokens: 4096,
-            system: prompt.system,
-            messages: [{ role: "user", content: prompt.userMessage }],
-          },
-          { signal: AbortSignal.timeout(AI_TIMEOUT_MS) },
-        );
+      const timer = setTimeout(() => {
+        console.error("[generate-document] Timeout after 30s");
+        controller.enqueue(encoder.encode("\n\n[Error: Generation timed out. Please try again.]"));
+        controller.close();
+      }, AI_TIMEOUT_MS);
 
-        for await (const event of stream) {
-          if (
-            event.type === "content_block_delta" &&
-            event.delta.type === "text_delta"
-          ) {
-            controller.enqueue(encoder.encode(event.delta.text));
+      try {
+        console.log(`[generate-document] Starting Gemini stream for ${documentType}`);
+        const streamResult = await genModel.generateContentStream({
+          contents: [{ role: "user", parts: [{ text: prompt.userMessage }] }],
+          generationConfig: { maxOutputTokens: 4096 },
+        });
+
+        for await (const chunk of streamResult.stream) {
+          const chunkText = chunk.text();
+          if (chunkText) {
+            controller.enqueue(encoder.encode(chunkText));
           }
         }
+
+        clearTimeout(timer);
 
         await logTimelineEvent(supabase, {
           application_id: applicationId,
@@ -224,8 +240,10 @@ export async function POST(req: NextRequest) {
           note: AI_AUDIT_NOTE,
         });
       } catch (e) {
-        console.error("[generate-document] Streaming error:", e);
-        controller.enqueue(encoder.encode("\n\n[Error: Generation failed. Please try again.]"));
+        clearTimeout(timer);
+        const msg = e instanceof Error ? e.message : String(e);
+        console.error("[generate-document] Streaming error:", msg, e);
+        controller.enqueue(encoder.encode(`\n\n[Error: ${msg}]`));
       } finally {
         controller.close();
       }

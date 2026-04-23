@@ -1,5 +1,5 @@
 import mammoth from "mammoth";
-import { getAnthropic, DEFAULT_MODEL } from "@/lib/ai/anthropic";
+import { getGemini, DEFAULT_MODEL } from "@/lib/ai/anthropic";
 
 export type ExtractedResume = {
   rawText: string;
@@ -29,56 +29,39 @@ export async function extractTextFromUpload(
   }
 
   if (isPdf) {
-    // Primary: use Claude's native PDF document understanding
+    const base64Data = buffer.toString("base64");
+    console.log(`[resume-text] PDF size: ${buffer.length} bytes`);
+
+    // Primary: Gemini inlineData PDF understanding
     try {
-      const client = getAnthropic();
-      const base64Data = buffer.toString("base64");
-      console.log(`[resume-text] PDF size: ${buffer.length} bytes, base64 length: ${base64Data.length}`);
-      const resp = await client.messages.create({
-        model: DEFAULT_MODEL,
-        max_tokens: 6000,
-        system:
-          "You are a document text extractor. Return the full plain text of the PDF, preserving section order and line breaks. No commentary.",
-        messages: [
-          {
-            role: "user",
-            content: [
-              {
-                type: "document",
-                source: {
-                  type: "base64",
-                  media_type: "application/pdf",
-                  data: base64Data,
-                },
-              },
-              {
-                type: "text",
-                text: "Extract the full plain text.",
-              },
-            ],
+      const client = getGemini();
+      const model = client.getGenerativeModel({ model: DEFAULT_MODEL });
+      const result = await model.generateContent([
+        {
+          inlineData: {
+            mimeType: "application/pdf",
+            data: base64Data,
           },
-        ],
-      });
-      const text = resp.content
-        .filter((b) => b.type === "text")
-        .map((b) => (b as { type: "text"; text: string }).text)
-        .join("\n")
-        .trim();
+        },
+        "Extract the full plain text of this document, preserving section order and line breaks. Output only the text, no commentary.",
+      ]);
+      const text = result.response.text().trim();
       if (text.length > 50) {
         return { rawText: text, sourceType: "pdf" };
       }
-      console.warn("[resume-text] Claude PDF extraction returned short text, falling back to pdf-parse");
+      console.warn("[resume-text] Gemini returned short text, falling back to pdf-parse");
     } catch (err) {
-      console.error("[resume-text] Claude PDF extraction failed, falling back to pdf-parse:", err);
+      console.error("[resume-text] Gemini PDF extraction failed, falling back to pdf-parse:", err);
     }
 
-    // Fallback: use pdf-parse to extract raw text
+    // Fallback: pdf-parse for direct text extraction
     try {
       // eslint-disable-next-line @typescript-eslint/no-require-imports
       const pdfParse = require("pdf-parse") as (buf: Buffer) => Promise<{ text: string }>;
       const result = await pdfParse(buffer);
       const rawText = result.text?.trim() ?? "";
       if (!rawText) throw new Error("pdf-parse returned empty text");
+      console.log(`[resume-text] pdf-parse extracted ${rawText.length} chars`);
       return { rawText, sourceType: "pdf" };
     } catch (err) {
       console.error("[resume-text] pdf-parse fallback failed:", err);
