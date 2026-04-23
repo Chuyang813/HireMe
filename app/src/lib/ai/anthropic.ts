@@ -4,7 +4,7 @@ export const DEFAULT_MODEL =
   process.env.ANTHROPIC_MODEL || "claude-sonnet-4-6";
 export const PROMPT_VERSION = "1.0";
 
-const AI_TIMEOUT_MS = 30_000;
+const AI_TIMEOUT_MS = 60_000;
 const RATE_LIMIT_MAX = 20;
 const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1_000;
 

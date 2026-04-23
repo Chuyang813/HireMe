@@ -1,3 +1,5 @@
+export const maxDuration = 60;
+
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { requireUser } from "@/lib/auth/current-user";
