@@ -29,47 +29,35 @@ export async function extractTextFromUpload(
   }
 
   if (isPdf) {
-    // Primary: use Claude's native PDF document understanding
+    // Primary: use Gemini's native PDF document understanding
     try {
       const client = getAnthropic();
       const base64Data = buffer.toString("base64");
       console.log(`[resume-text] PDF size: ${buffer.length} bytes, base64 length: ${base64Data.length}`);
-      const resp = await client.messages.create({
+      const genModel = client.getGenerativeModel({
         model: DEFAULT_MODEL,
-        max_tokens: 6000,
-        system:
+        systemInstruction:
           "You are a document text extractor. Return the full plain text of the PDF, preserving section order and line breaks. No commentary.",
-        messages: [
+      });
+      const resp = await genModel.generateContent({
+        contents: [
           {
             role: "user",
-            content: [
-              {
-                type: "document",
-                source: {
-                  type: "base64",
-                  media_type: "application/pdf",
-                  data: base64Data,
-                },
-              },
-              {
-                type: "text",
-                text: "Extract the full plain text.",
-              },
+            parts: [
+              { inlineData: { mimeType: "application/pdf", data: base64Data } },
+              { text: "Extract the full plain text." },
             ],
           },
         ],
+        generationConfig: { maxOutputTokens: 6000 },
       });
-      const text = resp.content
-        .filter((b) => b.type === "text")
-        .map((b) => (b as { type: "text"; text: string }).text)
-        .join("\n")
-        .trim();
+      const text = resp.response.text().trim();
       if (text.length > 50) {
         return { rawText: text, sourceType: "pdf" };
       }
-      console.warn("[resume-text] Claude PDF extraction returned short text, falling back to pdf-parse");
+      console.warn("[resume-text] Gemini PDF extraction returned short text, falling back to pdf-parse");
     } catch (err) {
-      console.error("[resume-text] Claude PDF extraction failed, falling back to pdf-parse:", err);
+      console.error("[resume-text] Gemini PDF extraction failed, falling back to pdf-parse:", err);
     }
 
     // Fallback: use pdf-parse to extract raw text

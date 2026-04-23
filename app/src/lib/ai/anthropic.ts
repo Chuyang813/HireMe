@@ -1,6 +1,6 @@
-import Anthropic from "@anthropic-ai/sdk";
+import { GoogleGenerativeAI, type Content } from "@google/generative-ai";
 
-export const DEFAULT_MODEL = process.env.ANTHROPIC_MODEL || "claude-sonnet-4-6";
+export const DEFAULT_MODEL = process.env.GEMINI_MODEL || "gemini-2.0-flash";
 export const PROMPT_VERSION = "1.0";
 
 const AI_TIMEOUT_MS = 30_000;
@@ -38,21 +38,21 @@ async function withRetry<T>(fn: () => Promise<T>): Promise<T> {
   }
 }
 
-let cached: Anthropic | null = null;
+let cached: GoogleGenerativeAI | null = null;
 
-export function getAnthropic(): Anthropic {
+export function getAnthropic(): GoogleGenerativeAI {
   if (cached) return cached;
-  const apiKey = process.env.ANTHROPIC_API_KEY;
+  const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
     throw new Error(
-      "ANTHROPIC_API_KEY is not set. Add it to your .env.local to enable AI features.",
+      "GEMINI_API_KEY is not set. Add it to your .env.local to enable AI features.",
     );
   }
-  cached = new Anthropic({ apiKey });
+  cached = new GoogleGenerativeAI(apiKey);
   return cached;
 }
 
-// Extract a JSON object from a Claude response string.
+// Extract a JSON object from a model response string.
 // Tolerant of ```json code fences and extra prose.
 export function extractJson<T = unknown>(text: string): T {
   const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/);
@@ -85,22 +85,18 @@ export async function claudeJson<T>({
 }): Promise<T> {
   if (userId) checkRateLimit(userId);
   const client = getAnthropic();
+  const genModel = client.getGenerativeModel({ model, systemInstruction: system });
+  const contents: Content[] = messages.map((m) => ({
+    role: m.role === "assistant" ? "model" : "user",
+    parts: [{ text: m.content }],
+  }));
   const resp = await withRetry(() =>
-    client.messages.create(
-      {
-        model,
-        max_tokens: maxTokens,
-        system,
-        messages: messages.map((m) => ({ role: m.role, content: m.content })),
-      },
-      { signal: AbortSignal.timeout(AI_TIMEOUT_MS) },
+    genModel.generateContent(
+      { contents, generationConfig: { maxOutputTokens: maxTokens } },
+      { timeout: AI_TIMEOUT_MS },
     ),
   );
-  const text = resp.content
-    .filter((b): b is Anthropic.TextBlock => b.type === "text")
-    .map((b) => b.text)
-    .join("\n");
-  return extractJson<T>(text);
+  return extractJson<T>(resp.response.text());
 }
 
 export async function claudeText({
@@ -118,20 +114,16 @@ export async function claudeText({
 }): Promise<string> {
   if (userId) checkRateLimit(userId);
   const client = getAnthropic();
+  const genModel = client.getGenerativeModel({ model, systemInstruction: system });
+  const contents: Content[] = messages.map((m) => ({
+    role: m.role === "assistant" ? "model" : "user",
+    parts: [{ text: m.content }],
+  }));
   const resp = await withRetry(() =>
-    client.messages.create(
-      {
-        model,
-        max_tokens: maxTokens,
-        system,
-        messages: messages.map((m) => ({ role: m.role, content: m.content })),
-      },
-      { signal: AbortSignal.timeout(AI_TIMEOUT_MS) },
+    genModel.generateContent(
+      { contents, generationConfig: { maxOutputTokens: maxTokens } },
+      { timeout: AI_TIMEOUT_MS },
     ),
   );
-  return resp.content
-    .filter((b): b is Anthropic.TextBlock => b.type === "text")
-    .map((b) => b.text)
-    .join("\n")
-    .trim();
+  return resp.response.text().trim();
 }

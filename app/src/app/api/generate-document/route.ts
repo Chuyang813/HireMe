@@ -197,23 +197,21 @@ export async function POST(req: NextRequest) {
   const readable = new ReadableStream({
     async start(controller) {
       try {
-        const stream = client.messages.stream(
+        const genModel = client.getGenerativeModel({
+          model: DEFAULT_MODEL,
+          systemInstruction: prompt.system,
+        });
+        const result = await genModel.generateContentStream(
           {
-            model: DEFAULT_MODEL,
-            max_tokens: 4096,
-            system: prompt.system,
-            messages: [{ role: "user", content: prompt.userMessage }],
+            contents: [{ role: "user", parts: [{ text: prompt.userMessage }] }],
+            generationConfig: { maxOutputTokens: 4096 },
           },
-          { signal: AbortSignal.timeout(AI_TIMEOUT_MS) },
+          { timeout: AI_TIMEOUT_MS },
         );
 
-        for await (const event of stream) {
-          if (
-            event.type === "content_block_delta" &&
-            event.delta.type === "text_delta"
-          ) {
-            controller.enqueue(encoder.encode(event.delta.text));
-          }
+        for await (const chunk of result.stream) {
+          const text = chunk.text();
+          if (text) controller.enqueue(encoder.encode(text));
         }
 
         await logTimelineEvent(supabase, {
