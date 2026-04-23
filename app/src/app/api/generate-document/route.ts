@@ -1,6 +1,6 @@
 import { type NextRequest } from "next/server";
 import { getOptionalUser } from "@/lib/auth/current-user";
-import { getGemini, DEFAULT_MODEL, PROMPT_VERSION } from "@/lib/ai/anthropic";
+import { getAnthropic, DEFAULT_MODEL, PROMPT_VERSION } from "@/lib/ai/anthropic";
 import { logTimelineEvent } from "@/lib/db/timeline";
 import type { DocumentType, ParsedJob, ParsedResume } from "@/lib/db/types";
 
@@ -192,19 +192,14 @@ export async function POST(req: NextRequest) {
   }
 
   // Verify API key is configured before starting the stream
-  let geminiClient;
+  let anthropicClient;
   try {
-    geminiClient = getGemini();
+    anthropicClient = getAnthropic();
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    console.error("[generate-document] Gemini init failed:", msg);
+    console.error("[generate-document] Anthropic init failed:", msg);
     return Response.json({ error: msg }, { status: 500 });
   }
-
-  const genModel = geminiClient.getGenerativeModel({
-    model: DEFAULT_MODEL,
-    systemInstruction: prompt.system,
-  });
 
   const encoder = new TextEncoder();
 
@@ -217,16 +212,20 @@ export async function POST(req: NextRequest) {
       }, AI_TIMEOUT_MS);
 
       try {
-        console.log(`[generate-document] Starting Gemini stream for ${documentType}`);
-        const streamResult = await genModel.generateContentStream({
-          contents: [{ role: "user", parts: [{ text: prompt.userMessage }] }],
-          generationConfig: { maxOutputTokens: 4096 },
+        console.log(`[generate-document] Starting Anthropic stream for ${documentType}`);
+        const stream = anthropicClient.messages.stream({
+          model: DEFAULT_MODEL,
+          max_tokens: 4096,
+          system: prompt.system,
+          messages: [{ role: "user", content: prompt.userMessage }],
         });
 
-        for await (const chunk of streamResult.stream) {
-          const chunkText = chunk.text();
-          if (chunkText) {
-            controller.enqueue(encoder.encode(chunkText));
+        for await (const event of stream) {
+          if (
+            event.type === "content_block_delta" &&
+            event.delta.type === "text_delta"
+          ) {
+            controller.enqueue(encoder.encode(event.delta.text));
           }
         }
 

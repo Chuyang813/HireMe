@@ -34,7 +34,12 @@ export async function uploadResumeAction(
     sourceType = extracted.sourceType;
   } catch (e) {
     console.error("[uploadResumeAction] File extraction error:", e);
-    return { error: "Failed to read the file. Please try a different format." };
+    return {
+      error:
+        e instanceof Error
+          ? e.message
+          : "Failed to read the file. Please try a different format.",
+    };
   }
 
   if (!rawText.trim()) {

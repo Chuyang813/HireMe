@@ -25,6 +25,12 @@ export async function analyzeJobAction(
     if (msg.includes("GEMINI_API_KEY") || msg.includes("ANTHROPIC_API_KEY")) {
       return { error: "AI service is not configured. Please contact support." };
     }
+    if (msg.includes("429") || msg.toLowerCase().includes("quota exceeded")) {
+      return {
+        error:
+          "AI provider quota exceeded for this API key. Please enable billing or use a key/project with available quota.",
+      };
+    }
     if (msg.includes("Rate limit")) {
       return { error: msg };
     }
