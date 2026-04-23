@@ -3,6 +3,7 @@ import { getTranslations } from "next-intl/server";
 import { requireUser } from "@/lib/auth/current-user";
 import { APPLICATION_STATUS_LABEL } from "@/lib/db/types";
 import type { JobApplication } from "@/lib/db/types";
+import { DeleteApplicationButton } from "@/components/DeleteApplicationButton";
 
 export const metadata = { title: "Applications" };
 
@@ -57,7 +58,7 @@ export default async function ApplicationsPage() {
         ) : (
           <ul className="flex flex-col gap-3">
             {applications.map((app) => (
-              <li key={app.id}>
+              <li key={app.id} className="relative">
                 <Link
                   href={`/applications/${app.id}`}
                   className="block rounded-md border border-border bg-white p-5 transition-colors hover:border-accent/50 shadow-sm"
@@ -85,6 +86,7 @@ export default async function ApplicationsPage() {
                       <span className="label-caps whitespace-nowrap rounded-md border border-border px-1.5 py-0.5">
                         {APPLICATION_STATUS_LABEL[app.current_status]}
                       </span>
+                      <DeleteApplicationButton applicationId={app.id} variant="icon" />
                     </div>
                   </div>
                   <p className="mt-2 text-xs text-muted-foreground">

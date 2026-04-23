@@ -109,6 +109,55 @@ export async function deleteResumeAction(formData: FormData) {
   revalidatePath("/resumes");
 }
 
+export type PreviewResult =
+  | { type: "pdf"; url: string }
+  | { type: "docx"; html: string }
+  | { type: "txt"; text: string }
+  | { error: string };
+
+export async function getResumePreviewAction(id: string): Promise<PreviewResult> {
+  const { supabase, user } = await requireUser();
+  const { data } = await supabase
+    .from("base_resumes")
+    .select("source_file_path, source_file_type, raw_text")
+    .eq("id", id)
+    .eq("user_id", user.id)
+    .single();
+
+  if (!data) return { error: "Resume not found." };
+
+  if (data.source_file_type === "txt" || !data.source_file_path) {
+    return { type: "txt", text: data.raw_text ?? "" };
+  }
+
+  const { data: signedData, error: signedError } = await supabase.storage
+    .from("resumes")
+    .createSignedUrl(data.source_file_path, 300);
+
+  if (signedError || !signedData?.signedUrl) {
+    return { error: "Could not generate preview link." };
+  }
+
+  if (data.source_file_type === "pdf") {
+    return { type: "pdf", url: signedData.signedUrl };
+  }
+
+  if (data.source_file_type === "docx") {
+    try {
+      const res = await supabase.storage.from("resumes").download(data.source_file_path);
+      if (res.error || !res.data) return { error: "Could not download file." };
+      const mammoth = await import("mammoth");
+      const arrayBuffer = await res.data.arrayBuffer();
+      const result = await mammoth.convertToHtml({ buffer: Buffer.from(arrayBuffer) });
+      return { type: "docx", html: result.value };
+    } catch {
+      return { error: "Could not render DOCX preview." };
+    }
+  }
+
+  return { error: "Unsupported file type." };
+}
+
 export async function setDefaultResumeAction(formData: FormData) {
   const { supabase, user } = await requireUser();
   const id = String(formData.get("id") || "");
