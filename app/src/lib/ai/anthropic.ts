@@ -1,7 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 
 export const DEFAULT_MODEL =
-  process.env.ANTHROPIC_MODEL || "claude-3-5-sonnet-latest";
+  process.env.ANTHROPIC_MODEL || "claude-sonnet-4-6";
 export const PROMPT_VERSION = "1.0";
 
 const AI_TIMEOUT_MS = 30_000;
