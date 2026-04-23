@@ -21,11 +21,15 @@ type ParsedJob = {
   application_url?: string;
   cover_letter_requested?: boolean;
   deadline?: string;
+  key_skills?: string[];   // top 5 must-have skills, ordered by importance
+  verdict?: string;        // ONE sentence: what makes this role distinctive or the bar to clear
 };
 
 Rules:
 - Only include information explicitly present in the posting.
 - Distinguish required vs desired skills when the posting separates them.
+- key_skills: pick the 5 most critical technical/domain skills from required_skills. Omit soft skills.
+- verdict: one sentence, max 15 words. State the defining requirement or standout trait of this role.
 - application_method must be "email" if the posting asks the user to email their application, otherwise "website" if a portal is referenced, else "unknown".
 - Output a single JSON object, no prose, no code fences.`;
 

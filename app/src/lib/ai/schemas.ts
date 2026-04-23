@@ -21,6 +21,8 @@ export const parsedJobSchema = z.object({
   application_url: z.string().optional(),
   cover_letter_requested: z.boolean().optional(),
   deadline: z.string().optional(),
+  key_skills: z.array(z.string()).optional(),
+  verdict: z.string().optional(),
 }) satisfies z.ZodType<ParsedJob>;
 
 export const assessmentAnalysisSchema = z.object({

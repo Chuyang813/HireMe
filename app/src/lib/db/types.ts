@@ -99,6 +99,9 @@ export interface ParsedJob {
   application_url?: string;
   cover_letter_requested?: boolean;
   deadline?: string;
+  // Concise analysis fields
+  key_skills?: string[];
+  verdict?: string;
 }
 
 export interface AssessmentAnalysis {
