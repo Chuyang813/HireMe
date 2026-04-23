@@ -38,8 +38,8 @@ export function NewApplicationForm() {
 
   function handleAnalyze(e: React.FormEvent) {
     e.preventDefault();
-    if (!rawJobText.trim()) {
-      setError(t("jobDescriptionRequired"));
+    if (!rawJobText.trim() && !jobUrl.trim()) {
+      setError("Paste the job description below, or provide a URL.");
       return;
     }
     if (jobUrl && !/^https?:\/\//i.test(jobUrl)) {
@@ -49,6 +49,7 @@ export function NewApplicationForm() {
     setError("");
     const fd = new FormData();
     fd.set("raw_job_text", rawJobText);
+    fd.set("job_url", jobUrl);
     startAnalyze(async () => {
       const result = await analyzeJobAction(undefined, fd);
       if (result?.error) {
@@ -210,10 +211,10 @@ export function NewApplicationForm() {
 
       <Field
         name="job_url"
-        label={t("jobUrl")}
+        label="Job URL (optional)"
         type="url"
         placeholder={t("jobUrlPlaceholder")}
-        hint={t("jobUrlHint")}
+        hint="Many job boards (LinkedIn, university portals) block AI access — paste the full description below instead."
         value={jobUrl}
         onChange={(e) => setJobUrl(e.target.value)}
       />
@@ -221,10 +222,12 @@ export function NewApplicationForm() {
       <TextareaField
         name="raw_job_text"
         label={t("jobDescription")}
-        required
+        required={!jobUrl.trim()}
         rows={16}
         placeholder={t("jobDescriptionPlaceholder")}
-        hint={t("jobDescriptionHint")}
+        hint={jobUrl.trim() && !rawJobText.trim()
+          ? "No description pasted — we'll try to parse from the URL, but this may fail for protected job boards."
+          : t("jobDescriptionHint")}
         className="min-h-72 font-mono text-xs"
         value={rawJobText}
         onChange={(e) => setRawJobText(e.target.value)}

@@ -162,6 +162,6 @@ export async function completeOnboardingAction(
     return { error: "Something went wrong. Please try again." };
   }
 
-  revalidatePath("/dashboard");
-  redirect("/dashboard");
+  revalidatePath("/resumes");
+  redirect("/resumes?welcome=1");
 }

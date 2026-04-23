@@ -29,6 +29,11 @@
   --font-serif: var(--font-playfair);
 }
 
+@keyframes progress {
+  from { width: 0%; }
+  to   { width: 95%; }
+}
+
 body {
   font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
   font-size: 0.9375rem;

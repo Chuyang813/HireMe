@@ -14,7 +14,37 @@ export async function analyzeJobAction(
   _prev: AnalyzeJobState,
   formData: FormData,
 ): Promise<AnalyzeJobState> {
-  const rawJobText = String(formData.get("raw_job_text") || "").trim();
+  let rawJobText = String(formData.get("raw_job_text") || "").trim();
+  const jobUrl = String(formData.get("job_url") || "").trim();
+
+  // If no description but URL given, try to fetch the page content.
+  if (!rawJobText && jobUrl) {
+    try {
+      const res = await fetch(jobUrl, {
+        headers: { "User-Agent": "Mozilla/5.0 (compatible; HireMe/1.0)" },
+        signal: AbortSignal.timeout(8000),
+      });
+      if (res.ok) {
+        const html = await res.text();
+        rawJobText = html
+          .replace(/<script[\s\S]*?<\/script>/gi, "")
+          .replace(/<style[\s\S]*?<\/style>/gi, "")
+          .replace(/<[^>]+>/g, " ")
+          .replace(/\s+/g, " ")
+          .trim()
+          .slice(0, 12000);
+      }
+    } catch {
+      // fetch failed — fall through to error below
+    }
+    if (!rawJobText) {
+      return {
+        error:
+          "Couldn't fetch that URL (job boards often block automated access). Please paste the job description directly.",
+      };
+    }
+  }
+
   if (!rawJobText) return { error: "Please paste the job description." };
   try {
     const parsed = await parseJobPosting(rawJobText);
