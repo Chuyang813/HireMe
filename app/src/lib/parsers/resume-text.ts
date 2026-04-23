@@ -69,25 +69,28 @@ export async function extractTextFromUpload(
         if (text.length > 50) {
           return { rawText: text, sourceType: "pdf" };
         }
-        console.warn("[resume-text] Anthropic returned short text, falling back to pdf-parse");
+        console.warn("[resume-text] Anthropic returned short text, falling back to unpdf");
       } catch (err) {
         console.error(
-          "[resume-text] Anthropic PDF extraction failed, falling back to pdf-parse:",
+          "[resume-text] Anthropic PDF extraction failed, falling back to unpdf:",
           err,
         );
       }
     } else {
-      console.warn("[resume-text] ANTHROPIC_API_KEY not set; using pdf-parse fallback only.");
+      console.warn("[resume-text] ANTHROPIC_API_KEY not set; using unpdf fallback only.");
     }
 
-    // Fallback: pdf-parse for direct text extraction
+    // Fallback: unpdf — serverless-friendly PDF text extraction (no native deps).
     try {
-      // pdf-parse v2 exports a PDFParse class (not a default function).
-      const { PDFParse } = await import("pdf-parse");
-      const parser = new PDFParse({ data: buffer });
-      const result = await parser.getText();
-      await parser.destroy();
-      const rawText = result.text?.trim() ?? "";
+      const { extractText, getDocumentProxy } = await import("unpdf");
+      const uint8 = new Uint8Array(
+        buffer.buffer,
+        buffer.byteOffset,
+        buffer.byteLength,
+      );
+      const pdf = await getDocumentProxy(uint8);
+      const { text } = await extractText(pdf, { mergePages: true });
+      const rawText = (Array.isArray(text) ? text.join("\n") : text)?.trim() ?? "";
       const normalized = rawText
         .replace(/--\s*\d+\s*of\s*\d+\s*--/gi, "")
         .trim();
@@ -96,10 +99,10 @@ export async function extractTextFromUpload(
           "Could not extract selectable text from this PDF. It may be a scanned/image PDF. Please upload DOCX or a text-based PDF.",
         );
       }
-      console.log(`[resume-text] pdf-parse extracted ${rawText.length} chars`);
+      console.log(`[resume-text] unpdf extracted ${rawText.length} chars`);
       return { rawText, sourceType: "pdf" };
     } catch (err) {
-      console.error("[resume-text] pdf-parse fallback failed:", err);
+      console.error("[resume-text] unpdf fallback failed:", err);
       throw new Error(
         "Could not extract text from this PDF. Try saving it as a DOCX or plain text file.",
       );
