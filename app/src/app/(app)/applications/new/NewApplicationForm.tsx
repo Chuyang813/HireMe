@@ -214,7 +214,6 @@ export function NewApplicationForm() {
         label="Job URL (optional)"
         type="url"
         placeholder={t("jobUrlPlaceholder")}
-        hint="Many job boards (LinkedIn, university portals) block AI access — paste the full description below instead."
         value={jobUrl}
         onChange={(e) => setJobUrl(e.target.value)}
       />
@@ -225,9 +224,7 @@ export function NewApplicationForm() {
         required={!jobUrl.trim()}
         rows={16}
         placeholder={t("jobDescriptionPlaceholder")}
-        hint={jobUrl.trim() && !rawJobText.trim()
-          ? "No description pasted — we'll try to parse from the URL, but this may fail for protected job boards."
-          : t("jobDescriptionHint")}
+        hint={t("jobDescriptionHint")}
         className="min-h-72 font-mono text-xs"
         value={rawJobText}
         onChange={(e) => setRawJobText(e.target.value)}

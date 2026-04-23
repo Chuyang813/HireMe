@@ -49,19 +49,39 @@ Absolute rules:
 - Use simple Markdown: # Name, contact line, ## Sections, - bullets.
 - Do not include any preamble or trailing commentary. Output only the resume.`;
 
-const COVER_LETTER_SYSTEM = `You are a cover letter writing assistant.
+const COVER_LETTER_SYSTEM = `You are a professional cover letter writing assistant.
 
-Given the candidate's parsed resume and a parsed job description, write a concise, role-specific cover letter of exactly 3 paragraphs, maximum 350 words, designed to fit on one page.
+Given the candidate's parsed resume and a parsed job description, write a complete, polished cover letter that a hiring manager would be impressed to receive.
+
+Structure (output as clean Markdown):
+
+[Candidate Name]
+[Email] | [Phone if available] | [Location if available]
+[Today's date]
+
+[Company Name]
+[Company City/Location if known]
+
+Dear Hiring Manager,
+
+**Opening paragraph** — A strong, specific hook: why this candidate is genuinely excited about this company and role. Reference something concrete about the company or the role that makes it distinctive. Not generic.
+
+**Body paragraph 1** — Most relevant experience: 1-2 specific achievements with numbers or tangible impact drawn directly from the resume. Show what the candidate has actually done that maps to the job requirements.
+
+**Body paragraph 2** — Skills alignment and fit: connect the candidate's specific skill set to the job's key requirements. Add one sentence about working style or cultural fit if supported by the resume.
+
+**Closing paragraph** — Confident, forward-looking close: express enthusiasm, invite next steps, thank the reader.
+
+Sincerely,
+[Candidate Full Name]
 
 Rules:
-- Exactly 3 short paragraphs — opening, evidence, close. No fourth paragraph.
-- Maximum 350 words total. Be concise and impactful; every sentence must earn its place.
-- Open with why the candidate is interested in this specific company/role (not a generic opener).
-- Second paragraph: 2 concrete examples from the candidate's actual experience that align with the posting.
-- Third paragraph: one sentence on fit/working style + one sentence close.
-- Never fabricate details, metrics, employers, or accomplishments not present in the resume.
-- Warm but professional. No clichés like "I'm excited to apply for this opportunity".
-- Output plain text only, no subject line, no markdown, no signature block beyond "Sincerely, {Name}".`;
+- 4-5 paragraphs, 400-500 words total. Complete and professional — not a stub.
+- Never fabricate employers, titles, degrees, metrics, or accomplishments not in the resume.
+- Reference actual details from both the resume and job description — no generic filler.
+- Professional but warm tone. No clichés like "I'm writing to express my interest" or "I'm excited to apply".
+- Use clean Markdown: blank lines between each section block, bold for paragraph labels removed in final output.
+- Output the full letter only — no commentary, no subject line, no notes.`;
 
 const EMAIL_SYSTEM = `You are an email drafting assistant for job applications submitted by email.
 
@@ -103,11 +123,11 @@ function buildPrompt(
   if (documentType === "cover_letter") {
     return {
       system: COVER_LETTER_SYSTEM,
-      maxTokens: 600,
+      maxTokens: 1024,
       userMessage: [
         `Candidate parsed resume (JSON):\n${resumeJson}`,
         `Parsed job posting (JSON):\n${jobJson}`,
-        "Write the cover letter. Maximum 350 words.",
+        "Write the complete cover letter.",
       ].join("\n\n"),
     };
   }
