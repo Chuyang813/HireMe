@@ -150,3 +150,17 @@ export async function updateNotesAction(formData: FormData) {
 
   revalidatePath(`/applications/${id}`);
 }
+
+export async function deleteApplicationAction(formData: FormData): Promise<void> {
+  const { supabase, user } = await requireUser();
+  const id = String(formData.get("id") || "");
+  if (!id) return;
+
+  await supabase
+    .from("job_applications")
+    .delete()
+    .eq("id", id)
+    .eq("user_id", user.id);
+
+  redirect("/applications");
+}

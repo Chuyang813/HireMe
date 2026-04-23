@@ -13,6 +13,7 @@ import type {
 import { APPLICATION_STATUS_LABEL } from "@/lib/db/types";
 import { StatusSelect } from "@/components/StatusSelect";
 import { WorkspaceTabs } from "./WorkspaceTabs";
+import { DeleteApplicationButton } from "@/components/DeleteApplicationButton";
 
 export async function generateMetadata({
   params,
@@ -230,64 +231,63 @@ export default async function ApplicationPage({
           </p>
         </div>
 
-        <StatusSelect
-          applicationId={application.id}
-          current={application.current_status}
-        />
+        <div className="flex items-center gap-2">
+          <StatusSelect
+            applicationId={application.id}
+            current={application.current_status}
+          />
+          <DeleteApplicationButton applicationId={application.id} variant="text" />
+        </div>
       </div>
 
       {job && (
         <div className="mt-8 rounded-md border border-border bg-muted/40 p-5 shadow-sm">
-          <h2 className="label-caps mb-3">Job analysis</h2>
-          <div className="grid gap-5 sm:grid-cols-2">
+          <h2 className="label-caps mb-4">Job analysis</h2>
+          <div className="flex flex-col gap-4">
             {job.role_summary ? (
-              <div className="sm:col-span-2">
-                <p className="label-caps mb-1.5 text-muted-foreground">Summary</p>
-                <p className="text-sm leading-relaxed">{job.role_summary}</p>
-              </div>
+              <p className="text-sm leading-relaxed text-muted-foreground">{job.role_summary}</p>
             ) : null}
-            {job.required_skills?.length ? (
-              <div>
-                <p className="label-caps mb-1.5 text-muted-foreground">
-                  Required skills
-                </p>
-                <div className="flex flex-wrap gap-1.5">
-                  {job.required_skills.map((s) => (
-                    <span
-                      key={s}
-                      className="rounded-md border border-border px-1.5 py-0.5 text-xs bg-white shadow-sm"
-                    >
-                      {s}
-                    </span>
-                  ))}
+            <div className="flex flex-wrap gap-4">
+              {job.required_skills?.length ? (
+                <div className="flex-1 min-w-[200px]">
+                  <p className="label-caps mb-2 text-muted-foreground">Key skills</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {job.required_skills.slice(0, 10).map((s) => (
+                      <span
+                        key={s}
+                        className="rounded-full border border-green-200 bg-green-50 px-2.5 py-0.5 text-xs font-medium text-green-800"
+                      >
+                        {s}
+                      </span>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            ) : null}
-            {job.desired_skills?.length ? (
-              <div>
-                <p className="label-caps mb-1.5 text-muted-foreground">
-                  Desired skills
-                </p>
-                <div className="flex flex-wrap gap-1.5">
-                  {job.desired_skills.map((s) => (
-                    <span
-                      key={s}
-                      className="rounded-md border border-border bg-muted px-1.5 py-0.5 text-xs"
-                    >
-                      {s}
-                    </span>
-                  ))}
+              ) : null}
+              {job.desired_skills?.length ? (
+                <div className="flex-1 min-w-[200px]">
+                  <p className="label-caps mb-2 text-muted-foreground">Nice to have</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {job.desired_skills.slice(0, 8).map((s) => (
+                      <span
+                        key={s}
+                        className="rounded-full border border-amber-200 bg-amber-50 px-2.5 py-0.5 text-xs font-medium text-amber-800"
+                      >
+                        {s}
+                      </span>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            ) : null}
+              ) : null}
+            </div>
             {job.responsibilities?.length ? (
-              <div className="sm:col-span-2">
-                <p className="label-caps mb-1.5 text-muted-foreground">
-                  Key responsibilities
-                </p>
-                <ul className="list-disc pl-4 text-sm leading-relaxed text-muted-foreground space-y-0.5">
-                  {job.responsibilities.slice(0, 6).map((r, i) => (
-                    <li key={i}>{r}</li>
+              <div>
+                <p className="label-caps mb-2 text-muted-foreground">Highlights</p>
+                <ul className="space-y-1">
+                  {job.responsibilities.slice(0, 4).map((r, i) => (
+                    <li key={i} className="flex items-start gap-2 text-sm text-muted-foreground">
+                      <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-muted-foreground/50" />
+                      {r}
+                    </li>
                   ))}
                 </ul>
               </div>

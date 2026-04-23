@@ -417,8 +417,9 @@ function DocumentPanel({
         const { done, value } = await reader.read();
         if (done) break;
         accumulated += decoder.decode(value, { stream: true });
-        setContent(accumulated);
       }
+      // Set content once after full generation — no incremental flicker
+      setContent(accumulated);
     } catch (e) {
       setGenerateError(e instanceof Error ? e.message : "Generation failed.");
     } finally {
@@ -556,7 +557,12 @@ function DocumentPanel({
             onClick={handleGenerate}
             disabled={generating || !hasResume}
           >
-            {generating ? "Generating…" : "Generate"}
+            {generating ? (
+              <span className="flex items-center gap-1.5">
+                <span className="h-3.5 w-3.5 animate-spin rounded-full border border-current border-t-transparent" />
+                Generating…
+              </span>
+            ) : "Generate"}
           </Button>
           {docId && (
             <HistoryDropdown
@@ -603,9 +609,11 @@ function DocumentPanel({
       )}
 
       {generating && (
-        <div className="rounded-md border border-border bg-white p-6 min-h-[28rem] shadow-sm">
-          <p className="text-sm text-muted-foreground animate-pulse">Generating…</p>
-          {content && <MarkdownViewer content={content} />}
+        <div className="flex min-h-[28rem] items-center justify-center rounded-md border border-border bg-white shadow-sm">
+          <div className="flex flex-col items-center gap-3">
+            <div className="h-8 w-8 animate-spin rounded-full border-2 border-border border-t-accent" />
+            <p className="text-sm text-muted-foreground">Generating document…</p>
+          </div>
         </div>
       )}
       {!generating && <MarkdownViewer content={content} />}

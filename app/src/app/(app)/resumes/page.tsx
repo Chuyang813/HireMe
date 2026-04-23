@@ -2,6 +2,7 @@ import { requireUser } from "@/lib/auth/current-user";
 import { UploadForm } from "./UploadForm";
 import { deleteResumeAction, setDefaultResumeAction } from "./actions";
 import type { BaseResume } from "@/lib/db/types";
+import { ResumePreviewButton } from "@/components/ResumePreviewButton";
 
 export const metadata = { title: "Resumes" };
 
@@ -58,7 +59,8 @@ export default async function ResumesPage() {
                         uploaded {new Date(r.created_at).toLocaleDateString()}
                       </p>
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex flex-wrap gap-2">
+                      <ResumePreviewButton resumeId={r.id} title={r.title} />
                       {!r.is_default ? (
                         <form action={setDefaultResumeAction}>
                           <input type="hidden" name="id" value={r.id} />
