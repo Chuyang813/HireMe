@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/Button";
 import { Field } from "@/components/ui/Field";
@@ -91,15 +91,46 @@ function Step1({ onSuccess }: { onSuccess: () => void }) {
 }
 
 // ---------------------------------------------------------------------------
-// Step 2 — Resume upload
+// Step 2 — Resume upload (no skip allowed)
 // ---------------------------------------------------------------------------
 
-function Step2({ onSuccess, onSkip }: { onSuccess: () => void; onSkip: () => void }) {
+const UPLOAD_MESSAGES = [
+  "Uploading your resume…",
+  "Reading document…",
+  "AI is analyzing your experience…",
+  "Building your profile…",
+];
+const UPLOAD_TIMEOUT_MS = 60_000;
+
+function Step2({ onSuccess }: { onSuccess: () => void }) {
   const t = useTranslations("Onboarding");
   const [state, action, pending] = useActionState<UploadOnboardingResumeState, FormData>(
     uploadOnboardingResumeAction,
     undefined,
   );
+  const [hasFile, setHasFile] = useState(false);
+  const [msgIndex, setMsgIndex] = useState(0);
+  const [timedOut, setTimedOut] = useState(false);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (pending) {
+      setMsgIndex(0);
+      setTimedOut(false);
+      intervalRef.current = setInterval(() => {
+        setMsgIndex((i) => (i + 1 < UPLOAD_MESSAGES.length ? i + 1 : i));
+      }, 4000);
+      timeoutRef.current = setTimeout(() => setTimedOut(true), UPLOAD_TIMEOUT_MS);
+    } else {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    }
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    };
+  }, [pending]);
 
   if (state?.ok) {
     onSuccess();
@@ -115,24 +146,40 @@ function Step2({ onSuccess, onSkip }: { onSuccess: () => void; onSkip: () => voi
           id="onboarding-file"
           name="file"
           type="file"
+          required
           accept=".pdf,.docx,.txt,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain"
           className="h-10 rounded-sm border border-border bg-background px-3 text-sm file:mr-3 file:rounded-sm file:border-0 file:bg-muted file:px-3 file:py-1.5 file:text-sm"
+          onChange={(e) => setHasFile(!!e.target.files?.length)}
         />
         <span className="text-xs text-muted-foreground">{t("resumeFileHint")}</span>
       </label>
+
       {state?.error && <p className="text-sm text-danger">{state.error}</p>}
-      <div className="flex items-center justify-between">
-        <button
-          type="button"
-          onClick={onSkip}
-          className="text-sm text-muted-foreground underline underline-offset-2 hover:text-foreground"
-        >
-          {t("skipForNow")}
-        </button>
-        <Button type="submit" disabled={pending}>
-          {pending ? t("uploading") : t("uploadAndContinue")}
-        </Button>
-      </div>
+
+      {pending && (
+        <div className="flex flex-col gap-2 rounded-sm border border-border bg-muted/40 px-4 py-3">
+          <div className="flex items-center gap-2.5">
+            <div className="h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-border border-t-accent" />
+            <span className="text-sm text-foreground">{UPLOAD_MESSAGES[msgIndex]}</span>
+          </div>
+          {timedOut && (
+            <p className="text-xs text-muted-foreground pl-6.5">
+              This is taking longer than usual — still working, please wait…
+            </p>
+          )}
+          <div className="mt-1 h-1 w-full overflow-hidden rounded-full bg-border">
+            <div className="h-full animate-[progress_16s_linear_forwards] rounded-full bg-accent" />
+          </div>
+        </div>
+      )}
+
+      {!pending && (
+        <div className="flex justify-end">
+          <Button type="submit" disabled={!hasFile}>
+            {t("uploadAndContinue")}
+          </Button>
+        </div>
+      )}
     </form>
   );
 }
@@ -210,12 +257,7 @@ export default function OnboardingPage() {
 
       <div className="mt-8 rounded-sm border border-border bg-background p-6">
         {step === 1 && <Step1 onSuccess={() => setStep(2)} />}
-        {step === 2 && (
-          <Step2
-            onSuccess={() => setStep(3)}
-            onSkip={() => setStep(3)}
-          />
-        )}
+        {step === 2 && <Step2 onSuccess={() => setStep(3)} />}
         {step === 3 && <Step3 />}
       </div>
 
