@@ -57,8 +57,8 @@ export async function uploadResumeAction(
   let parsed = null;
   try {
     parsed = await parseResume(rawText);
-  } catch {
-    // parse is best-effort; keep raw text even if structuring fails.
+  } catch (e) {
+    console.error("[uploadResumeAction] parseResume failed:", e);
   }
 
   if (makeDefault) {

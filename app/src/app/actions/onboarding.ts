@@ -97,8 +97,8 @@ export async function uploadOnboardingResumeAction(
   let parsed = null;
   try {
     parsed = await parseResume(rawText);
-  } catch {
-    // best-effort parse
+  } catch (e) {
+    console.error("[uploadOnboardingResumeAction] parseResume failed:", e);
   }
 
   // set as default, clearing any existing default
