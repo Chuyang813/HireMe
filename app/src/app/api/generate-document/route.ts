@@ -1,6 +1,6 @@
 import { type NextRequest } from "next/server";
 import { getOptionalUser } from "@/lib/auth/current-user";
-import { getAnthropic, DEFAULT_MODEL, PROMPT_VERSION } from "@/lib/ai/anthropic";
+import { getGemini, DEFAULT_MODEL, PROMPT_VERSION } from "@/lib/ai/anthropic";
 import { logTimelineEvent } from "@/lib/db/timeline";
 import type { DocumentType, ParsedJob, ParsedResume } from "@/lib/db/types";
 
@@ -191,29 +191,23 @@ export async function POST(req: NextRequest) {
     return Response.json({ error: `Unsupported document type: ${documentType}` }, { status: 400 });
   }
 
-  const client = getAnthropic();
+  const genModel = getGemini().getGenerativeModel({
+    model: DEFAULT_MODEL,
+    systemInstruction: prompt.system,
+    generationConfig: { maxOutputTokens: 4096 },
+  });
   const encoder = new TextEncoder();
 
   const readable = new ReadableStream({
     async start(controller) {
       try {
-        const stream = client.messages.stream(
-          {
-            model: DEFAULT_MODEL,
-            max_tokens: 4096,
-            system: prompt.system,
-            messages: [{ role: "user", content: prompt.userMessage }],
-          },
-          { signal: AbortSignal.timeout(AI_TIMEOUT_MS) },
-        );
+        const streamResult = await genModel.generateContentStream({
+          contents: [{ role: "user", parts: [{ text: prompt.userMessage }] }],
+        });
 
-        for await (const event of stream) {
-          if (
-            event.type === "content_block_delta" &&
-            event.delta.type === "text_delta"
-          ) {
-            controller.enqueue(encoder.encode(event.delta.text));
-          }
+        for await (const chunk of streamResult.stream) {
+          const text = chunk.text();
+          if (text) controller.enqueue(encoder.encode(text));
         }
 
         await logTimelineEvent(supabase, {
