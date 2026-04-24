@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 import { scoreResumeAction } from "@/app/actions/ai";
 import type { ParsedJob } from "@/lib/db/types";
 
 function scoreColor(score: number) {
-  if (score >= 70) return { ring: "#16a34a", bg: "bg-green-50", text: "text-green-700" };
-  if (score >= 50) return { ring: "#d97706", bg: "bg-yellow-50", text: "text-yellow-700" };
-  return { ring: "#dc2626", bg: "bg-red-50", text: "text-red-700" };
+  if (score >= 70) return "#16a34a";
+  if (score >= 50) return "#d97706";
+  return "#dc2626";
 }
 
 export function JobAnalysisCard({
@@ -23,7 +23,7 @@ export function JobAnalysisCard({
   const [gaps, setGaps] = useState<string[]>([]);
   const [scoring, startScore] = useTransition();
 
-  useEffect(() => {
+  function runScore() {
     if (!hasResume) return;
     const fd = new FormData();
     fd.set("application_id", applicationId);
@@ -34,39 +34,35 @@ export function JobAnalysisCard({
         setGaps(res.result.gaps.slice(0, 3));
       }
     });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [applicationId, hasResume]);
+  }
 
   const keySkills = (job.key_skills?.length ? job.key_skills : job.required_skills ?? []).slice(0, 5);
   const verdict = job.verdict ?? job.role_summary ?? null;
-  const colors = score !== null ? scoreColor(score) : null;
+  const color = score !== null ? scoreColor(score) : null;
 
   return (
     <div className="mt-8 flex items-start gap-5 rounded-md border border-border bg-muted/40 p-5 shadow-sm">
-      {/* Score circle */}
       <div className="shrink-0 flex flex-col items-center gap-1">
         {scoring ? (
           <div className="flex h-16 w-16 items-center justify-center rounded-full border-2 border-border">
             <div className="h-5 w-5 animate-spin rounded-full border-2 border-border border-t-accent" />
           </div>
-        ) : score !== null && colors ? (
+        ) : score !== null && color ? (
           <div
             className="flex h-16 w-16 items-center justify-center rounded-full border-2 text-xl font-bold"
-            style={{ borderColor: colors.ring, color: colors.ring }}
+            style={{ borderColor: color, color }}
           >
             {score}
           </div>
         ) : (
           <div className="flex h-16 w-16 items-center justify-center rounded-full border-2 border-dashed border-border text-sm text-muted-foreground">
-            {hasResume ? "…" : "–"}
+            --
           </div>
         )}
         <span className="text-[10px] text-muted-foreground">match</span>
       </div>
 
-      {/* Skills + verdict */}
-      <div className="flex flex-col gap-3 min-w-0">
-        {/* Matched skills */}
+      <div className="flex min-w-0 flex-col gap-3">
         {keySkills.length > 0 && (
           <div className="flex flex-wrap gap-1.5">
             {keySkills.map((s) => (
@@ -80,7 +76,6 @@ export function JobAnalysisCard({
           </div>
         )}
 
-        {/* Gap skills */}
         {gaps.length > 0 && (
           <div className="flex flex-wrap gap-1.5">
             {gaps.map((g) => (
@@ -94,9 +89,19 @@ export function JobAnalysisCard({
           </div>
         )}
 
-        {/* Verdict */}
         {verdict && (
           <p className="text-xs text-muted-foreground leading-relaxed">{verdict}</p>
+        )}
+
+        {hasResume && score === null && (
+          <button
+            type="button"
+            onClick={runScore}
+            disabled={scoring}
+            className="w-fit rounded-sm border border-border px-2.5 py-1 text-xs text-muted-foreground hover:bg-background hover:text-foreground disabled:opacity-50"
+          >
+            Score match
+          </button>
         )}
       </div>
     </div>

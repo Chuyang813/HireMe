@@ -1,4 +1,4 @@
-import { claudeJson } from "./anthropic";
+import { aiJson } from "./provider";
 import type { ParsedResume } from "@/lib/db/types";
 
 const SYSTEM = `You are a resume parsing assistant.
@@ -23,7 +23,7 @@ Rules:
 - Output a single JSON object, no prose, no code fences.`;
 
 export async function parseResume(rawText: string): Promise<ParsedResume> {
-  return claudeJson<ParsedResume>({
+  return aiJson<ParsedResume>({
     system: SYSTEM,
     messages: [
       {

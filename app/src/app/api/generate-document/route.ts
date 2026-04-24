@@ -1,11 +1,11 @@
 import { type NextRequest } from "next/server";
 import { getOptionalUser } from "@/lib/auth/current-user";
-import { getAnthropic, DEFAULT_MODEL, PROMPT_VERSION } from "@/lib/ai/anthropic";
+import { aiText, AI_PROVIDER, DEFAULT_MODEL, PROMPT_VERSION } from "@/lib/ai/provider";
 import { logTimelineEvent } from "@/lib/db/timeline";
 import type { DocumentType, ParsedJob, ParsedResume } from "@/lib/db/types";
 
-const AI_TIMEOUT_MS = 30_000;
-const AI_AUDIT_NOTE = `model=${DEFAULT_MODEL} prompt_version=${PROMPT_VERSION}`;
+const AI_TIMEOUT_MS = 65_000;
+const AI_AUDIT_NOTE = `provider=${AI_PROVIDER} model=${DEFAULT_MODEL} prompt_version=${PROMPT_VERSION}`;
 
 // ---------------------------------------------------------------------------
 // Per-user rate limiter: max 10 streaming requests per user per minute
@@ -215,16 +215,6 @@ export async function POST(req: NextRequest) {
     return Response.json({ error: `Unsupported document type: ${documentType}` }, { status: 400 });
   }
 
-  // Verify API key is configured before starting the stream
-  let anthropicClient;
-  try {
-    anthropicClient = getAnthropic();
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    console.error("[generate-document] Anthropic init failed:", msg);
-    return Response.json({ error: msg }, { status: 500 });
-  }
-
   const encoder = new TextEncoder();
 
   const readable = new ReadableStream({
@@ -236,22 +226,14 @@ export async function POST(req: NextRequest) {
       }, AI_TIMEOUT_MS);
 
       try {
-        console.log(`[generate-document] Starting Anthropic stream for ${documentType}`);
-        const stream = anthropicClient.messages.stream({
-          model: DEFAULT_MODEL,
-          max_tokens: prompt.maxTokens,
+        console.log(`[generate-document] Starting ${AI_PROVIDER} generation for ${documentType}`);
+        const content = await aiText({
           system: prompt.system,
           messages: [{ role: "user", content: prompt.userMessage }],
+          maxTokens: prompt.maxTokens,
         });
 
-        for await (const event of stream) {
-          if (
-            event.type === "content_block_delta" &&
-            event.delta.type === "text_delta"
-          ) {
-            controller.enqueue(encoder.encode(event.delta.text));
-          }
-        }
+        controller.enqueue(encoder.encode(content));
 
         clearTimeout(timer);
 

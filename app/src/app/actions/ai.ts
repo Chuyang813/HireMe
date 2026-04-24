@@ -9,7 +9,7 @@ import { analyzeAssessment } from "@/lib/ai/assessment";
 import { generateInterviewPrep } from "@/lib/ai/interview-prep";
 import { extractTextFromUpload } from "@/lib/parsers/resume-text";
 import { logTimelineEvent } from "@/lib/db/timeline";
-import { claudeJson, DEFAULT_MODEL, PROMPT_VERSION } from "@/lib/ai/anthropic";
+import { aiJson, AI_PROVIDER, DEFAULT_MODEL, PROMPT_VERSION } from "@/lib/ai/provider";
 import { resumeScoreSchema } from "@/lib/ai/schemas";
 import type {
   AssessmentAnalysis,
@@ -20,7 +20,7 @@ import type {
   ResumeScore,
 } from "@/lib/db/types";
 
-const AI_AUDIT_NOTE = `model=${DEFAULT_MODEL} prompt_version=${PROMPT_VERSION}`;
+const AI_AUDIT_NOTE = `provider=${AI_PROVIDER} model=${DEFAULT_MODEL} prompt_version=${PROMPT_VERSION}`;
 
 // ---------------------------------------------------------------------------
 // Generate document (non-streaming fallback — kept for types; streaming is via
@@ -342,7 +342,7 @@ Return ONLY valid JSON with this exact shape:
 
   let result: ResumeScore;
   try {
-    const raw = await claudeJson<ResumeScore>({
+    const raw = await aiJson<ResumeScore>({
       system,
       messages: [
         {

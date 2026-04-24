@@ -52,7 +52,7 @@ export async function analyzeJobAction(
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     console.error("[analyzeJobAction] parseJobPosting failed:", msg, e);
-    if (msg.includes("ANTHROPIC_API_KEY")) {
+    if (msg.includes("GEMINI_API_KEY")) {
       return { error: "AI service is not configured. Please contact support." };
     }
     if (msg.includes("429") || msg.toLowerCase().includes("quota exceeded")) {

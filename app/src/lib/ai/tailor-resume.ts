@@ -1,4 +1,4 @@
-import { claudeText } from "./anthropic";
+import { aiText } from "./provider";
 import type { ParsedJob, ParsedResume } from "@/lib/db/types";
 
 const SYSTEM = `You are a resume tailoring assistant.
@@ -22,7 +22,7 @@ export async function tailorResume({
   job: ParsedJob;
   extraInstructions?: string;
 }): Promise<string> {
-  return claudeText({
+  return aiText({
     system: SYSTEM,
     messages: [
       {

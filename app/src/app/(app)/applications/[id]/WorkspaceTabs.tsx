@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, useEffect } from "react";
+import { useState, useTransition } from "react";
 import {
   saveDocumentAction,
   analyzeAssessmentAction,
@@ -127,7 +127,6 @@ async function exportDOCX(content: string, filename: string) {
     BorderStyle,
   } = await import("docx");
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const paragraphs: InstanceType<typeof Paragraph>[] = [];
 
   for (const raw of content.split("\n")) {
@@ -999,11 +998,9 @@ function ScoreCard({ result }: { result: ResumeScore }) {
 function ScorePanel({
   applicationId,
   hasResume,
-  autoFetch,
 }: {
   applicationId: string;
   hasResume: boolean;
-  autoFetch?: boolean;
 }) {
   const [scoreResult, setScoreResult] = useState<ResumeScore | null>(null);
   const [error, setError] = useState("");
@@ -1022,13 +1019,6 @@ function ScorePanel({
       }
     });
   }
-
-  useEffect(() => {
-    if (autoFetch && hasResume && !scoreResult) {
-      runScore();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [autoFetch, hasResume]);
 
   return (
     <div className="mt-2">
@@ -1121,7 +1111,7 @@ export function WorkspaceTabs({
               <p className="text-xs text-muted-foreground mb-3">
                 Compare your base resume against this job description.
               </p>
-              <ScorePanel applicationId={applicationId} hasResume={hasResume} autoFetch />
+              <ScorePanel applicationId={applicationId} hasResume={hasResume} />
             </div>
           </>
         )}

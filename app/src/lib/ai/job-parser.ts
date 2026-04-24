@@ -1,4 +1,4 @@
-import { claudeJson } from "./anthropic";
+import { aiJson } from "./provider";
 import { parsedJobSchema } from "./schemas";
 import type { ParsedJob } from "@/lib/db/types";
 
@@ -34,7 +34,7 @@ Rules:
 - Output a single JSON object, no prose, no code fences.`;
 
 export async function parseJobPosting(rawText: string): Promise<ParsedJob> {
-  const raw = await claudeJson<ParsedJob>({
+  const raw = await aiJson<ParsedJob>({
     system: SYSTEM,
     messages: [
       {

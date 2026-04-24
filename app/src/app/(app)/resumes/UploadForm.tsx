@@ -27,8 +27,10 @@ export function UploadForm() {
 
   useEffect(() => {
     if (pending) {
-      setMsgIndex(0);
-      setTimedOut(false);
+      queueMicrotask(() => {
+        setMsgIndex(0);
+        setTimedOut(false);
+      });
 
       intervalRef.current = setInterval(() => {
         setMsgIndex((i) => (i + 1 < LOADING_MESSAGES.length ? i + 1 : i));

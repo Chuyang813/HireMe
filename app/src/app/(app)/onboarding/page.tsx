@@ -116,8 +116,10 @@ function Step2({ onSuccess }: { onSuccess: () => void }) {
 
   useEffect(() => {
     if (pending) {
-      setMsgIndex(0);
-      setTimedOut(false);
+      queueMicrotask(() => {
+        setMsgIndex(0);
+        setTimedOut(false);
+      });
       intervalRef.current = setInterval(() => {
         setMsgIndex((i) => (i + 1 < UPLOAD_MESSAGES.length ? i + 1 : i));
       }, 4000);

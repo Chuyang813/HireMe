@@ -1,5 +1,5 @@
 import mammoth from "mammoth";
-import { getAnthropic, DEFAULT_MODEL } from "@/lib/ai/anthropic";
+import { aiExtractPdfText } from "@/lib/ai/provider";
 
 export type ExtractedResume = {
   rawText: string;
@@ -29,55 +29,25 @@ export async function extractTextFromUpload(
   }
 
   if (isPdf) {
-    const base64Data = buffer.toString("base64");
     console.log(`[resume-text] PDF size: ${buffer.length} bytes`);
-    const hasAnthropicKey = Boolean(process.env.ANTHROPIC_API_KEY);
+    const hasGeminiKey = Boolean(process.env.GEMINI_API_KEY);
 
-    // Primary: Anthropic PDF understanding
-    if (hasAnthropicKey) {
+    // Primary: Gemini PDF understanding
+    if (hasGeminiKey) {
       try {
-        const client = getAnthropic();
-        const response = await client.messages.create({
-          model: DEFAULT_MODEL,
-          max_tokens: 4096,
-          messages: [
-            {
-              role: "user",
-              content: [
-                {
-                  type: "document",
-                  source: {
-                    type: "base64",
-                    media_type: "application/pdf",
-                    data: base64Data,
-                  },
-                },
-                {
-                  type: "text",
-                  text:
-                    "Extract the full plain text of this document, preserving section order and line breaks. Output only the text, no commentary.",
-                },
-              ],
-            },
-          ],
-        });
-        const text = response.content
-          .filter((block) => block.type === "text")
-          .map((block) => block.text)
-          .join("\n")
-          .trim();
+        const text = (await aiExtractPdfText(buffer)).trim();
         if (text.length > 50) {
           return { rawText: text, sourceType: "pdf" };
         }
-        console.warn("[resume-text] Anthropic returned short text, falling back to unpdf");
+        console.warn("[resume-text] Gemini returned short text, falling back to unpdf");
       } catch (err) {
         console.error(
-          "[resume-text] Anthropic PDF extraction failed, falling back to unpdf:",
+          "[resume-text] Gemini PDF extraction failed, falling back to unpdf:",
           err,
         );
       }
     } else {
-      console.warn("[resume-text] ANTHROPIC_API_KEY not set; using unpdf fallback only.");
+      console.warn("[resume-text] GEMINI_API_KEY not set; using unpdf fallback only.");
     }
 
     // Fallback: unpdf — serverless-friendly PDF text extraction (no native deps).

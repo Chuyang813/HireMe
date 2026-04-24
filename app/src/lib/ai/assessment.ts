@@ -1,4 +1,4 @@
-import { claudeJson } from "./anthropic";
+import { aiJson } from "./provider";
 import { assessmentAnalysisSchema } from "./schemas";
 import type { AssessmentAnalysis, ParsedJob } from "@/lib/db/types";
 
@@ -27,7 +27,7 @@ export async function analyzeAssessment({
   assessmentText: string;
   job?: ParsedJob | null;
 }): Promise<AssessmentAnalysis> {
-  const raw = await claudeJson<AssessmentAnalysis>({
+  const raw = await aiJson<AssessmentAnalysis>({
     system: SYSTEM,
     messages: [
       {

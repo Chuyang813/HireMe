@@ -185,9 +185,11 @@ export default async function ApplicationPage({
 
   // Show reminder banner if status is "saved" and created > 1 day ago
   const oneDayMs = 24 * 60 * 60 * 1000;
+  const staleCutoff = new Date();
+  staleCutoff.setTime(staleCutoff.getTime() - oneDayMs);
   const isStaleSaved =
     application.current_status === "saved" &&
-    Date.now() - new Date(application.created_at).getTime() > oneDayMs;
+    new Date(application.created_at) < staleCutoff;
 
   return (
     <div className="mx-auto w-full max-w-6xl px-6 py-12">

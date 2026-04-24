@@ -1,4 +1,4 @@
-import { claudeJson } from "./anthropic";
+import { aiJson } from "./provider";
 import type { ParsedJob, ParsedResume } from "@/lib/db/types";
 
 const SYSTEM = `You are an email drafting assistant for job applications submitted by email.
@@ -29,7 +29,7 @@ export async function generateEmailDraft({
   resume: ParsedResume;
   job: ParsedJob;
 }): Promise<EmailDraft> {
-  return claudeJson<EmailDraft>({
+  return aiJson<EmailDraft>({
     system: SYSTEM,
     messages: [
       {

@@ -1,4 +1,4 @@
-import { claudeText } from "./anthropic";
+import { aiText } from "./provider";
 import type { ParsedJob, ParsedResume } from "@/lib/db/types";
 
 const SYSTEM = `You are a cover letter writing assistant.
@@ -23,7 +23,7 @@ export async function generateCoverLetter({
   job: ParsedJob;
   extraInstructions?: string;
 }): Promise<string> {
-  return claudeText({
+  return aiText({
     system: SYSTEM,
     messages: [
       {

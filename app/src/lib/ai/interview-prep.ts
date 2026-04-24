@@ -1,4 +1,4 @@
-import { claudeJson } from "./anthropic";
+import { aiJson } from "./provider";
 import { interviewPrepSchema } from "./schemas";
 import type { InterviewPrep, ParsedJob, ParsedResume } from "@/lib/db/types";
 
@@ -35,7 +35,7 @@ export async function generateInterviewPrep({
   job: ParsedJob;
   interviewStage?: string;
 }): Promise<InterviewPrep> {
-  const raw = await claudeJson<InterviewPrep>({
+  const raw = await aiJson<InterviewPrep>({
     system: SYSTEM,
     messages: [
       {
