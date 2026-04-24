@@ -5,6 +5,7 @@ export const PROMPT_VERSION = "2.0";
 
 const GEMINI_API_BASE = "https://generativelanguage.googleapis.com/v1beta";
 const AI_TIMEOUT_MS = 60_000;
+const RETRYABLE_STATUS = new Set([429, 503]);
 
 export type AiTextMessage = {
   role: "user" | "assistant";
@@ -81,55 +82,73 @@ async function generateGemini({
   maxTokens?: number;
   responseMimeType?: "text/plain" | "application/json";
 }): Promise<string> {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), AI_TIMEOUT_MS);
+  let lastError: Error | null = null;
 
-  try {
-    const contents = parts
-      ? [{ role: "user", parts }]
-      : (messages ?? []).map((message) => ({
-          role: toGeminiRole(message.role),
-          parts: [{ text: message.content }],
-        }));
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), AI_TIMEOUT_MS);
 
-    const res = await fetch(
-      `${GEMINI_API_BASE}/models/${encodeURIComponent(model)}:generateContent`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-goog-api-key": getGeminiApiKey(),
-        },
-        body: JSON.stringify({
-          systemInstruction: system
-            ? { parts: [{ text: system }] }
-            : undefined,
-          contents,
-          generationConfig: {
-            maxOutputTokens: maxTokens,
-            responseMimeType,
+    try {
+      const contents = parts
+        ? [{ role: "user", parts }]
+        : (messages ?? []).map((message) => ({
+            role: toGeminiRole(message.role),
+            parts: [{ text: message.content }],
+          }));
+
+      const res = await fetch(
+        `${GEMINI_API_BASE}/models/${encodeURIComponent(model)}:generateContent`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-goog-api-key": getGeminiApiKey(),
           },
-        }),
-        signal: controller.signal,
-      },
-    );
-
-    const json = (await res.json().catch(() => ({}))) as GeminiResponse;
-    if (!res.ok) {
-      throw new Error(
-        json.error?.message ?? `Gemini API request failed with status ${res.status}.`,
+          body: JSON.stringify({
+            systemInstruction: system
+              ? { parts: [{ text: system }] }
+              : undefined,
+            contents,
+            generationConfig: {
+              maxOutputTokens: maxTokens,
+              responseMimeType,
+            },
+          }),
+          signal: controller.signal,
+        },
       );
-    }
 
-    return extractText(json);
-  } catch (err) {
-    if (err instanceof Error && err.name === "AbortError") {
-      throw new Error("AI request timed out after 60s.");
+      const json = (await res.json().catch(() => ({}))) as GeminiResponse;
+      if (!res.ok) {
+        throw new Error(
+          json.error?.message ?? `Gemini API request failed with status ${res.status}.`,
+          { cause: res.status },
+        );
+      }
+
+      return extractText(json);
+    } catch (err) {
+      lastError =
+        err instanceof Error
+          ? err
+          : new Error("Gemini API request failed.");
+      if (lastError.name === "AbortError") {
+        lastError = new Error("AI request timed out after 60s.");
+      }
+
+      const status =
+        typeof lastError.cause === "number" ? lastError.cause : null;
+      if (!status || !RETRYABLE_STATUS.has(status) || attempt === 3) {
+        throw lastError;
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, attempt * 1500));
+    } finally {
+      clearTimeout(timer);
     }
-    throw err;
-  } finally {
-    clearTimeout(timer);
   }
+
+  throw lastError ?? new Error("Gemini API request failed.");
 }
 
 export function extractJson<T = unknown>(text: string): T {
