@@ -6,6 +6,12 @@ export const PROMPT_VERSION = "2.0";
 const GEMINI_API_BASE = "https://generativelanguage.googleapis.com/v1beta";
 const AI_TIMEOUT_MS = 60_000;
 const RETRYABLE_STATUS = new Set([429, 503]);
+const DEFAULT_FALLBACK_MODELS = [
+  "gemini-3.1-flash-lite-preview",
+  "gemma-3-27b-it",
+  "gemma-3-12b-it",
+  "gemma-3-4b-it",
+];
 
 export type AiTextMessage = {
   role: "user" | "assistant";
@@ -44,6 +50,21 @@ function getGeminiApiKey(): string {
 
 function toGeminiRole(role: AiTextMessage["role"]) {
   return role === "assistant" ? "model" : "user";
+}
+
+function isGemmaModel(model: string): boolean {
+  return model.startsWith("gemma-");
+}
+
+function getModelChain(primary: string): string[] {
+  const fallbackModels =
+    process.env.GEMINI_FALLBACK_MODELS?.split(",")
+      .map((model) => model.trim())
+      .filter(Boolean) ?? DEFAULT_FALLBACK_MODELS;
+
+  return [primary, ...fallbackModels].filter(
+    (model, index, models) => models.indexOf(model) === index,
+  );
 }
 
 function extractText(response: GeminiResponse): string {
@@ -173,19 +194,36 @@ export async function aiJson<T>({
   model?: string;
   maxTokens?: number;
 }): Promise<T> {
-  const text = await generateGemini({
-    system,
-    messages,
-    model,
-    maxTokens,
-    responseMimeType: "application/json",
-  });
+  let lastError: Error | null = null;
 
-  try {
-    return JSON.parse(text) as T;
-  } catch {
-    return extractJson<T>(text);
+  for (const candidateModel of getModelChain(model)) {
+    try {
+      const text = await generateGemini({
+        system: isGemmaModel(candidateModel)
+          ? `${system}\n\nReturn only valid JSON. Do not use markdown or prose.`
+          : system,
+        messages,
+        model: candidateModel,
+        maxTokens,
+        responseMimeType: isGemmaModel(candidateModel)
+          ? "text/plain"
+          : "application/json",
+      });
+
+      try {
+        return JSON.parse(text) as T;
+      } catch {
+        return extractJson<T>(text);
+      }
+    } catch (err) {
+      lastError =
+        err instanceof Error
+          ? err
+          : new Error("Gemini API request failed.");
+    }
   }
+
+  throw lastError ?? new Error("Gemini API request failed.");
 }
 
 export async function aiText({
@@ -199,13 +237,26 @@ export async function aiText({
   model?: string;
   maxTokens?: number;
 }): Promise<string> {
-  return generateGemini({
-    system,
-    messages,
-    model,
-    maxTokens,
-    responseMimeType: "text/plain",
-  });
+  let lastError: Error | null = null;
+
+  for (const candidateModel of getModelChain(model)) {
+    try {
+      return await generateGemini({
+        system,
+        messages,
+        model: candidateModel,
+        maxTokens,
+        responseMimeType: "text/plain",
+      });
+    } catch (err) {
+      lastError =
+        err instanceof Error
+          ? err
+          : new Error("Gemini API request failed.");
+    }
+  }
+
+  throw lastError ?? new Error("Gemini API request failed.");
 }
 
 export async function aiExtractPdfText(buffer: Buffer): Promise<string> {
