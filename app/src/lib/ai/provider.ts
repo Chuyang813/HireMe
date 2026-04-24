@@ -5,7 +5,7 @@ export const PROMPT_VERSION = "2.0";
 
 const GEMINI_API_BASE = "https://generativelanguage.googleapis.com/v1beta";
 const AI_TIMEOUT_MS = 60_000;
-const RETRYABLE_STATUS = new Set([429, 503]);
+const RETRYABLE_STATUS = new Set([503]);
 const DEFAULT_FALLBACK_MODELS = [
   "gemini-3.1-flash-lite-preview",
   "gemma-3-27b-it",
