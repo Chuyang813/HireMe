@@ -18,6 +18,7 @@ export default async function AppLayout({
     { href: "/tracker", label: t("tracker") },
     { href: "/resumes", label: t("resumes") },
     { href: "/insights", label: t("insights") },
+    { href: "/settings", label: t("settings") },
   ];
 
   return (
