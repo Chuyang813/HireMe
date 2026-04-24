@@ -297,6 +297,178 @@ function MarkdownViewer({ content }: { content: string }) {
 }
 
 // ---------------------------------------------------------------------------
+// EmailDraftView — parses the AI-formatted email into structured sections
+// (subject / body / signature / attachments) and renders them with the
+// HireMe postal aesthetic. Falls back to raw text if parsing fails.
+// ---------------------------------------------------------------------------
+
+type ParsedAttachment = { name: string; reason?: string };
+type ParsedEmail = {
+  subject: string;
+  body: string;
+  signature: string;
+  attachments: ParsedAttachment[];
+};
+
+const SIGNATURE_OPENERS = /^(best regards|sincerely|kind regards|regards|yours sincerely|warm regards|thank you|many thanks|with appreciation|respectfully)[,.]?\s*$/i;
+
+function parseEmailDraft(text: string): ParsedEmail {
+  const lines = text.replace(/\r\n/g, "\n").split("\n");
+
+  let subject = "";
+  let bodyStart = 0;
+  for (let i = 0; i < lines.length; i++) {
+    const m = lines[i].match(/^\s*Subject\s*:\s*(.*)$/i);
+    if (m) {
+      subject = m[1].trim();
+      bodyStart = i + 1;
+      break;
+    }
+  }
+
+  let attachmentsIdx = -1;
+  for (let i = bodyStart; i < lines.length; i++) {
+    if (/^\s*Attachments\s*:\s*$/i.test(lines[i])) {
+      attachmentsIdx = i;
+      break;
+    }
+    const inline = lines[i].match(/^\s*Attachments\s*:\s*(.+)$/i);
+    if (inline) {
+      attachmentsIdx = i;
+      break;
+    }
+  }
+
+  const bodyEnd = attachmentsIdx === -1 ? lines.length : attachmentsIdx;
+  const bodySlice = lines.slice(bodyStart, bodyEnd);
+  while (bodySlice.length && bodySlice[0].trim() === "") bodySlice.shift();
+  while (bodySlice.length && bodySlice[bodySlice.length - 1].trim() === "") bodySlice.pop();
+
+  let sigStart = -1;
+  for (let i = 0; i < bodySlice.length; i++) {
+    if (SIGNATURE_OPENERS.test(bodySlice[i].trim())) {
+      sigStart = i;
+      break;
+    }
+  }
+  const messageLines = sigStart === -1 ? bodySlice : bodySlice.slice(0, sigStart);
+  const signatureLines = sigStart === -1 ? [] : bodySlice.slice(sigStart);
+  while (messageLines.length && messageLines[messageLines.length - 1].trim() === "") messageLines.pop();
+
+  const attachments: ParsedAttachment[] = [];
+  if (attachmentsIdx !== -1) {
+    const inlineMatch = lines[attachmentsIdx].match(/^\s*Attachments\s*:\s*(.+)$/i);
+    const candidates: string[] = [];
+    if (inlineMatch) {
+      for (const part of inlineMatch[1].split(",")) {
+        const trimmed = part.trim();
+        if (trimmed) candidates.push(trimmed);
+      }
+    }
+    for (let i = attachmentsIdx + 1; i < lines.length; i++) {
+      const raw = lines[i].trim();
+      if (!raw) continue;
+      const stripped = raw.replace(/^[-*•]\s*/, "");
+      candidates.push(stripped);
+    }
+    for (const item of candidates) {
+      const dash = item.match(/^(.+?)\s+[—–-]\s+(.+)$/);
+      if (dash) {
+        attachments.push({ name: dash[1].trim(), reason: dash[2].trim() });
+      } else {
+        attachments.push({ name: item.trim() });
+      }
+    }
+  }
+
+  return {
+    subject,
+    body: messageLines.join("\n"),
+    signature: signatureLines.join("\n"),
+    attachments,
+  };
+}
+
+function EmailDraftView({ content }: { content: string }) {
+  const parsed = parseEmailDraft(content);
+  const hasStructure =
+    parsed.subject || parsed.signature || parsed.attachments.length > 0;
+
+  if (!hasStructure) {
+    return (
+      <div className="rounded-md border border-border bg-white shadow-sm">
+        <div className="flex items-center justify-between border-b border-border px-6 py-3">
+          <span className="label-caps">Email draft</span>
+        </div>
+        <div className="whitespace-pre-wrap p-6 text-sm leading-relaxed text-foreground">
+          {content}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-md border border-border bg-white shadow-sm overflow-hidden">
+      <div className="flex items-center justify-between border-b border-border bg-muted/40 px-6 py-3">
+        <span className="label-caps">Email draft</span>
+        <span className="text-xs text-muted-foreground">Suggestion · review before sending</span>
+      </div>
+
+      {parsed.subject && (
+        <div className="grid grid-cols-[5rem_1fr] gap-4 border-b border-border px-6 py-4">
+          <span className="label-caps pt-0.5">Subject</span>
+          <p className="font-display text-base leading-snug text-foreground">
+            {parsed.subject}
+          </p>
+        </div>
+      )}
+
+      {parsed.body && (
+        <div className="px-6 py-5">
+          <p className="label-caps mb-3">Body</p>
+          <div className="whitespace-pre-wrap text-sm leading-relaxed text-foreground">
+            {parsed.body}
+          </div>
+        </div>
+      )}
+
+      {parsed.signature && (
+        <div className="border-t border-border px-6 py-4">
+          <p className="label-caps mb-2">Signature</p>
+          <div className="whitespace-pre-wrap text-sm leading-relaxed text-foreground">
+            {parsed.signature}
+          </div>
+        </div>
+      )}
+
+      {parsed.attachments.length > 0 && (
+        <div className="border-t border-border bg-muted/30 px-6 py-4">
+          <p className="label-caps mb-3">Suggested attachments</p>
+          <ul className="flex flex-col gap-2">
+            {parsed.attachments.map((a, i) => (
+              <li key={i} className="flex items-start gap-3 text-sm">
+                <span className="mt-0.5 inline-flex shrink-0 items-center gap-1.5 rounded-sm border border-border bg-white px-2 py-0.5 text-xs text-foreground">
+                  <span className="text-muted-foreground">◆</span>
+                  <span className="font-medium">{a.name}</span>
+                </span>
+                {a.reason && (
+                  <span className="leading-relaxed text-muted-foreground">
+                    — {a.reason}
+                  </span>
+                )}
+              </li>
+            ))}
+          </ul>
+          <p className="mt-3 text-xs italic text-muted-foreground">
+            Filenames are suggestions — attach whichever files you have ready.
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // HistoryDropdown — lists saved versions and allows restoring
 // ---------------------------------------------------------------------------
 
@@ -517,18 +689,23 @@ function DocumentPanel({
           </p>
         )}
 
-        {content ? (
-          <div className="rounded-xl border border-border bg-blue-50 p-6 shadow-sm">
-            <p className="text-xs font-medium text-blue-600 mb-3 uppercase tracking-wider">Email Draft</p>
-            <div className="whitespace-pre-wrap text-sm leading-relaxed text-foreground">
-              {content}
+        {generating && !content ? (
+          <div className="flex min-h-[18rem] items-center justify-center rounded-md border border-border bg-white shadow-sm">
+            <div className="flex flex-col items-center gap-3">
+              <div className="h-8 w-8 animate-spin rounded-full border-2 border-border border-t-accent" />
+              <p className="text-sm text-muted-foreground">Drafting email…</p>
             </div>
           </div>
+        ) : content ? (
+          <EmailDraftView content={content} />
         ) : (
-          <div className="rounded-xl border border-dashed border-border bg-muted/30 p-8 text-center">
-            <p className="text-sm text-muted-foreground">
-              Click &ldquo;Generate&rdquo; to create your email draft.
-            </p>
+          <div className="flex min-h-[18rem] items-center justify-center rounded-md border border-dashed border-border bg-muted/30 px-8 py-12 text-center">
+            <div className="max-w-sm">
+              <p className="label-caps mb-2">Email draft</p>
+              <p className="text-sm text-muted-foreground">
+                Click &ldquo;Generate&rdquo; to draft a subject, message, signature, and a tailored attachment list for this posting.
+              </p>
+            </div>
           </div>
         )}
 
