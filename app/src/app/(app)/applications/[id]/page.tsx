@@ -9,6 +9,7 @@ import type {
   ApplicationStatus,
   JobApplication,
   ParsedJob,
+  ParsedResume,
   Profile,
   TimelineEventType,
 } from "@/lib/db/types";
@@ -149,7 +150,7 @@ export default async function ApplicationPage({
       .order("created_at", { ascending: false }),
     supabase
       .from("base_resumes")
-      .select("id")
+      .select("id, parsed_resume_json")
       .eq("user_id", user.id)
       .eq("is_default", true)
       .single(),
@@ -173,6 +174,7 @@ export default async function ApplicationPage({
   const documents = (docs ?? []) as ApplicationDocument[];
   const events = (timeline ?? []) as ApplicationTimelineEvent[];
   const job = application.parsed_job_json as ParsedJob | null;
+  const parsedResume = (resume?.parsed_resume_json as ParsedResume | null) ?? null;
   const profileData = profile as Pick<Profile, "full_name" | "display_name"> | null;
 
   const fullName = profileData?.full_name ?? profileData?.display_name ?? "";
@@ -247,9 +249,8 @@ export default async function ApplicationPage({
 
       {job && (
         <JobAnalysisCard
-          applicationId={application.id}
-          hasResume={!!resume}
           job={job}
+          resume={parsedResume}
         />
       )}
 
