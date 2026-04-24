@@ -1,0 +1,14 @@
+.env*
+!.env.example
+
+app/.env*
+!app/.env.example
+
+node_modules
+app/node_modules
+
+.next
+app/.next
+
+.claude
+app/.claude
