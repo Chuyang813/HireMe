@@ -67,6 +67,26 @@ function getModelChain(primary: string): string[] {
   );
 }
 
+function withSystemInUserMessage(
+  system: string,
+  messages: AiTextMessage[],
+): AiTextMessage[] {
+  const [first, ...rest] = messages;
+  const systemBlock = `Instructions:\n${system}`;
+
+  if (!first) {
+    return [{ role: "user", content: systemBlock }];
+  }
+
+  return [
+    {
+      ...first,
+      content: `${systemBlock}\n\nUser request:\n${first.content}`,
+    },
+    ...rest,
+  ];
+}
+
 function extractText(response: GeminiResponse): string {
   if (response.error) {
     throw new Error(response.error.message ?? "Gemini API request failed.");
@@ -198,16 +218,14 @@ export async function aiJson<T>({
 
   for (const candidateModel of getModelChain(model)) {
     try {
+      const isGemma = isGemmaModel(candidateModel);
+      const jsonSystem = `${system}\n\nReturn only valid JSON. Do not use markdown or prose.`;
       const text = await generateGemini({
-        system: isGemmaModel(candidateModel)
-          ? `${system}\n\nReturn only valid JSON. Do not use markdown or prose.`
-          : system,
-        messages,
+        system: isGemma ? undefined : system,
+        messages: isGemma ? withSystemInUserMessage(jsonSystem, messages) : messages,
         model: candidateModel,
         maxTokens,
-        responseMimeType: isGemmaModel(candidateModel)
-          ? "text/plain"
-          : "application/json",
+        responseMimeType: isGemma ? "text/plain" : "application/json",
       });
 
       try {
@@ -241,9 +259,10 @@ export async function aiText({
 
   for (const candidateModel of getModelChain(model)) {
     try {
+      const isGemma = isGemmaModel(candidateModel);
       return await generateGemini({
-        system,
-        messages,
+        system: isGemma ? undefined : system,
+        messages: isGemma ? withSystemInUserMessage(system, messages) : messages,
         model: candidateModel,
         maxTokens,
         responseMimeType: "text/plain",
