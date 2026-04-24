@@ -5,6 +5,7 @@ import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 export default async function Home() {
   const t = await getTranslations("Landing");
   const nav = await getTranslations("Nav");
+  const legal = await getTranslations("Legal");
 
   const features = [
     { index: "01", title: t("feature01Title"), body: t("feature01Body") },
@@ -97,11 +98,19 @@ export default async function Home() {
       </main>
 
       <footer className="border-t border-border">
-        <div className="mx-auto flex w-full max-w-5xl flex-col gap-2 px-6 py-8 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
+        <div className="mx-auto flex w-full max-w-5xl flex-col gap-3 px-6 py-8 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
           <span className="label-caps">
             HireMe · © {new Date().getFullYear()}
           </span>
           <span className="italic">{t("footerDisclaimer")}</span>
+          <span className="flex items-center gap-4">
+            <Link href="/privacy" className="hover:text-foreground">
+              {legal("privacy")}
+            </Link>
+            <Link href="/terms" className="hover:text-foreground">
+              {legal("terms")}
+            </Link>
+          </span>
         </div>
       </footer>
     </div>
