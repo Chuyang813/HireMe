@@ -21,50 +21,73 @@ export function DeleteApplicationButton({
     startDelete(() => deleteApplicationAction(fd));
   }
 
-  if (confirming) {
-    return (
-      <div className="flex items-center gap-2">
-        <span className="text-xs text-muted-foreground whitespace-nowrap">{t("deleteConfirm")}</span>
-        <button
-          onClick={handleDelete}
-          disabled={pending}
-          className="rounded px-2 py-1 text-xs font-medium bg-red-600 text-white hover:bg-red-700 disabled:opacity-50"
-        >
-          {pending ? t("deleting") : t("deleteYes")}
-        </button>
-        <button
-          onClick={() => setConfirming(false)}
-          className="rounded px-2 py-1 text-xs border border-border hover:bg-muted"
-        >
-          {t("deleteCancel")}
-        </button>
-      </div>
-    );
-  }
-
-  if (variant === "text") {
-    return (
-      <button
-        onClick={(e) => { e.preventDefault(); setConfirming(true); }}
-        className="rounded-md border border-border px-3 py-1.5 text-xs text-danger hover:bg-muted"
-      >
-        {t("deleteApplication")}
-      </button>
-    );
-  }
+  const buttonClass =
+    variant === "text"
+      ? "inline-flex h-9 items-center gap-2 rounded-md border border-red-200 bg-white px-3 text-sm font-medium text-red-700 shadow-sm transition hover:border-red-300 hover:bg-red-50"
+      : "inline-flex h-8 w-8 items-center justify-center rounded-md border border-border bg-white text-muted-foreground shadow-sm transition hover:border-red-300 hover:bg-red-50 hover:text-red-700";
 
   return (
-    <button
-      onClick={(e) => { e.preventDefault(); setConfirming(true); }}
-      title={t("deleteApplication")}
-      className="flex h-7 w-7 items-center justify-center rounded border border-border text-muted-foreground hover:border-danger/50 hover:text-danger hover:bg-muted"
+    <div className="relative inline-flex">
+      <button
+        type="button"
+        onClick={(e) => {
+          e.preventDefault();
+          setConfirming((v) => !v);
+        }}
+        title={t("deleteApplication")}
+        aria-label={t("deleteApplication")}
+        className={buttonClass}
+      >
+        <TrashIcon />
+        {variant === "text" && <span>{t("deleteApplication")}</span>}
+      </button>
+
+      {confirming && (
+        <div className="absolute right-0 top-[calc(100%+0.5rem)] z-30 w-64 rounded-md border border-border bg-background p-3 text-left shadow-lg">
+          <p className="mb-3 text-sm font-medium text-foreground">
+            {t("deleteConfirm")}
+          </p>
+          <div className="flex items-center justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => setConfirming(false)}
+              className="h-8 rounded-md border border-border px-3 text-xs font-medium hover:bg-muted"
+            >
+              {t("deleteCancel")}
+            </button>
+            <button
+              type="button"
+              onClick={handleDelete}
+              disabled={pending}
+              className="h-8 rounded-md bg-red-600 px-3 text-xs font-medium text-white hover:bg-red-700 disabled:opacity-50"
+            >
+              {pending ? t("deleting") : t("deleteYes")}
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function TrashIcon() {
+  return (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
     >
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <polyline points="3 6 5 6 21 6" />
-        <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" />
-        <path d="M10 11v6M14 11v6" />
-        <path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2" />
-      </svg>
-    </button>
+      <path d="M3 6h18" />
+      <path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2" />
+      <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+      <path d="M10 11v6" />
+      <path d="M14 11v6" />
+    </svg>
   );
 }

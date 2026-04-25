@@ -559,12 +559,40 @@ function DocumentPanel({
   const [saveStatus, setSaveStatus] = useState<"idle" | "saved" | "error">("idle");
   const [generating, setGenerating] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [saving, startSave] = useTransition();
+  const [autoSaving, setAutoSaving] = useState(false);
   const [exporting, setExporting] = useState(false);
+
+  async function saveContent(nextContent: string) {
+    if (!nextContent.trim() || nextContent.includes("[Error:")) return false;
+    setSaveStatus("idle");
+    setAutoSaving(true);
+
+    const fd = new FormData();
+    fd.set("application_id", applicationId);
+    fd.set("document_type", documentType);
+    fd.set("content", nextContent);
+    if (docId) fd.set("document_id", docId);
+
+    try {
+      const result = await saveDocumentAction(undefined, fd);
+      if (result && "ok" in result && result.ok) {
+        setDocId(result.documentId);
+        setSaveStatus("saved");
+        return true;
+      }
+    } catch {
+      // Surface a simple save error below; generation content remains visible.
+    } finally {
+      setAutoSaving(false);
+    }
+
+    setSaveStatus("error");
+    return false;
+  }
 
   async function handleGenerate() {
     setGenerateError("");
-    setContent("");
+    setSaveStatus("idle");
     setGenerating(true);
     try {
       const res = await fetch("/api/generate-document", {
@@ -597,6 +625,11 @@ function DocumentPanel({
       }
       // Set content once after full generation — no incremental flicker
       setContent(accumulated);
+      if (accumulated.includes("[Error:")) {
+        setGenerateError(t("generationFailed"));
+        return;
+      }
+      await saveContent(accumulated);
     } catch (e) {
       setGenerateError(e instanceof Error ? e.message : t("generationFailed"));
     } finally {
@@ -613,24 +646,6 @@ function DocumentPanel({
     } catch {
       // clipboard API may be unavailable in some contexts
     }
-  }
-
-  function handleSave() {
-    setSaveStatus("idle");
-    const fd = new FormData();
-    fd.set("application_id", applicationId);
-    fd.set("document_type", documentType);
-    fd.set("content", content);
-    if (docId) fd.set("document_id", docId);
-    startSave(async () => {
-      const result = await saveDocumentAction(undefined, fd);
-      if (result && "ok" in result && result.ok) {
-        setDocId(result.documentId);
-        setSaveStatus("saved");
-      } else {
-        setSaveStatus("error");
-      }
-    });
   }
 
   async function handleExport(format: "pdf" | "docx") {
@@ -676,7 +691,7 @@ function DocumentPanel({
                 documentId={docId}
                 onRestore={(restored) => {
                   setContent(restored);
-                  setSaveStatus("idle");
+                  void saveContent(restored);
                 }}
               />
             )}
@@ -685,9 +700,6 @@ function DocumentPanel({
                 {copied ? t("copied") : t("copyToClipboard")}
               </Button>
             )}
-            <Button onClick={handleSave} disabled={saving || !content.trim()}>
-              {saving ? t("saving") : t("save")}
-            </Button>
           </div>
         </div>
 
@@ -717,6 +729,7 @@ function DocumentPanel({
           </div>
         )}
 
+        {autoSaving && <p className="text-xs text-muted-foreground">{t("saving")}</p>}
         {saveStatus === "saved" && <p className="text-xs text-success">{t("saved")}</p>}
         {saveStatus === "error" && <p className="text-xs text-danger">{t("saveFailed")}</p>}
       </div>
@@ -755,7 +768,7 @@ function DocumentPanel({
               documentId={docId}
               onRestore={(restored) => {
                 setContent(restored);
-                setSaveStatus("idle");
+                void saveContent(restored);
               }}
             />
           )}
@@ -782,9 +795,6 @@ function DocumentPanel({
               </Button>
             </>
           )}
-          <Button onClick={handleSave} disabled={saving || !content.trim()}>
-            {saving ? t("saving") : t("save")}
-          </Button>
         </div>
       </div>
 
@@ -804,6 +814,7 @@ function DocumentPanel({
       )}
       {!generating && <MarkdownViewer content={content} />}
 
+      {autoSaving && <p className="text-xs text-muted-foreground">{t("saving")}</p>}
       {saveStatus === "saved" && <p className="text-xs text-success">{t("saved")}</p>}
       {saveStatus === "error" && <p className="text-xs text-danger">{t("saveFailed")}</p>}
     </div>
