@@ -133,6 +133,7 @@ export interface Profile {
   target_industries: string[] | null;
   target_companies: string[] | null;
   onboarding_complete: boolean;
+  beta_approved: boolean;
   created_at: string;
   updated_at: string;
 }
