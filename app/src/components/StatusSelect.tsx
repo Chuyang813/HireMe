@@ -1,6 +1,8 @@
 "use client";
 
+import { useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
+import { useRouter } from "next/navigation";
 import { updateStatusAction } from "@/app/actions/applications";
 import { APPLICATION_STATUSES } from "@/lib/db/types";
 import type { ApplicationStatus } from "@/lib/db/types";
@@ -37,19 +39,35 @@ export function StatusSelect({
   className?: string;
 }) {
   const t = useTranslations("Applications");
+  const router = useRouter();
+  const [selected, setSelected] = useState<ApplicationStatus>(current);
+  const [pending, startTransition] = useTransition();
+
+  function handleChange(next: ApplicationStatus) {
+    setSelected(next);
+
+    const fd = new FormData();
+    fd.set("id", applicationId);
+    fd.set("status", next);
+
+    startTransition(async () => {
+      await updateStatusAction(fd);
+      router.refresh();
+    });
+  }
 
   return (
-    <form action={updateStatusAction} className="relative">
-      <input type="hidden" name="id" value={applicationId} />
+    <div className="relative">
       <select
         name="status"
-        defaultValue={current}
-        onChange={(e) => (e.currentTarget.form as HTMLFormElement).requestSubmit()}
-        aria-label={t(STATUS_LABEL_KEYS[current])}
+        value={selected}
+        onChange={(e) => handleChange(e.currentTarget.value as ApplicationStatus)}
+        disabled={pending}
+        aria-label={t(STATUS_LABEL_KEYS[selected])}
         className={[
           "h-9 min-w-32 cursor-pointer appearance-none rounded-md border px-3 pr-8 text-sm font-medium shadow-sm outline-none transition-colors",
           "hover:border-foreground/30 focus:border-foreground focus:ring-2 focus:ring-foreground/10",
-          STATUS_TONES[current],
+          STATUS_TONES[selected],
           className,
         ].join(" ")}
       >
@@ -65,6 +83,6 @@ export function StatusSelect({
       >
         v
       </span>
-    </form>
+    </div>
   );
 }
