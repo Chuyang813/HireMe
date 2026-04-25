@@ -121,9 +121,9 @@
     "noAppsHeading": "还没有申请记录。",
     "noAppsSub": "添加第一个申请，开始追踪你的求职进度。",
     "updatedPrefix": "更新于",
-    "unknownApplication": "????",
-    "untitledRole": "?????",
-    "unknownCompany": "????"
+    "unknownApplication": "某个申请",
+    "untitledRole": "未命名职位",
+    "unknownCompany": "未知公司"
   },
   "Tracker": {
     "pipelineLabel": "申请漏斗",
@@ -218,17 +218,17 @@
     "detailEventInterviewPrepGenerated": "面试准备已生成",
     "detailEventNoteAdded": "备注已保存",
     "statusUnknown": "{status}",
-    "detailDocument": "??",
-    "deleteApplication": "????",
-    "deleteConfirm": "??????????",
-    "deleteYes": "????",
-    "deleteCancel": "??",
-    "deleting": "????",
-    "fitGood": "????",
-    "fitModerate": "????",
-    "fitLow": "????",
-    "fitReview": "???",
-    "fitResumeNeeded": "????"
+    "detailDocument": "文档",
+    "deleteApplication": "删除申请",
+    "deleteConfirm": "确定删除这个申请吗？",
+    "deleteYes": "是，删除",
+    "deleteCancel": "取消",
+    "deleting": "删除中…",
+    "fitGood": "匹配度高",
+    "fitModerate": "基本匹配",
+    "fitLow": "匹配度低",
+    "fitReview": "需核对",
+    "fitResumeNeeded": "需要简历"
   },
   "Insights": {
     "analyticsLabel": "数据分析",
@@ -356,8 +356,8 @@
     "loadingReading": "正在读取文档…",
     "loadingAnalyzing": "AI 正在分析你的经历…",
     "loadingBuilding": "正在构建你的档案…",
-    "preview": "??",
-    "previewResume": "????"
+    "preview": "预览",
+    "previewResume": "预览简历"
   },
   "Workspace": {
     "tabResume": "简历",
@@ -392,7 +392,7 @@
     "generatingDocument": "正在生成文档…",
     "emailEmptyLabel": "申请邮件",
     "emailEmptyBody": "点击「生成」起草主题、正文、落款，以及本职位的附件建议。",
-    "assessmentDescription": "??????????AI ????????",
+    "assessmentDescription": "上传测评或作业说明，AI 会帮你拆解重点。",
     "chooseFile": "选择文件…",
     "analyzing": "分析中…",
     "analyze": "开始分析",
@@ -423,7 +423,7 @@
     "analyzingMatch": "正在分析匹配度…",
     "resumeScoringLabel": "简历评分",
     "resumeScoringDesc": "将你的基础简历与该岗位描述进行对比。",
-    "generationFailed": "?????",
-    "streamingUnsupported": "?????????????"
+    "generationFailed": "生成失败。",
+    "streamingUnsupported": "当前浏览器不支持流式生成。"
   }
 }

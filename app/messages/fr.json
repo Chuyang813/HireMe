@@ -223,11 +223,11 @@
     "deleteConfirm": "Supprimer cette candidature ?",
     "deleteYes": "Oui, supprimer",
     "deleteCancel": "Annuler",
-    "deleting": "Suppression?",
-    "fitGood": "Bonne ad?quation",
-    "fitModerate": "Ad?quation moyenne",
-    "fitLow": "Faible ad?quation",
-    "fitReview": "? v?rifier",
+    "deleting": "Suppression…",
+    "fitGood": "Bonne adéquation",
+    "fitModerate": "Adéquation moyenne",
+    "fitLow": "Faible adéquation",
+    "fitReview": "À vérifier",
     "fitResumeNeeded": "CV requis"
   },
   "Insights": {
@@ -356,8 +356,8 @@
     "loadingReading": "Lecture du document…",
     "loadingAnalyzing": "L'IA analyse votre expérience…",
     "loadingBuilding": "Construction de votre profil…",
-    "preview": "Aper?u",
-    "previewResume": "Aper?u du CV"
+    "preview": "Aperçu",
+    "previewResume": "Aperçu du CV"
   },
   "Workspace": {
     "tabResume": "CV",
@@ -392,7 +392,7 @@
     "generatingDocument": "Génération du document…",
     "emailEmptyLabel": "Brouillon d'e-mail",
     "emailEmptyBody": "Cliquez sur « Générer » pour rédiger un objet, un message, une signature et une liste de pièces jointes adaptée à ce poste.",
-    "assessmentDescription": "Importez le brief ou le sujet du test technique ? l'IA le d?compose pour vous.",
+    "assessmentDescription": "Importez le brief ou le sujet du test technique ; l'IA le décompose pour vous.",
     "chooseFile": "Choisir un fichier…",
     "analyzing": "Analyse…",
     "analyze": "Analyser",
@@ -423,7 +423,7 @@
     "analyzingMatch": "Analyse de la correspondance…",
     "resumeScoringLabel": "Évaluation du CV",
     "resumeScoringDesc": "Comparez votre CV de base avec cette description de poste.",
-    "generationFailed": "?chec de la g?n?ration.",
+    "generationFailed": "Échec de la génération.",
     "streamingUnsupported": "Ce navigateur ne prend pas en charge le flux."
   }
 }
