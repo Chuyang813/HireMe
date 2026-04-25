@@ -3,6 +3,7 @@ import { getTranslations } from "next-intl/server";
 import { requireUser } from "@/lib/auth/current-user";
 import { signoutAction } from "@/lib/auth/actions";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { AppNavLink } from "@/components/AppNavLink";
 
 export default async function AppLayout({
   children,
@@ -23,46 +24,40 @@ export default async function AppLayout({
 
   return (
     <div className="flex flex-1 flex-col">
-      <header className="border-b border-border">
-        <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-4">
+      <header className="border-b border-border bg-background/95">
+        <div className="mx-auto flex h-20 w-full max-w-7xl items-center justify-between px-6">
           <Link href="/dashboard" className="flex items-baseline gap-2">
-            <span className="font-display text-xl">HireMe</span>
-            <span className="label-caps">№ 01</span>
+            <span className="font-display text-2xl leading-none">HireMe</span>
+            <span className="label-caps text-[0.65rem]">No 01</span>
           </Link>
-          <nav className="hidden items-center gap-1 text-sm sm:flex">
+
+          <nav className="hidden h-full items-center gap-8 md:flex">
             {navItems.map((n) => (
-              <Link
-                key={n.href}
-                href={n.href}
-                className="rounded-sm px-3 py-1.5 text-muted-foreground hover:bg-muted hover:text-foreground"
-              >
-                {n.label}
-              </Link>
+              <AppNavLink key={n.href} href={n.href} label={n.label} />
             ))}
           </nav>
-          <div className="flex items-center gap-2 text-sm">
+
+          <div className="flex items-center gap-4 text-sm">
             <LanguageSwitcher />
-            <span className="label-caps hidden sm:inline">{user.email}</span>
+            <div className="hidden h-8 w-px bg-border sm:block" />
+            <span className="hidden max-w-56 truncate text-xs font-semibold uppercase tracking-wider text-muted-foreground sm:inline">
+              {user.email}
+            </span>
             <form action={signoutAction}>
               <button
                 type="submit"
-                className="rounded-sm border border-border px-3 py-1.5 text-sm hover:bg-muted"
+                className="rounded-md border border-border px-3 py-2 text-sm font-medium hover:bg-muted"
               >
                 {t("signOut")}
               </button>
             </form>
           </div>
         </div>
-        <nav className="sm:hidden border-t border-border">
-          <div className="mx-auto flex w-full max-w-6xl items-center gap-1 overflow-x-auto px-6 py-2 text-sm">
+
+        <nav className="border-t border-border md:hidden">
+          <div className="mx-auto flex w-full max-w-7xl items-center gap-5 overflow-x-auto px-6 text-sm">
             {navItems.map((n) => (
-              <Link
-                key={n.href}
-                href={n.href}
-                className="whitespace-nowrap rounded-sm px-3 py-1.5 text-muted-foreground hover:bg-muted hover:text-foreground"
-              >
-                {n.label}
-              </Link>
+              <AppNavLink key={n.href} href={n.href} label={n.label} />
             ))}
           </div>
         </nav>

@@ -2,7 +2,12 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { requireUser } from "@/lib/auth/current-user";
-import type { ApplicationStatus, ApplicationTimelineEvent, JobApplication, Profile } from "@/lib/db/types";
+import type {
+  ApplicationStatus,
+  ApplicationTimelineEvent,
+  JobApplication,
+  Profile,
+} from "@/lib/db/types";
 
 export const metadata = { title: "Dashboard" };
 
@@ -28,9 +33,151 @@ const STATUS_LABEL_KEY: Record<ApplicationStatus, string> = {
   withdrawn: "statusWithdrawn",
 };
 
+const STATUS_BADGE_CLASS: Record<ApplicationStatus, string> = {
+  saved: "bg-slate-100 text-slate-600",
+  ready_to_apply: "bg-orange-50 text-orange-600",
+  applied: "bg-green-50 text-green-700",
+  assessment: "bg-amber-50 text-amber-700",
+  interview: "bg-blue-50 text-blue-700",
+  rejected: "bg-red-50 text-red-700",
+  offer: "bg-emerald-50 text-emerald-700",
+  withdrawn: "bg-zinc-100 text-zinc-600",
+};
+
 type TimelineEventWithApp = ApplicationTimelineEvent & {
   job_applications: { role_title: string | null; company_name: string | null } | null;
 };
+
+type Translator = Awaited<ReturnType<typeof getTranslations>>;
+
+function fullNameFromProfile(profile: Pick<Profile, "full_name" | "display_name"> | null) {
+  return profile?.full_name || profile?.display_name || "there";
+}
+
+function statusCount(apps: Pick<JobApplication, "current_status">[], status: ApplicationStatus) {
+  return apps.filter((a) => a.current_status === status).length;
+}
+
+function StatCard({
+  label,
+  value,
+  sub,
+  icon,
+}: {
+  label: string;
+  value: number;
+  sub: string;
+  icon: React.ReactNode;
+}) {
+  return (
+    <div className="min-h-36 rounded-lg border border-border bg-background p-5 shadow-sm">
+      <div className="flex items-start justify-between gap-4">
+        <p className="font-display text-4xl leading-none">{value}</p>
+        <span className="flex h-9 w-9 items-center justify-center rounded-full bg-muted text-muted-foreground">
+          {icon}
+        </span>
+      </div>
+      <p className="label-caps mt-5 text-foreground">{label}</p>
+      <p className="mt-1 text-sm text-muted-foreground">{sub}</p>
+    </div>
+  );
+}
+
+function EventBadge({
+  status,
+  label,
+}: {
+  status: ApplicationStatus | null;
+  label: string;
+}) {
+  const className = status ? STATUS_BADGE_CLASS[status] : STATUS_BADGE_CLASS.saved;
+  return (
+    <span className={`rounded-full px-4 py-1 text-xs font-medium ${className}`}>
+      {label}
+    </span>
+  );
+}
+
+function eventStatus(event: TimelineEventWithApp): ApplicationStatus | null {
+  if (event.event_type !== "status_changed") return null;
+  const value = event.new_value as ApplicationStatus | null;
+  return value && value in STATUS_LABEL_KEY ? value : null;
+}
+
+function activityTitle(event: TimelineEventWithApp, t: Translator) {
+  return (
+    event.job_applications?.role_title ??
+    event.job_applications?.company_name ??
+    t("unknownApplication")
+  );
+}
+
+function activitySubtitle(event: TimelineEventWithApp, t: Translator) {
+  const eventLabelKey = EVENT_TYPE_LABEL_KEY[event.event_type];
+  const label = eventLabelKey ? t(eventLabelKey as Parameters<typeof t>[0]) : event.event_type;
+  const status = eventStatus(event);
+  if (!status) return label;
+  return `${label} · ${t(STATUS_LABEL_KEY[status] as Parameters<typeof t>[0])}`;
+}
+
+function SmallIcon({ kind }: { kind: "trend" | "send" | "doc" | "calendar" | "gear" | "briefcase" }) {
+  const common = {
+    width: 16,
+    height: 16,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: 1.8,
+    strokeLinecap: "round" as const,
+    strokeLinejoin: "round" as const,
+  };
+
+  if (kind === "trend") {
+    return (
+      <svg {...common} aria-hidden="true">
+        <path d="M4 17l6-6 4 4 6-8" />
+        <path d="M15 7h5v5" />
+      </svg>
+    );
+  }
+  if (kind === "send") {
+    return (
+      <svg {...common} aria-hidden="true">
+        <path d="M22 2L11 13" />
+        <path d="M22 2l-7 20-4-9-9-4 20-7z" />
+      </svg>
+    );
+  }
+  if (kind === "doc") {
+    return (
+      <svg {...common} aria-hidden="true">
+        <path d="M8 3h6l4 4v14H8z" />
+        <path d="M14 3v5h5" />
+        <path d="M10 13h6" />
+        <path d="M10 17h4" />
+      </svg>
+    );
+  }
+  if (kind === "calendar" || kind === "briefcase") {
+    return (
+      <svg {...common} aria-hidden="true">
+        <rect x="4" y="5" width="16" height="15" rx="2" />
+        <path d="M8 3v4" />
+        <path d="M16 3v4" />
+        <path d="M4 10h16" />
+      </svg>
+    );
+  }
+  return (
+    <svg {...common} aria-hidden="true">
+      <path d="M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8z" />
+      <path d="M12 2v3" />
+      <path d="M12 19v3" />
+      <path d="M2 12h3" />
+      <path d="M19 12h3" />
+    </svg>
+  );
+}
 
 export default async function DashboardPage() {
   const { supabase, user } = await requireUser();
@@ -38,7 +185,7 @@ export default async function DashboardPage() {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("onboarding_complete")
+    .select("onboarding_complete, full_name, display_name")
     .eq("id", user.id)
     .single();
 
@@ -68,139 +215,167 @@ export default async function DashboardPage() {
   const allApps = (allAppsData ?? []) as Pick<JobApplication, "id" | "current_status">[];
   const applications: JobApplication[] = (recentData ?? []) as JobApplication[];
   const events = (eventsData ?? []) as TimelineEventWithApp[];
+  const profileData = profile as Pick<Profile, "full_name" | "display_name"> | null;
 
   const activeCount = allApps.filter(
     (a) => !INACTIVE_STATUSES.includes(a.current_status),
   ).length;
+  const interviewCount = statusCount(allApps, "interview");
+  const nextActionApp =
+    applications.find((app) => app.current_status === "interview") ??
+    applications.find((app) => app.current_status === "assessment") ??
+    applications[0] ??
+    null;
 
-  const statusCount = (status: ApplicationStatus) =>
-    allApps.filter((a) => a.current_status === status).length;
+  const stats = [
+    {
+      label: t("active"),
+      value: activeCount,
+      sub: t("activeSub"),
+      icon: <SmallIcon kind="trend" />,
+    },
+    {
+      label: t("applied"),
+      value: statusCount(allApps, "applied"),
+      sub: t("appliedSub"),
+      icon: <SmallIcon kind="send" />,
+    },
+    {
+      label: t("assessment"),
+      value: statusCount(allApps, "assessment"),
+      sub: t("assessmentSub"),
+      icon: <SmallIcon kind="doc" />,
+    },
+    {
+      label: t("interview"),
+      value: interviewCount,
+      sub: t("interviewSub"),
+      icon: <SmallIcon kind="calendar" />,
+    },
+    {
+      label: t("offer"),
+      value: statusCount(allApps, "offer"),
+      sub: t("offerSub"),
+      icon: <SmallIcon kind="gear" />,
+    },
+  ];
 
   return (
-    <div className="mx-auto w-full max-w-5xl px-6 py-12">
-      <div className="label-caps mb-2">{t("overviewLabel")}</div>
-      <div className="flex items-baseline justify-between gap-4">
-        <h1 className="font-display text-4xl leading-tight">{t("heading")}</h1>
-        <span className="label-caps hidden sm:inline">{user.email}</span>
-      </div>
+    <div className="mx-auto w-full max-w-7xl px-6 py-14">
+      <section className="flex items-start justify-between gap-8">
+        <div>
+          <p className="label-caps mb-6">{t("overviewLabel")}</p>
+          <h1 className="font-display text-5xl leading-none md:text-6xl">
+            {t("heading")}
+          </h1>
+          <div className="mt-6 space-y-1 text-lg text-muted-foreground">
+            <p>{t("welcomeBack", { name: fullNameFromProfile(profileData).split(" ")[0] })}</p>
+            <p className="text-base">
+              {t("summary", {
+                active: activeCount,
+                interviews: interviewCount,
+              })}
+            </p>
+          </div>
+        </div>
 
-      {/* Stats row */}
-      <div className="mt-8">
-        <div className="label-caps mb-3">{t("statsLabel")}</div>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
-          {(
-            [
-              { key: "active", value: activeCount },
-              { key: "applied", status: "applied" as ApplicationStatus },
-              { key: "assessment", status: "assessment" as ApplicationStatus },
-              { key: "interview", status: "interview" as ApplicationStatus },
-              { key: "offer", status: "offer" as ApplicationStatus },
-            ] as Array<{ key: string; value?: number; status?: ApplicationStatus }>
-          ).map(({ key, value, status }) => (
-            <div
-              key={key}
-              className="rounded-sm border border-border bg-background p-4 text-center"
-            >
-              <p className="font-display text-3xl">
-                {value !== undefined ? value : statusCount(status!)}
-              </p>
-              <p className="label-caps mt-1 text-muted-foreground">{t(key as Parameters<typeof t>[0])}</p>
-            </div>
+        <Link
+          href="/applications/new"
+          className="mt-16 hidden h-12 items-center gap-2 rounded-md bg-foreground px-5 text-sm font-semibold text-background shadow-sm transition-opacity hover:opacity-90 sm:inline-flex"
+        >
+          <span className="text-lg leading-none">+</span>
+          {t("newApplication")}
+        </Link>
+      </section>
+
+      <section className="mt-14">
+        <p className="label-caps mb-4">{t("statsLabel")}</p>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
+          {stats.map((stat) => (
+            <StatCard key={stat.label} {...stat} />
           ))}
         </div>
-      </div>
+      </section>
 
-      {/* Recent activity */}
-      <div className="mt-10">
-        <div className="label-caps mb-3">{t("recentActivityLabel")}</div>
-        {events.length === 0 ? (
-          <p className="text-sm text-muted-foreground">{t("noActivity")}</p>
-        ) : (
-          <ul className="flex flex-col gap-2">
-            {events.map((ev) => {
-              const appName =
-                ev.job_applications?.role_title ??
-                ev.job_applications?.company_name ??
-                t("unknownApplication");
-              const eventLabelKey = EVENT_TYPE_LABEL_KEY[ev.event_type];
-              return (
-                <li
-                  key={ev.id}
-                  className="flex items-baseline justify-between gap-4 rounded-sm border border-border px-4 py-3"
-                >
-                  <span className="text-sm">
-                    <span className="text-muted-foreground">
-                      {eventLabelKey ? t(eventLabelKey as Parameters<typeof t>[0]) : ev.event_type}
-                    </span>
-                    {" · "}
-                    <span className="font-medium">{appName}</span>
-                    {ev.new_value ? (
-                      <span className="ml-1 text-muted-foreground">({ev.new_value})</span>
-                    ) : null}
-                  </span>
-                  <span className="label-caps shrink-0 text-muted-foreground">
-                    {new Date(ev.created_at).toLocaleDateString()}
-                  </span>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </div>
-
-      {/* Recent applications */}
-      <div className="mt-10">
-        <div className="flex items-baseline justify-between gap-4 mb-4">
-          <h2 className="label-caps">
-            {t("recentApplications", { count: applications.length })}
-          </h2>
-          <Link
-            href="/applications/new"
-            className="rounded-sm bg-accent px-4 py-1.5 text-sm font-medium text-accent-foreground hover:opacity-90"
-          >
-            {t("addApplication")}
-          </Link>
+      <section className="mt-14 grid grid-cols-1 gap-6 lg:grid-cols-[0.95fr_1.05fr]">
+        <div>
+          <p className="label-caps mb-4">{t("nextActionLabel")}</p>
+          <div className="flex min-h-80 flex-col justify-between rounded-lg border border-border bg-background p-7 shadow-sm">
+            <div className="flex items-start gap-6">
+              <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
+                <SmallIcon kind="briefcase" />
+              </span>
+              <div>
+                <h2 className="font-display text-xl leading-snug">
+                  {nextActionApp
+                    ? t("nextActionTitle", {
+                        role: nextActionApp.role_title ?? t("untitledRole"),
+                      })
+                    : t("noAppsHeading")}
+                </h2>
+                <p className="mt-2 max-w-xl text-sm leading-relaxed text-muted-foreground">
+                  {nextActionApp ? t("nextActionBody") : t("noAppsSub")}
+                </p>
+              </div>
+            </div>
+            <div className="mt-10 flex justify-end">
+              <Link
+                href={nextActionApp ? `/applications/${nextActionApp.id}` : "/applications/new"}
+                className="inline-flex h-12 min-w-40 items-center justify-center gap-3 rounded-md border border-border px-5 text-sm font-medium shadow-sm transition-colors hover:bg-muted"
+              >
+                {nextActionApp ? t("prepareNow") : t("addApplication")}
+                <span aria-hidden="true">-&gt;</span>
+              </Link>
+            </div>
+          </div>
         </div>
 
-        {applications.length === 0 ? (
-          <div className="rounded-sm border border-dashed border-border p-12 text-center">
-            <p className="font-display text-2xl text-muted-foreground">
-              {t("noAppsHeading")}
-            </p>
-            <p className="mt-2 text-sm text-muted-foreground">{t("noAppsSub")}</p>
-            <Link
-              href="/applications/new"
-              className="mt-6 inline-flex h-10 items-center justify-center rounded-sm bg-accent px-5 text-sm font-medium text-accent-foreground hover:opacity-90"
-            >
-              {t("addApplication")}
+        <div>
+          <div className="mb-4 flex items-center justify-between gap-4">
+            <p className="label-caps">{t("recentActivityLabel")}</p>
+            <Link href="/applications" className="text-sm text-muted-foreground hover:text-foreground">
+              {t("viewAll")}
             </Link>
           </div>
-        ) : (
-          <ul className="flex flex-col gap-3">
-            {applications.map((app) => (
-              <li key={app.id} className="rounded-sm border border-border bg-background p-5">
-                <div className="flex items-baseline justify-between gap-4">
-                  <div>
-                    <h3 className="font-display text-xl">
-                      {app.role_title ?? t("untitledRole")}
-                    </h3>
-                    <p className="mt-0.5 text-sm text-muted-foreground">
-                      {app.company_name ?? t("unknownCompany")}
-                      {app.location ? ` · ${app.location}` : ""}
-                    </p>
-                  </div>
-                  <span className="label-caps whitespace-nowrap rounded-sm border border-border px-1.5 py-0.5">
-                    {t(STATUS_LABEL_KEY[app.current_status] as Parameters<typeof t>[0])}
-                  </span>
-                </div>
-                <p className="mt-2 text-xs text-muted-foreground">
-                  {t("updatedPrefix")} {new Date(app.updated_at).toLocaleDateString()}
-                </p>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
+          <div className="rounded-lg border border-border bg-background px-5 py-3 shadow-sm">
+            {events.length === 0 ? (
+              <p className="py-8 text-sm text-muted-foreground">{t("noActivity")}</p>
+            ) : (
+              <ul>
+                {events.map((ev) => {
+                  const status = eventStatus(ev);
+                  return (
+                    <li
+                      key={ev.id}
+                      className="grid grid-cols-[1fr_auto_auto] items-center gap-5 border-b border-border py-3 last:border-0"
+                    >
+                      <div className="min-w-0">
+                        <p className="truncate font-display text-base leading-tight">
+                          {activityTitle(ev, t)}
+                        </p>
+                        <p className="mt-1 truncate text-xs text-muted-foreground">
+                          {activitySubtitle(ev, t)}
+                        </p>
+                      </div>
+                      <p className="hidden text-xs text-muted-foreground sm:block">
+                        {new Date(ev.created_at).toLocaleDateString()}
+                      </p>
+                      <EventBadge
+                        status={status}
+                        label={
+                          status
+                            ? t(STATUS_LABEL_KEY[status] as Parameters<typeof t>[0])
+                            : t(EVENT_TYPE_LABEL_KEY[ev.event_type] as Parameters<typeof t>[0])
+                        }
+                      />
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </div>
+        </div>
+      </section>
     </div>
   );
 }
