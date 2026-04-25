@@ -71,8 +71,20 @@ export async function generateDocumentAction(
     } else if (documentType === "cover_letter") {
       content = await generateCoverLetter({ resume: parsedResume, job });
     } else if (documentType === "email_draft") {
-      const draft = await generateEmailDraft({ resume: parsedResume, job });
-      content = `Subject: ${draft.subject}\n\n${draft.body}\n\nAttachments: ${draft.attachments.join(", ")}`;
+      const draft = await generateEmailDraft({
+        resume: parsedResume,
+        job,
+        rawJobText: app.raw_job_text,
+      });
+      const attachments = draft.attachments
+        .map((item) => `- ${item.name}${item.reason ? ` - ${item.reason}` : ""}`)
+        .join("\n");
+      content = [
+        `Subject: ${draft.subject}`,
+        draft.body,
+        draft.signature,
+        attachments ? `Attachments:\n${attachments}` : "",
+      ].filter(Boolean).join("\n\n");
     } else {
       return { error: `Unsupported document type: ${documentType}` };
     }

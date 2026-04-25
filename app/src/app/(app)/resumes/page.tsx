@@ -1,4 +1,5 @@
 import { requireUser } from "@/lib/auth/current-user";
+import { getTranslations } from "next-intl/server";
 import { UploadForm } from "./UploadForm";
 import { deleteResumeAction, setDefaultResumeAction } from "./actions";
 import type { BaseResume } from "@/lib/db/types";
@@ -12,6 +13,7 @@ export default async function ResumesPage({
   searchParams: Promise<{ welcome?: string; needResume?: string }>;
 }) {
   const { supabase, user } = await requireUser();
+  const t = await getTranslations("Resumes");
   const params = await searchParams;
   const { data } = await supabase
     .from("base_resumes")
@@ -30,13 +32,13 @@ export default async function ResumesPage({
   if (resumes.length === 0) {
     return (
       <div className="mx-auto w-full max-w-2xl px-6 py-16">
-        <div className="label-caps mb-2">Dossier</div>
+        <div className="label-caps mb-2">{t("dossierLabel")}</div>
 
         {needsResume && (
           <div className="mb-6 flex items-start gap-3 rounded-md border border-amber-300 bg-amber-50 px-4 py-3">
             <span className="mt-0.5 shrink-0 text-amber-500">⚠</span>
             <p className="text-sm text-amber-800">
-              You need to upload a base resume before creating an application.
+              {t("needResumeWarning")}
             </p>
           </div>
         )}
@@ -50,15 +52,13 @@ export default async function ResumesPage({
               <line x1="9" y1="15" x2="15" y2="15" />
             </svg>
           </div>
-          <h1 className="font-display text-3xl leading-tight">Upload your base resume</h1>
+          <h1 className="font-display text-3xl leading-tight">{t("heroHeading")}</h1>
           <p className="mt-3 text-sm text-muted-foreground max-w-sm mx-auto">
-            {isWelcome
-              ? "You're all set up — now upload your resume. HireMe will tailor it automatically for each job you apply to."
-              : "HireMe tailors your resume for each job. Upload your base resume once and we handle the rest."}
+            {isWelcome ? t("heroBodyWelcome") : t("heroBodyDefault")}
           </p>
 
           <div className="mt-8 text-left rounded-sm border border-border bg-muted/40 p-6">
-            <h2 className="label-caps mb-4">New upload</h2>
+            <h2 className="label-caps mb-4">{t("newUpload")}</h2>
             <UploadForm />
           </div>
         </div>
@@ -68,32 +68,29 @@ export default async function ResumesPage({
 
   return (
     <div className="mx-auto w-full max-w-5xl px-6 py-12">
-      <div className="label-caps mb-2">Dossier</div>
-      <h1 className="font-display text-4xl leading-tight">Base resumes</h1>
+      <div className="label-caps mb-2">{t("dossierLabel")}</div>
+      <h1 className="font-display text-4xl leading-tight">{t("heading")}</h1>
       <p className="mt-2 text-sm text-muted-foreground">
-        Upload the source resumes HireMe will tailor from. Your default is used
-        automatically for new applications.
+        {t("headingSub")}
       </p>
 
       {showBanner && (
         <div className="mt-6 flex items-start gap-3 rounded-md border border-green-300 bg-green-50 px-4 py-3">
           <span className="mt-0.5 shrink-0 text-green-600">✓</span>
           <p className="text-sm text-green-800">
-            {isWelcome
-              ? "Welcome! Upload your base resume below to get started — you'll need it to apply for jobs."
-              : "Upload a base resume below, then you can create applications."}
+            {isWelcome ? t("welcomeBanner") : t("needResumeBanner")}
           </p>
         </div>
       )}
 
       <div className="mt-10 grid gap-10 lg:grid-cols-[1fr_1.2fr]">
         <section className="rounded-sm border border-border bg-muted/40 p-6">
-          <h2 className="label-caps mb-4">New upload</h2>
+          <h2 className="label-caps mb-4">{t("newUpload")}</h2>
           <UploadForm />
         </section>
 
         <section>
-          <h2 className="label-caps mb-4">On file · {resumes.length}</h2>
+          <h2 className="label-caps mb-4">{t("onFile", { count: resumes.length })}</h2>
           <ul className="flex flex-col gap-3">
             {resumes.map((r) => (
               <li
@@ -106,13 +103,13 @@ export default async function ResumesPage({
                       <h3 className="font-display text-xl">{r.title}</h3>
                       {r.is_default ? (
                         <span className="label-caps rounded-sm border border-border px-1.5 py-0.5">
-                          Default
+                          {t("defaultBadge")}
                         </span>
                       ) : null}
                     </div>
                     <p className="mt-1 text-xs text-muted-foreground">
                       {r.source_file_type?.toUpperCase() ?? "TEXT"} ·{" "}
-                      uploaded {new Date(r.created_at).toLocaleDateString()}
+                      {t("uploadedOn")} {new Date(r.created_at).toLocaleDateString()}
                     </p>
                   </div>
                   <div className="flex flex-wrap gap-2">
@@ -124,7 +121,7 @@ export default async function ResumesPage({
                           type="submit"
                           className="rounded-sm border border-border px-3 py-1.5 text-xs hover:bg-muted"
                         >
-                          Set default
+                          {t("setDefault")}
                         </button>
                       </form>
                     ) : null}
@@ -134,28 +131,28 @@ export default async function ResumesPage({
                         type="submit"
                         className="rounded-sm border border-border px-3 py-1.5 text-xs text-danger hover:bg-muted"
                       >
-                        Delete
+                        {t("delete")}
                       </button>
                     </form>
                   </div>
                 </div>
                 {r.parsed_resume_json ? (
                   <p className="mt-3 text-xs text-muted-foreground">
-                    Structured:{" "}
+                    {t("structuredPrefix")}{" "}
                     {[
                       r.parsed_resume_json.experience?.length &&
-                        `${r.parsed_resume_json.experience.length} role${r.parsed_resume_json.experience.length === 1 ? "" : "s"}`,
+                        t("roleCount", { count: r.parsed_resume_json.experience.length }),
                       r.parsed_resume_json.education?.length &&
-                        `${r.parsed_resume_json.education.length} edu`,
+                        t("eduCount", { count: r.parsed_resume_json.education.length }),
                       r.parsed_resume_json.skills?.length &&
-                        `${r.parsed_resume_json.skills.length} skills`,
+                        t("skillsCount", { count: r.parsed_resume_json.skills.length }),
                     ]
                       .filter(Boolean)
-                      .join(" · ") || "text only"}
+                      .join(" · ") || t("textOnly")}
                   </p>
                 ) : (
                   <p className="mt-3 text-xs text-muted-foreground italic">
-                    Text captured — structured parse unavailable.
+                    {t("textCaptured")}
                   </p>
                 )}
               </li>

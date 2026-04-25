@@ -2,6 +2,7 @@ export const maxDuration = 60;
 
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import { getLocale, getTranslations } from "next-intl/server";
 import { requireUser } from "@/lib/auth/current-user";
 import type {
   ApplicationDocument,
@@ -13,7 +14,6 @@ import type {
   Profile,
   TimelineEventType,
 } from "@/lib/db/types";
-import { APPLICATION_STATUS_LABEL } from "@/lib/db/types";
 import { StatusSelect } from "@/components/StatusSelect";
 import { WorkspaceTabs } from "./WorkspaceTabs";
 import { DeleteApplicationButton } from "@/components/DeleteApplicationButton";
@@ -33,11 +33,11 @@ export async function generateMetadata({
 // ---------------------------------------------------------------------------
 
 const DOC_LABELS: Record<string, string> = {
-  tailored_resume: "Resume",
-  cover_letter: "Cover letter",
-  email_draft: "Email draft",
-  assessment_notes: "Assessment notes",
-  interview_prep: "Interview prep",
+  tailored_resume: "detailDocResume",
+  cover_letter: "detailDocCoverLetter",
+  email_draft: "detailDocEmailDraft",
+  assessment_notes: "detailDocAssessmentNotes",
+  interview_prep: "detailDocInterviewPrep",
 };
 
 const EVENT_ICON: Record<TimelineEventType, string> = {
@@ -49,31 +49,50 @@ const EVENT_ICON: Record<TimelineEventType, string> = {
   note_added: "✐",
 };
 
-function eventDescription(event: ApplicationTimelineEvent): string {
+type Translator = Awaited<ReturnType<typeof getTranslations>>;
+
+const STATUS_LABEL_KEYS: Record<ApplicationStatus, string> = {
+  saved: "statusSaved",
+  ready_to_apply: "statusReadyToApply",
+  applied: "statusApplied",
+  assessment: "statusAssessment",
+  interview: "statusInterview",
+  rejected: "statusRejected",
+  offer: "statusOffer",
+  withdrawn: "statusWithdrawn",
+};
+
+function statusLabel(t: Translator, status: string | null): string {
+  if (!status) return t("statusUnknown", { status: "unknown" });
+  const key = STATUS_LABEL_KEYS[status as ApplicationStatus];
+  return key ? t(key) : t("statusUnknown", { status });
+}
+
+function eventDescription(event: ApplicationTimelineEvent, t: Translator): string {
   switch (event.event_type) {
     case "created":
-      return "Application created";
+      return t("detailEventCreated");
     case "status_changed":
-      return `Status → ${
-        APPLICATION_STATUS_LABEL[event.new_value as ApplicationStatus] ??
-        event.new_value ??
-        "unknown"
-      }`;
-    case "document_generated":
-      return `${DOC_LABELS[event.new_value ?? ""] ?? event.new_value ?? "Document"} generated`;
+      return t("detailEventStatusChanged", { status: statusLabel(t, event.new_value) });
+    case "document_generated": {
+      const docKey = DOC_LABELS[event.new_value ?? ""];
+      return t("detailEventDocGenerated", {
+        doc: docKey ? t(docKey) : event.new_value ?? t("detailDocument"),
+      });
+    }
     case "assessment_added":
-      return "Assessment uploaded";
+      return t("detailEventAssessmentAdded");
     case "interview_prep_generated":
-      return "Interview prep generated";
+      return t("detailEventInterviewPrepGenerated");
     case "note_added":
-      return "Notes saved";
+      return t("detailEventNoteAdded");
     default:
       return event.event_type;
   }
 }
 
-function formatTimestamp(iso: string): string {
-  return new Intl.DateTimeFormat("en-US", {
+function formatTimestamp(iso: string, locale: string): string {
+  return new Intl.DateTimeFormat(locale, {
     month: "short",
     day: "numeric",
     hour: "numeric",
@@ -81,13 +100,13 @@ function formatTimestamp(iso: string): string {
   }).format(new Date(iso));
 }
 
-function TimelineSidebar({ events }: { events: ApplicationTimelineEvent[] }) {
+function TimelineSidebar({ events, locale, t }: { events: ApplicationTimelineEvent[]; locale: string; t: Translator }) {
   return (
     <aside>
       <div className="sticky top-6">
-        <p className="label-caps mb-4">Activity</p>
+        <p className="label-caps mb-4">{t("detailActivity")}</p>
         {events.length === 0 ? (
-          <p className="text-xs text-muted-foreground">No activity yet.</p>
+          <p className="text-xs text-muted-foreground">{t("detailNoActivity")}</p>
         ) : (
           <ol className="space-y-0">
             {events.map((event, i) => (
@@ -102,10 +121,10 @@ function TimelineSidebar({ events }: { events: ApplicationTimelineEvent[] }) {
                 </div>
                 <div className="pb-4 min-w-0">
                   <p className="text-xs leading-tight">
-                    {eventDescription(event)}
+                    {eventDescription(event, t)}
                   </p>
                   <p className="mt-0.5 text-[10px] text-muted-foreground">
-                    {formatTimestamp(event.created_at)}
+                    {formatTimestamp(event.created_at, locale)}
                   </p>
                 </div>
               </li>
@@ -128,6 +147,8 @@ export default async function ApplicationPage({
 }) {
   const { id } = await params;
   const { supabase, user } = await requireUser();
+  const t = await getTranslations("Applications");
+  const locale = await getLocale();
 
   const [
     { data: app },
@@ -197,18 +218,18 @@ export default async function ApplicationPage({
     <div className="mx-auto w-full max-w-6xl px-6 py-12">
       <div className="label-caps mb-2">
         <Link href="/applications" className="hover:underline">
-          Applications
+          {t("heading")}
         </Link>{" "}
-        / {application.company_name ?? "Application"}
+        / {application.company_name ?? t("heading")}
       </div>
 
       {isStaleSaved && (
         <div className="mb-6 flex items-start gap-3 rounded-md border border-yellow-300 bg-yellow-50 px-4 py-3">
           <span className="mt-0.5 shrink-0 text-yellow-500">⚠</span>
           <p className="text-sm text-yellow-800">
-            <strong>Reminder:</strong> You haven&apos;t updated the status of this application. Did you apply?{" "}
+            <strong>{t("detailStaleReminder")}</strong> {t("detailStaleBody")}{" "}
             <span className="text-yellow-700 opacity-75">
-              Update the status above once you&apos;ve submitted your application.
+              {t("detailStaleHint")}
             </span>
           </p>
         </div>
@@ -217,10 +238,10 @@ export default async function ApplicationPage({
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="font-display text-4xl leading-tight">
-            {application.role_title ?? "Untitled role"}
+            {application.role_title ?? t("detailUntitledRole")}
           </h1>
           <p className="mt-1 text-muted-foreground">
-            {application.company_name ?? "Unknown company"}
+            {application.company_name ?? t("detailUnknownCompany")}
             {application.location ? ` · ${application.location}` : ""}
             {application.job_url ? (
               <>
@@ -231,7 +252,7 @@ export default async function ApplicationPage({
                   rel="noopener noreferrer"
                   className="underline underline-offset-2 opacity-60 hover:opacity-100"
                 >
-                  Job posting ↗
+                  {t("detailJobPosting")}
                 </a>
               </>
             ) : null}
@@ -266,7 +287,7 @@ export default async function ApplicationPage({
           userFirstName={userFirstName}
           companyName={application.company_name ?? undefined}
         />
-        <TimelineSidebar events={events} />
+        <TimelineSidebar events={events} locale={locale} t={t} />
       </div>
     </div>
   );

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useTranslations } from "next-intl";
 import { deleteApplicationAction } from "@/app/actions/applications";
 
 export function DeleteApplicationButton({
@@ -10,6 +11,7 @@ export function DeleteApplicationButton({
   applicationId: string;
   variant?: "icon" | "text";
 }) {
+  const t = useTranslations("Applications");
   const [confirming, setConfirming] = useState(false);
   const [pending, startDelete] = useTransition();
 
@@ -22,19 +24,19 @@ export function DeleteApplicationButton({
   if (confirming) {
     return (
       <div className="flex items-center gap-2">
-        <span className="text-xs text-muted-foreground whitespace-nowrap">Delete this application?</span>
+        <span className="text-xs text-muted-foreground whitespace-nowrap">{t("deleteConfirm")}</span>
         <button
           onClick={handleDelete}
           disabled={pending}
           className="rounded px-2 py-1 text-xs font-medium bg-red-600 text-white hover:bg-red-700 disabled:opacity-50"
         >
-          {pending ? "Deleting…" : "Yes, delete"}
+          {pending ? t("deleting") : t("deleteYes")}
         </button>
         <button
           onClick={() => setConfirming(false)}
           className="rounded px-2 py-1 text-xs border border-border hover:bg-muted"
         >
-          Cancel
+          {t("deleteCancel")}
         </button>
       </div>
     );
@@ -46,7 +48,7 @@ export function DeleteApplicationButton({
         onClick={(e) => { e.preventDefault(); setConfirming(true); }}
         className="rounded-md border border-border px-3 py-1.5 text-xs text-danger hover:bg-muted"
       >
-        Delete application
+        {t("deleteApplication")}
       </button>
     );
   }
@@ -54,7 +56,7 @@ export function DeleteApplicationButton({
   return (
     <button
       onClick={(e) => { e.preventDefault(); setConfirming(true); }}
-      title="Delete application"
+      title={t("deleteApplication")}
       className="flex h-7 w-7 items-center justify-center rounded border border-border text-muted-foreground hover:border-danger/50 hover:text-danger hover:bg-muted"
     >
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

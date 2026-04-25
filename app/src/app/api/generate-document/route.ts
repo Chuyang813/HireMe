@@ -100,8 +100,8 @@ Best regards,
 [Candidate Email][ | Candidate Phone if present in resume][ | Candidate Location if present in resume]
 
 Attachments:
-- [Filename.pdf] — [one short reason tying it to the posting]
-- [Filename.pdf] — [one short reason tying it to the posting]
+- [Filename.pdf] - [one short reason tying it to the posting]
+- [Filename.pdf] - [one short reason tying it to the posting]
 
 Rules for the signature block:
 - Always include "Best regards," then the candidate's full name on the next line, then a single contact line.
@@ -117,7 +117,7 @@ Rules for the attachments block:
 - Include writing samples IF the posting mentions writing samples or published work.
 - Include references IF the posting requests references with the application.
 - Include certifications IF the posting requires a specific certification the candidate holds.
-- Each attachment line MUST end with " — " followed by a short reason that cites what in the posting prompted it (e.g. "— posting requires unofficial transcript", "— role requests design portfolio").
+- Each attachment line MUST use " - " before the reason and cite what in the posting prompted it (e.g. "- posting requires unofficial transcript", "- role requests design portfolio").
 - Never invent a document the candidate doesn't plausibly have. If unsure, leave it out.
 
 Other rules:
@@ -132,6 +132,7 @@ function buildPrompt(
   documentType: DocumentType,
   resume: ParsedResume,
   job: ParsedJob,
+  rawJobText?: string | null,
 ): { system: string; userMessage: string; maxTokens: number } | null {
   const resumeJson = JSON.stringify(resume, null, 2);
   const jobJson = JSON.stringify(job, null, 2);
@@ -167,8 +168,9 @@ function buildPrompt(
       userMessage: [
         `Candidate parsed resume (JSON):\n${resumeJson}`,
         `Parsed job posting (JSON):\n${jobJson}`,
+        rawJobText ? `Raw job posting text:\n${rawJobText}` : "",
         "Write the application email. Tailor the attachments list to what THIS posting actually asks for.",
-      ].join("\n\n"),
+      ].filter(Boolean).join("\n\n"),
     };
   }
 
@@ -213,7 +215,7 @@ export async function POST(req: NextRequest) {
   const [{ data: app }, { data: resumeRow }] = await Promise.all([
     supabase
       .from("job_applications")
-      .select("parsed_job_json")
+      .select("parsed_job_json, raw_job_text")
       .eq("id", applicationId)
       .eq("user_id", user.id)
       .single(),
@@ -238,7 +240,7 @@ export async function POST(req: NextRequest) {
   }
 
   const parsedResume = (resumeRow?.parsed_resume_json as ParsedResume | null) ?? {};
-  const prompt = buildPrompt(documentType, parsedResume, job);
+  const prompt = buildPrompt(documentType, parsedResume, job, app.raw_job_text);
   if (!prompt) {
     return Response.json({ error: `Unsupported document type: ${documentType}` }, { status: 400 });
   }

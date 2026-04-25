@@ -1,9 +1,11 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useTranslations } from "next-intl";
 import { getResumePreviewAction } from "@/app/(app)/resumes/actions";
 
 export function ResumePreviewButton({ resumeId, title }: { resumeId: string; title: string }) {
+  const t = useTranslations("Resumes");
   const [open, setOpen] = useState(false);
   const [preview, setPreview] = useState<
     | { type: "pdf"; url: string }
@@ -27,14 +29,14 @@ export function ResumePreviewButton({ resumeId, title }: { resumeId: string; tit
     <>
       <button
         onClick={handleOpen}
-        title="Preview resume"
+        title={t("previewResume")}
         className="rounded-sm border border-border px-3 py-1.5 text-xs hover:bg-muted flex items-center gap-1.5"
       >
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M1 12S5 4 12 4s11 8 11 8-4 8-11 8S1 12 1 12z" />
           <circle cx="12" cy="12" r="3" />
         </svg>
-        Preview
+        {t("preview")}
       </button>
 
       {open && (

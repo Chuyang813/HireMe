@@ -12,10 +12,14 @@ type LocaleOption = {
 };
 
 const LOCALES: LocaleOption[] = [
-  { code: "en", native: "English",  english: "English", shortLabel: "EN" },
-  { code: "zh", native: "中文",      english: "Chinese", shortLabel: "中" },
-  { code: "fr", native: "Français",  english: "French",  shortLabel: "FR" },
+  { code: "en", native: "English", english: "English", shortLabel: "EN" },
+  { code: "zh", native: "中文", english: "Chinese", shortLabel: "中" },
+  { code: "fr", native: "Français", english: "French", shortLabel: "FR" },
 ];
+
+function setLocaleCookie(code: LocaleOption["code"]) {
+  globalThis.document.cookie = `locale=${code};path=/;max-age=31536000`;
+}
 
 export function LanguageSwitcher() {
   const locale = useLocale();
@@ -23,8 +27,7 @@ export function LanguageSwitcher() {
   const [open, setOpen] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
 
-  const current =
-    LOCALES.find((l) => l.code === locale) ?? LOCALES[0];
+  const current = LOCALES.find((l) => l.code === locale) ?? LOCALES[0];
 
   useEffect(() => {
     if (!open) return;
@@ -45,7 +48,7 @@ export function LanguageSwitcher() {
   function pick(code: LocaleOption["code"]) {
     setOpen(false);
     if (code === locale) return;
-    document.cookie = `locale=${code};path=/;max-age=31536000`;
+    setLocaleCookie(code);
     try {
       localStorage.setItem("locale", code);
     } catch {
@@ -68,7 +71,7 @@ export function LanguageSwitcher() {
           className={`text-[0.55rem] transition-transform ${open ? "rotate-180" : ""}`}
           aria-hidden="true"
         >
-          ▾
+          v
         </span>
       </button>
 

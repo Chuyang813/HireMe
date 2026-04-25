@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { requireUser } from "@/lib/auth/current-user";
-import { APPLICATION_STATUS_LABEL } from "@/lib/db/types";
 import { StatusSelect } from "@/components/StatusSelect";
 import type { ApplicationStatus, JobApplication } from "@/lib/db/types";
 
@@ -67,7 +66,7 @@ export default async function TrackerPage() {
           {PIPELINE_STATS.map((s) => (
             <div key={s} className="rounded-md border border-border p-4 shadow-sm bg-white">
               <p className="label-caps text-muted-foreground">
-                {APPLICATION_STATUS_LABEL[s]}
+                {t(s as Parameters<typeof t>[0])}
               </p>
               <p className="mt-1 font-display text-3xl">{counts[s] ?? 0}</p>
             </div>
@@ -125,10 +124,10 @@ export default async function TrackerPage() {
                         {isStale(app) && (
                           <span
                             className="inline-flex items-center gap-1 rounded-full bg-yellow-100 px-2 py-0.5 text-[10px] font-medium text-yellow-700"
-                            title="Saved over 1 day ago — did you apply?"
+                            title={t("staleTooltip")}
                           >
                             <span className="h-1.5 w-1.5 rounded-full bg-yellow-400" />
-                            Update status
+                            {t("staleUpdateStatus")}
                           </span>
                         )}
                       </div>

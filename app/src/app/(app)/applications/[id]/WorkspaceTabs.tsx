@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useTranslations } from "next-intl";
 import {
   saveDocumentAction,
   analyzeAssessmentAction,
@@ -29,12 +30,12 @@ type TabId =
   | "assessment"
   | "interview_prep";
 
-const TABS: { id: TabId; label: string }[] = [
-  { id: "resume", label: "Resume" },
-  { id: "cover_letter", label: "Cover letter" },
-  { id: "email", label: "Email draft" },
-  { id: "assessment", label: "Assessment" },
-  { id: "interview_prep", label: "Interview prep" },
+const TABS: { id: TabId; labelKey: string }[] = [
+  { id: "resume", labelKey: "tabResume" },
+  { id: "cover_letter", labelKey: "tabCoverLetter" },
+  { id: "email", labelKey: "tabEmail" },
+  { id: "assessment", labelKey: "tabAssessment" },
+  { id: "interview_prep", labelKey: "tabInterviewPrep" },
 ];
 
 // ---------------------------------------------------------------------------
@@ -219,10 +220,12 @@ function applyInline(text: string): React.ReactNode[] {
 }
 
 function MarkdownViewer({ content }: { content: string }) {
+  const t = useTranslations("Workspace");
+
   if (!content.trim()) {
     return (
       <p className="text-sm text-muted-foreground italic">
-        No content yet. Click &ldquo;Generate&rdquo; to create content.
+        {t("noContent")}
       </p>
     );
   }
@@ -368,11 +371,11 @@ function parseEmailDraft(text: string): ParsedEmail {
     for (let i = attachmentsIdx + 1; i < lines.length; i++) {
       const raw = lines[i].trim();
       if (!raw) continue;
-      const stripped = raw.replace(/^[-*•]\s*/, "");
+      const stripped = raw.replace(/^[-*\s]*/, "");
       candidates.push(stripped);
     }
     for (const item of candidates) {
-      const dash = item.match(/^(.+?)\s+[—–-]\s+(.+)$/);
+      const dash = item.match(/^(.+?)\s+(?:-|:)\s+(.+)$/);
       if (dash) {
         attachments.push({ name: dash[1].trim(), reason: dash[2].trim() });
       } else {
@@ -390,6 +393,7 @@ function parseEmailDraft(text: string): ParsedEmail {
 }
 
 function EmailDraftView({ content }: { content: string }) {
+  const t = useTranslations("Workspace");
   const parsed = parseEmailDraft(content);
   const hasStructure =
     parsed.subject || parsed.signature || parsed.attachments.length > 0;
@@ -398,7 +402,7 @@ function EmailDraftView({ content }: { content: string }) {
     return (
       <div className="rounded-md border border-border bg-white shadow-sm">
         <div className="flex items-center justify-between border-b border-border px-6 py-3">
-          <span className="label-caps">Email draft</span>
+          <span className="label-caps">{t("emailDraftHeader")}</span>
         </div>
         <div className="whitespace-pre-wrap p-6 text-sm leading-relaxed text-foreground">
           {content}
@@ -410,13 +414,13 @@ function EmailDraftView({ content }: { content: string }) {
   return (
     <div className="rounded-md border border-border bg-white shadow-sm overflow-hidden">
       <div className="flex items-center justify-between border-b border-border bg-muted/40 px-6 py-3">
-        <span className="label-caps">Email draft</span>
-        <span className="text-xs text-muted-foreground">Suggestion · review before sending</span>
+        <span className="label-caps">{t("emailDraftHeader")}</span>
+        <span className="text-xs text-muted-foreground">{t("emailSuggestionHint")}</span>
       </div>
 
       {parsed.subject && (
         <div className="grid grid-cols-[5rem_1fr] gap-4 border-b border-border px-6 py-4">
-          <span className="label-caps pt-0.5">Subject</span>
+          <span className="label-caps pt-0.5">{t("emailSubjectLabel")}</span>
           <p className="font-display text-base leading-snug text-foreground">
             {parsed.subject}
           </p>
@@ -425,7 +429,7 @@ function EmailDraftView({ content }: { content: string }) {
 
       {parsed.body && (
         <div className="px-6 py-5">
-          <p className="label-caps mb-3">Body</p>
+          <p className="label-caps mb-3">{t("emailBodyLabel")}</p>
           <div className="whitespace-pre-wrap text-sm leading-relaxed text-foreground">
             {parsed.body}
           </div>
@@ -434,7 +438,7 @@ function EmailDraftView({ content }: { content: string }) {
 
       {parsed.signature && (
         <div className="border-t border-border px-6 py-4">
-          <p className="label-caps mb-2">Signature</p>
+          <p className="label-caps mb-2">{t("emailSignatureLabel")}</p>
           <div className="whitespace-pre-wrap text-sm leading-relaxed text-foreground">
             {parsed.signature}
           </div>
@@ -443,7 +447,7 @@ function EmailDraftView({ content }: { content: string }) {
 
       {parsed.attachments.length > 0 && (
         <div className="border-t border-border bg-muted/30 px-6 py-4">
-          <p className="label-caps mb-3">Suggested attachments</p>
+          <p className="label-caps mb-3">{t("emailAttachmentsLabel")}</p>
           <ul className="flex flex-col gap-2">
             {parsed.attachments.map((a, i) => (
               <li key={i} className="flex items-start gap-3 text-sm">
@@ -453,14 +457,14 @@ function EmailDraftView({ content }: { content: string }) {
                 </span>
                 {a.reason && (
                   <span className="leading-relaxed text-muted-foreground">
-                    — {a.reason}
+                    - {a.reason}
                   </span>
                 )}
               </li>
             ))}
           </ul>
           <p className="mt-3 text-xs italic text-muted-foreground">
-            Filenames are suggestions — attach whichever files you have ready.
+            {t("emailFilenameHint")}
           </p>
         </div>
       )}
@@ -479,6 +483,7 @@ function HistoryDropdown({
   documentId: string;
   onRestore: (content: string) => void;
 }) {
+  const t = useTranslations("Workspace");
   const [open, setOpen] = useState(false);
   const [versions, setVersions] = useState<DocumentVersion[]>([]);
   const [loading, setLoading] = useState(false);
@@ -501,14 +506,14 @@ function HistoryDropdown({
   return (
     <div className="relative">
       <Button variant="outline" onClick={handleOpen}>
-        History
+        {t("historyButton")}
       </Button>
       {open && (
         <div className="absolute right-0 top-full z-20 mt-1 w-72 rounded-md border border-border bg-background shadow-lg">
-          {loading && <p className="px-4 py-3 text-sm text-muted-foreground">Loading…</p>}
+          {loading && <p className="px-4 py-3 text-sm text-muted-foreground">{t("historyLoading")}</p>}
           {error && <p className="px-4 py-3 text-sm text-danger">{error}</p>}
           {!loading && !error && versions.length === 0 && (
-            <p className="px-4 py-3 text-sm text-muted-foreground">No previous versions.</p>
+            <p className="px-4 py-3 text-sm text-muted-foreground">{t("historyEmpty")}</p>
           )}
           {versions.map((v) => (
             <button
@@ -547,6 +552,7 @@ function DocumentPanel({
   exportFilename: string;
   showEmail?: boolean;
 }) {
+  const t = useTranslations("Workspace");
   const [content, setContent] = useState(existingDoc?.text_content ?? "");
   const [docId, setDocId] = useState(existingDoc?.id ?? "");
   const [generateError, setGenerateError] = useState("");
@@ -572,13 +578,13 @@ function DocumentPanel({
 
       if (!res.ok) {
         const json = await res.json().catch(() => ({})) as { error?: string };
-        setGenerateError(json.error ?? "Generation failed.");
+        setGenerateError(json.error ?? t("generationFailed"));
         return;
       }
 
       const reader = res.body?.getReader();
       if (!reader) {
-        setGenerateError("Streaming not supported by this browser.");
+        setGenerateError(t("streamingUnsupported"));
         return;
       }
 
@@ -592,7 +598,7 @@ function DocumentPanel({
       // Set content once after full generation — no incremental flicker
       setContent(accumulated);
     } catch (e) {
-      setGenerateError(e instanceof Error ? e.message : "Generation failed.");
+      setGenerateError(e instanceof Error ? e.message : t("generationFailed"));
     } finally {
       setGenerating(false);
     }
@@ -648,11 +654,13 @@ function DocumentPanel({
         <div className="flex flex-wrap items-center justify-between gap-3">
           {!hasResume && (
             <p className="text-sm text-muted-foreground">
-              Upload a base resume in{" "}
-              <a href="/resumes" className="underline underline-offset-2 text-accent">
-                Resumes
-              </a>{" "}
-              to enable AI generation.
+              {t.rich("uploadResumeHint", {
+                link: (chunks) => (
+                  <a href="/resumes" className="underline underline-offset-2 text-accent">
+                    {chunks}
+                  </a>
+                ),
+              })}
             </p>
           )}
           <div className="ml-auto flex flex-wrap gap-2">
@@ -661,7 +669,7 @@ function DocumentPanel({
               onClick={handleGenerate}
               disabled={generating || !hasResume}
             >
-              {generating ? "Generating…" : "Generate"}
+              {generating ? t("generating") : t("generate")}
             </Button>
             {docId && (
               <HistoryDropdown
@@ -674,11 +682,11 @@ function DocumentPanel({
             )}
             {content && (
               <Button variant="outline" onClick={handleCopy}>
-                {copied ? "Copied!" : "Copy to clipboard"}
+                {copied ? t("copied") : t("copyToClipboard")}
               </Button>
             )}
             <Button onClick={handleSave} disabled={saving || !content.trim()}>
-              {saving ? "Saving…" : "Save"}
+              {saving ? t("saving") : t("save")}
             </Button>
           </div>
         </div>
@@ -693,7 +701,7 @@ function DocumentPanel({
           <div className="flex min-h-[18rem] items-center justify-center rounded-md border border-border bg-white shadow-sm">
             <div className="flex flex-col items-center gap-3">
               <div className="h-8 w-8 animate-spin rounded-full border-2 border-border border-t-accent" />
-              <p className="text-sm text-muted-foreground">Drafting email…</p>
+              <p className="text-sm text-muted-foreground">{t("draftingEmail")}</p>
             </div>
           </div>
         ) : content ? (
@@ -701,16 +709,16 @@ function DocumentPanel({
         ) : (
           <div className="flex min-h-[18rem] items-center justify-center rounded-md border border-dashed border-border bg-muted/30 px-8 py-12 text-center">
             <div className="max-w-sm">
-              <p className="label-caps mb-2">Email draft</p>
+              <p className="label-caps mb-2">{t("emailEmptyLabel")}</p>
               <p className="text-sm text-muted-foreground">
-                Click &ldquo;Generate&rdquo; to draft a subject, message, signature, and a tailored attachment list for this posting.
+                {t("emailEmptyBody")}
               </p>
             </div>
           </div>
         )}
 
-        {saveStatus === "saved" && <p className="text-xs text-success">Saved.</p>}
-        {saveStatus === "error" && <p className="text-xs text-danger">Save failed. Please try again.</p>}
+        {saveStatus === "saved" && <p className="text-xs text-success">{t("saved")}</p>}
+        {saveStatus === "error" && <p className="text-xs text-danger">{t("saveFailed")}</p>}
       </div>
     );
   }
@@ -720,11 +728,13 @@ function DocumentPanel({
       <div className="flex flex-wrap items-center justify-between gap-3">
         {!hasResume && (
           <p className="text-sm text-muted-foreground">
-            Upload a base resume in{" "}
-            <a href="/resumes" className="underline underline-offset-2 text-accent">
-              Resumes
-            </a>{" "}
-            to enable AI generation.
+            {t.rich("uploadResumeHint", {
+                link: (chunks) => (
+                  <a href="/resumes" className="underline underline-offset-2 text-accent">
+                    {chunks}
+                  </a>
+                ),
+              })}
           </p>
         )}
         <div className="ml-auto flex flex-wrap gap-2">
@@ -736,9 +746,9 @@ function DocumentPanel({
             {generating ? (
               <span className="flex items-center gap-1.5">
                 <span className="h-3.5 w-3.5 animate-spin rounded-full border border-current border-t-transparent" />
-                Generating…
+                {t("generating")}
               </span>
-            ) : "Generate"}
+            ) : t("generate")}
           </Button>
           {docId && (
             <HistoryDropdown
@@ -752,28 +762,28 @@ function DocumentPanel({
           {content && (
             <>
               <Button variant="outline" onClick={handleCopy}>
-                {copied ? "Copied!" : "Copy"}
+                {copied ? t("copied") : t("copy")}
               </Button>
               <Button
                 variant="outline"
                 onClick={() => handleExport("pdf")}
                 disabled={exporting || !content.trim()}
-                title="Download as PDF"
+                title={t("downloadPDF")}
               >
-                Download PDF
+                {t("downloadPDF")}
               </Button>
               <Button
                 variant="outline"
                 onClick={() => handleExport("docx")}
                 disabled={exporting || !content.trim()}
-                title="Download as Word document"
+                title={t("downloadDOCX")}
               >
-                Download DOCX
+                {t("downloadDOCX")}
               </Button>
             </>
           )}
           <Button onClick={handleSave} disabled={saving || !content.trim()}>
-            {saving ? "Saving…" : "Save"}
+            {saving ? t("saving") : t("save")}
           </Button>
         </div>
       </div>
@@ -788,14 +798,14 @@ function DocumentPanel({
         <div className="flex min-h-[28rem] items-center justify-center rounded-md border border-border bg-white shadow-sm">
           <div className="flex flex-col items-center gap-3">
             <div className="h-8 w-8 animate-spin rounded-full border-2 border-border border-t-accent" />
-            <p className="text-sm text-muted-foreground">Generating document…</p>
+            <p className="text-sm text-muted-foreground">{t("generatingDocument")}</p>
           </div>
         </div>
       )}
       {!generating && <MarkdownViewer content={content} />}
 
-      {saveStatus === "saved" && <p className="text-xs text-success">Saved.</p>}
-      {saveStatus === "error" && <p className="text-xs text-danger">Save failed. Please try again.</p>}
+      {saveStatus === "saved" && <p className="text-xs text-success">{t("saved")}</p>}
+      {saveStatus === "error" && <p className="text-xs text-danger">{t("saveFailed")}</p>}
     </div>
   );
 }
@@ -822,12 +832,14 @@ function AssessmentChecklist({ items, label }: { items: string[]; label: string 
 }
 
 function AssessmentResults({ result }: { result: AssessmentAnalysis }) {
+  const t = useTranslations("Workspace");
+
   return (
     <div className="mt-6 space-y-6">
       <div className="rounded-md border border-border p-4 shadow-sm">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <p className="label-caps mb-1.5">Summary</p>
+            <p className="label-caps mb-1.5">{t("summaryLabel")}</p>
             <p className="text-sm leading-relaxed">{result.summary}</p>
           </div>
           {result.estimated_effort_hours != null && (
@@ -840,7 +852,7 @@ function AssessmentResults({ result }: { result: AssessmentAnalysis }) {
 
       {result.deliverables?.length ? (
         <div>
-          <p className="label-caps mb-2">Deliverables</p>
+          <p className="label-caps mb-2">{t("deliverablesLabel")}</p>
           <ul className="space-y-1">
             {result.deliverables.map((d, i) => (
               <li key={i} className="flex items-start gap-2.5 text-sm">
@@ -854,7 +866,7 @@ function AssessmentResults({ result }: { result: AssessmentAnalysis }) {
 
       {result.evaluation_criteria?.length ? (
         <div>
-          <p className="label-caps mb-2">Likely evaluation criteria</p>
+          <p className="label-caps mb-2">{t("evalCriteriaLabel")}</p>
           <ul className="space-y-1">
             {result.evaluation_criteria.map((c, i) => (
               <li key={i} className="text-sm text-muted-foreground">
@@ -865,13 +877,14 @@ function AssessmentResults({ result }: { result: AssessmentAnalysis }) {
         </div>
       ) : null}
 
-      <AssessmentChecklist items={result.preparation_steps ?? []} label="Preparation steps" />
-      <AssessmentChecklist items={result.checklist ?? []} label="Key checklist" />
+      <AssessmentChecklist items={result.preparation_steps ?? []} label={t("prepStepsLabel")} />
+      <AssessmentChecklist items={result.checklist ?? []} label={t("keyChecklistLabel")} />
     </div>
   );
 }
 
 function AssessmentPanel({ applicationId }: { applicationId: string }) {
+  const t = useTranslations("Workspace");
   const [file, setFile] = useState<File | null>(null);
   const [result, setResult] = useState<AssessmentAnalysis | null>(null);
   const [error, setError] = useState("");
@@ -896,12 +909,12 @@ function AssessmentPanel({ applicationId }: { applicationId: string }) {
   return (
     <div className="flex flex-col gap-4">
       <p className="text-sm text-muted-foreground">
-        Upload the take-home or assessment brief and Claude will break it down for you.
+        {t("assessmentDescription")}
       </p>
 
       <div className="flex flex-wrap items-center gap-3">
         <label className="flex cursor-pointer items-center gap-2 rounded-md border border-border px-4 py-2.5 text-sm hover:bg-muted shadow-sm">
-          <span>{file ? file.name : "Choose file…"}</span>
+          <span>{file ? file.name : t("chooseFile")}</span>
           <input
             type="file"
             accept=".pdf,.docx,.txt"
@@ -914,7 +927,7 @@ function AssessmentPanel({ applicationId }: { applicationId: string }) {
           />
         </label>
         <Button onClick={handleAnalyze} disabled={!file || analyzing}>
-          {analyzing ? "Analyzing…" : "Analyze"}
+          {analyzing ? t("analyzing") : t("analyze")}
         </Button>
       </div>
 
@@ -933,12 +946,13 @@ function AssessmentPanel({ applicationId }: { applicationId: string }) {
 // InterviewPrepPanel
 // ---------------------------------------------------------------------------
 
-const CATEGORY_LABEL: Record<string, string> = {
-  behavioral: "Behavioral",
-  technical: "Technical",
-  role_specific: "Role-specific",
-  company: "Company",
-};
+function categoryLabel(t: ReturnType<typeof useTranslations>, category: string): string {
+  if (category === "behavioral") return t("categoryBehavioral");
+  if (category === "technical") return t("categoryTechnical");
+  if (category === "role_specific") return t("categoryRoleSpecific");
+  if (category === "company") return t("categoryCompany");
+  return category;
+}
 
 function QuestionCard({
   q,
@@ -949,6 +963,8 @@ function QuestionCard({
   isOpen: boolean;
   onToggle: () => void;
 }) {
+  const t = useTranslations("Workspace");
+
   return (
     <div className="rounded-md border border-border shadow-sm">
       <button
@@ -958,7 +974,7 @@ function QuestionCard({
         <div className="min-w-0">
           <p className="text-sm font-medium leading-snug">{q.question}</p>
           <p className="mt-0.5 text-xs text-muted-foreground">
-            {CATEGORY_LABEL[q.category] ?? q.category}
+            {categoryLabel(t, q.category)}
           </p>
         </div>
         <span className="mt-0.5 shrink-0 text-muted-foreground text-xs">
@@ -970,19 +986,19 @@ function QuestionCard({
         <div className="border-t border-border px-4 py-3 bg-muted/30">
           {q.star_answer ? (
             <>
-              <p className="label-caps mb-2">Suggested answer</p>
+              <p className="label-caps mb-2">{t("suggestedAnswer")}</p>
               <p className="whitespace-pre-wrap text-sm leading-relaxed">
                 {q.star_answer}
               </p>
             </>
           ) : (
             <p className="text-sm text-muted-foreground italic">
-              No suggested answer for this question type.
+              {t("noSuggestedAnswer")}
             </p>
           )}
           {q.rationale && (
             <p className="mt-3 text-xs text-muted-foreground">
-              Why asked: {q.rationale}
+              {t("whyAsked")} {q.rationale}
             </p>
           )}
         </div>
@@ -998,6 +1014,7 @@ function InterviewPrepPanel({
   applicationId: string;
   hasResume: boolean;
 }) {
+  const t = useTranslations("Workspace");
   const [result, setResult] = useState<InterviewPrep | null>(null);
   const [error, setError] = useState("");
   const [expandedIdx, setExpandedIdx] = useState<number | null>(null);
@@ -1023,11 +1040,13 @@ function InterviewPrepPanel({
       <div className="flex flex-wrap items-center justify-between gap-3">
         {!hasResume && (
           <p className="text-sm text-muted-foreground">
-            Upload a base resume in{" "}
-            <a href="/resumes" className="underline underline-offset-2 text-accent">
-              Resumes
-            </a>{" "}
-            to enable AI generation.
+            {t.rich("uploadResumeHint", {
+                link: (chunks) => (
+                  <a href="/resumes" className="underline underline-offset-2 text-accent">
+                    {chunks}
+                  </a>
+                ),
+              })}
           </p>
         )}
         <Button
@@ -1035,7 +1054,7 @@ function InterviewPrepPanel({
           disabled={generating || !hasResume}
           className="ml-auto"
         >
-          {generating ? "Generating…" : "Generate Interview Prep"}
+          {generating ? t("generating") : t("generateInterviewPrep")}
         </Button>
       </div>
 
@@ -1048,7 +1067,7 @@ function InterviewPrepPanel({
       {result && (
         <div className="space-y-6">
           <div>
-            <p className="label-caps mb-3">Likely questions</p>
+            <p className="label-caps mb-3">{t("likelyQuestions")}</p>
             <div className="space-y-2">
               {result.likely_questions.map((q, i) => (
                 <QuestionCard
@@ -1065,7 +1084,7 @@ function InterviewPrepPanel({
 
           {result.preparation_checklist?.length ? (
             <div>
-              <p className="label-caps mb-2">Preparation checklist</p>
+              <p className="label-caps mb-2">{t("prepChecklist")}</p>
               <ul className="space-y-1.5">
                 {result.preparation_checklist.map((item, i) => (
                   <li key={i} className="flex items-start gap-2.5 text-sm">
@@ -1079,7 +1098,7 @@ function InterviewPrepPanel({
 
           {result.talking_points?.length ? (
             <div>
-              <p className="label-caps mb-2">Key talking points</p>
+              <p className="label-caps mb-2">{t("talkingPoints")}</p>
               <ul className="space-y-1">
                 {result.talking_points.map((tp, i) => (
                   <li key={i} className="text-sm text-muted-foreground">
@@ -1106,6 +1125,7 @@ function scoreColor(score: number) {
 }
 
 function ScoreCard({ result }: { result: ResumeScore }) {
+  const t = useTranslations("Workspace");
   const color = scoreColor(result.score);
   return (
     <div className="mt-4 rounded-md border border-border bg-white p-5 shadow-sm space-y-5">
@@ -1117,7 +1137,7 @@ function ScoreCard({ result }: { result: ResumeScore }) {
           {result.score}
         </div>
         <div>
-          <p className="label-caps text-muted-foreground mb-0.5">Match score</p>
+          <p className="label-caps text-muted-foreground mb-0.5">{t("matchScore")}</p>
           <div className="h-2 w-48 rounded-full bg-muted overflow-hidden">
             <div
               className="h-full rounded-full transition-all duration-500"
@@ -1129,7 +1149,7 @@ function ScoreCard({ result }: { result: ResumeScore }) {
 
       {result.strengths?.length ? (
         <div>
-          <p className="label-caps mb-2">Strengths</p>
+          <p className="label-caps mb-2">{t("strengths")}</p>
           <ul className="space-y-1">
             {result.strengths.map((s, i) => (
               <li key={i} className="flex items-start gap-2 text-sm">
@@ -1143,7 +1163,7 @@ function ScoreCard({ result }: { result: ResumeScore }) {
 
       {result.gaps?.length ? (
         <div>
-          <p className="label-caps mb-2">Gaps</p>
+          <p className="label-caps mb-2">{t("gaps")}</p>
           <ul className="space-y-1">
             {result.gaps.map((g, i) => (
               <li key={i} className="flex items-start gap-2 text-sm">
@@ -1157,7 +1177,7 @@ function ScoreCard({ result }: { result: ResumeScore }) {
 
       {result.suggestions?.length ? (
         <div>
-          <p className="label-caps mb-2">Top suggestions</p>
+          <p className="label-caps mb-2">{t("topSuggestions")}</p>
           <ol className="space-y-1.5">
             {result.suggestions.map((s, i) => (
               <li key={i} className="flex items-start gap-2.5 text-sm">
@@ -1179,6 +1199,7 @@ function ScorePanel({
   applicationId: string;
   hasResume: boolean;
 }) {
+  const t = useTranslations("Workspace");
   const [scoreResult, setScoreResult] = useState<ResumeScore | null>(null);
   const [error, setError] = useState("");
   const [scoring, startScore] = useTransition();
@@ -1205,15 +1226,15 @@ function ScorePanel({
           onClick={runScore}
           disabled={scoring || !hasResume}
         >
-          {scoring ? "Scoring…" : scoreResult ? "Re-score" : "Score Resume"}
+          {scoring ? t("scoring") : scoreResult ? t("reScore") : t("scoreResume")}
         </Button>
         {!hasResume && (
           <p className="text-sm text-muted-foreground">
-            Upload a base resume to enable scoring.
+            {t("uploadForScoring")}
           </p>
         )}
         {scoring && (
-          <p className="text-sm text-muted-foreground animate-pulse">Analyzing match…</p>
+          <p className="text-sm text-muted-foreground animate-pulse">{t("analyzingMatch")}</p>
         )}
       </div>
       {error && (
@@ -1247,6 +1268,7 @@ export function WorkspaceTabs({
   userFirstName?: string;
   companyName?: string;
 }) {
+  const t = useTranslations("Workspace");
   const [activeTab, setActiveTab] = useState<TabId>("resume");
 
   const firstName = sanitizeName(userFirstName ?? "Resume");
@@ -1268,7 +1290,7 @@ export function WorkspaceTabs({
                 : "text-muted-foreground hover:text-foreground"
             }`}
           >
-            {tab.label}
+            {t(tab.labelKey)}
           </button>
         ))}
       </div>
@@ -1284,9 +1306,9 @@ export function WorkspaceTabs({
               exportFilename={resumeFilename}
             />
             <div className="mt-6 border-t border-border pt-6">
-              <p className="label-caps mb-1">Resume scoring</p>
+              <p className="label-caps mb-1">{t("resumeScoringLabel")}</p>
               <p className="text-xs text-muted-foreground mb-3">
-                Compare your base resume against this job description.
+                {t("resumeScoringDesc")}
               </p>
               <ScorePanel applicationId={applicationId} hasResume={hasResume} />
             </div>

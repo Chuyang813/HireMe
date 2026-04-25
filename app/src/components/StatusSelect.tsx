@@ -1,8 +1,20 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { updateStatusAction } from "@/app/actions/applications";
-import { APPLICATION_STATUS_LABEL, APPLICATION_STATUSES } from "@/lib/db/types";
+import { APPLICATION_STATUSES } from "@/lib/db/types";
 import type { ApplicationStatus } from "@/lib/db/types";
+
+const STATUS_LABEL_KEYS: Record<ApplicationStatus, string> = {
+  saved: "statusSaved",
+  ready_to_apply: "statusReadyToApply",
+  applied: "statusApplied",
+  assessment: "statusAssessment",
+  interview: "statusInterview",
+  rejected: "statusRejected",
+  offer: "statusOffer",
+  withdrawn: "statusWithdrawn",
+};
 
 export function StatusSelect({
   applicationId,
@@ -13,6 +25,8 @@ export function StatusSelect({
   current: ApplicationStatus;
   className?: string;
 }) {
+  const t = useTranslations("Applications");
+
   return (
     <form action={updateStatusAction}>
       <input type="hidden" name="id" value={applicationId} />
@@ -24,7 +38,7 @@ export function StatusSelect({
       >
         {APPLICATION_STATUSES.map((s) => (
           <option key={s} value={s}>
-            {APPLICATION_STATUS_LABEL[s]}
+            {t(STATUS_LABEL_KEYS[s])}
           </option>
         ))}
       </select>

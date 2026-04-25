@@ -1,3 +1,4 @@
+import { getTranslations } from "next-intl/server";
 import type { ParsedJob, ParsedResume } from "@/lib/db/types";
 
 const STOP_WORDS = new Set([
@@ -41,17 +42,17 @@ function getFitLabel({
 }: {
   keySkills: string[];
   resume: ParsedResume | null;
-}): { label: string; className: string } {
+}): { labelKey: string; className: string } {
   if (!resume) {
     return {
-      label: "Resume needed",
+      labelKey: "fitResumeNeeded",
       className: "border-border bg-background text-muted-foreground",
     };
   }
 
   if (keySkills.length === 0) {
     return {
-      label: "Review fit",
+      labelKey: "fitReview",
       className: "border-border bg-background text-muted-foreground",
     };
   }
@@ -62,31 +63,32 @@ function getFitLabel({
 
   if (ratio >= 0.65) {
     return {
-      label: "Good fit",
+      labelKey: "fitGood",
       className: "border-green-200 bg-green-50 text-green-800",
     };
   }
 
   if (ratio >= 0.3) {
     return {
-      label: "Moderate fit",
+      labelKey: "fitModerate",
       className: "border-yellow-200 bg-yellow-50 text-yellow-800",
     };
   }
 
   return {
-    label: "Low fit",
+    labelKey: "fitLow",
     className: "border-red-200 bg-red-50 text-red-700",
   };
 }
 
-export function JobAnalysisCard({
+export async function JobAnalysisCard({
   job,
   resume,
 }: {
   job: ParsedJob;
   resume: ParsedResume | null;
 }) {
+  const t = await getTranslations("Applications");
   const keySkills = (job.key_skills?.length ? job.key_skills : job.required_skills ?? []).slice(0, 5);
   const verdict = job.verdict ?? job.role_summary ?? null;
   const fit = getFitLabel({ keySkills, resume });
@@ -97,7 +99,7 @@ export function JobAnalysisCard({
         <div
           className={`flex min-h-16 w-24 items-center justify-center rounded-md border px-3 text-center text-sm font-semibold leading-tight ${fit.className}`}
         >
-          {fit.label}
+          {t(fit.labelKey)}
         </div>
       </div>
 

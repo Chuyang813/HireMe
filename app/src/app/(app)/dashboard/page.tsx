@@ -3,19 +3,29 @@ import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { requireUser } from "@/lib/auth/current-user";
 import type { ApplicationStatus, ApplicationTimelineEvent, JobApplication, Profile } from "@/lib/db/types";
-import { APPLICATION_STATUS_LABEL } from "@/lib/db/types";
 
 export const metadata = { title: "Dashboard" };
 
 const INACTIVE_STATUSES: ApplicationStatus[] = ["rejected", "offer", "withdrawn"];
 
-const EVENT_TYPE_LABEL: Record<string, string> = {
-  created: "Application created",
-  status_changed: "Status updated",
-  document_generated: "Document generated",
-  assessment_added: "Assessment uploaded",
-  interview_prep_generated: "Interview prep generated",
-  note_added: "Notes updated",
+const EVENT_TYPE_LABEL_KEY: Record<string, string> = {
+  created: "eventCreated",
+  status_changed: "eventStatusChanged",
+  document_generated: "eventDocumentGenerated",
+  assessment_added: "eventAssessmentAdded",
+  interview_prep_generated: "eventInterviewPrepGenerated",
+  note_added: "eventNoteAdded",
+};
+
+const STATUS_LABEL_KEY: Record<ApplicationStatus, string> = {
+  saved: "statusSaved",
+  ready_to_apply: "statusReadyToApply",
+  applied: "statusApplied",
+  assessment: "statusAssessment",
+  interview: "statusInterview",
+  rejected: "statusRejected",
+  offer: "statusOffer",
+  withdrawn: "statusWithdrawn",
 };
 
 type TimelineEventWithApp = ApplicationTimelineEvent & {
@@ -111,7 +121,8 @@ export default async function DashboardPage() {
               const appName =
                 ev.job_applications?.role_title ??
                 ev.job_applications?.company_name ??
-                "an application";
+                t("unknownApplication");
+              const eventLabelKey = EVENT_TYPE_LABEL_KEY[ev.event_type];
               return (
                 <li
                   key={ev.id}
@@ -119,7 +130,7 @@ export default async function DashboardPage() {
                 >
                   <span className="text-sm">
                     <span className="text-muted-foreground">
-                      {EVENT_TYPE_LABEL[ev.event_type] ?? ev.event_type}
+                      {eventLabelKey ? t(eventLabelKey as Parameters<typeof t>[0]) : ev.event_type}
                     </span>
                     {" · "}
                     <span className="font-medium">{appName}</span>
@@ -171,15 +182,15 @@ export default async function DashboardPage() {
                 <div className="flex items-baseline justify-between gap-4">
                   <div>
                     <h3 className="font-display text-xl">
-                      {app.role_title ?? "Untitled role"}
+                      {app.role_title ?? t("untitledRole")}
                     </h3>
                     <p className="mt-0.5 text-sm text-muted-foreground">
-                      {app.company_name ?? "Unknown company"}
+                      {app.company_name ?? t("unknownCompany")}
                       {app.location ? ` · ${app.location}` : ""}
                     </p>
                   </div>
                   <span className="label-caps whitespace-nowrap rounded-sm border border-border px-1.5 py-0.5">
-                    {APPLICATION_STATUS_LABEL[app.current_status]}
+                    {t(STATUS_LABEL_KEY[app.current_status] as Parameters<typeof t>[0])}
                   </span>
                 </div>
                 <p className="mt-2 text-xs text-muted-foreground">
