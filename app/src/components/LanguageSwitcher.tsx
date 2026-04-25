@@ -52,7 +52,7 @@ export function LanguageSwitcher() {
     try {
       localStorage.setItem("locale", code);
     } catch {
-      // localStorage may be unavailable in private mode
+      // localStorage may be unavailable in private mode.
     }
     router.refresh();
   }
