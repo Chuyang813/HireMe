@@ -5,6 +5,18 @@ import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/auth/current-user";
 import { parseJobPosting } from "@/lib/ai/job-parser";
 import { logTimelineEvent } from "@/lib/db/timeline";
+import {
+  applicationStatusSchema,
+  cleanSingleLine,
+  cleanText,
+  MAX_JOB_TEXT_LENGTH,
+  MAX_NOTES_LENGTH,
+  MAX_TITLE_LENGTH,
+  validateSafeHttpUrl,
+  uuidSchema,
+} from "@/lib/security/limits";
+import { checkRateLimit } from "@/lib/security/rate-limit";
+import { getClientIp } from "@/lib/security/request";
 import type { ApplicationStatus, ParsedJob } from "@/lib/db/types";
 
 export type CreateApplicationState = { error?: string } | undefined;
@@ -14,8 +26,17 @@ export async function analyzeJobAction(
   _prev: AnalyzeJobState,
   formData: FormData,
 ): Promise<AnalyzeJobState> {
-  let rawJobText = String(formData.get("raw_job_text") || "").trim();
-  const jobUrl = String(formData.get("job_url") || "").trim();
+  const { user } = await requireUser();
+  const ip = await getClientIp();
+  const limit = checkRateLimit(`analyze:${user.id}:${ip}`, { max: 8, windowMs: 60_000 });
+  if (!limit.allowed) {
+    return { error: `Too many analysis requests. Try again in ${limit.retryAfterSec}s.` };
+  }
+
+  let rawJobText = cleanText(formData.get("raw_job_text"), MAX_JOB_TEXT_LENGTH);
+  const jobUrlResult = validateSafeHttpUrl(formData.get("job_url"));
+  if (!jobUrlResult.ok) return { error: jobUrlResult.error };
+  const jobUrl = jobUrlResult.url;
 
   // If no description but URL given, try to fetch the page content.
   if (!rawJobText && jobUrl) {
@@ -23,8 +44,13 @@ export async function analyzeJobAction(
       const res = await fetch(jobUrl, {
         headers: { "User-Agent": "Mozilla/5.0 (compatible; HireMe/1.0)" },
         signal: AbortSignal.timeout(8000),
+        redirect: "follow",
       });
       if (res.ok) {
+        const contentType = res.headers.get("content-type") || "";
+        if (!/text\/html|text\/plain|application\/xhtml\+xml/i.test(contentType)) {
+          return { error: "That URL does not look like a readable job posting." };
+        }
         const html = await res.text();
         rawJobText = html
           .replace(/<script[\s\S]*?<\/script>/gi, "")
@@ -32,7 +58,7 @@ export async function analyzeJobAction(
           .replace(/<[^>]+>/g, " ")
           .replace(/\s+/g, " ")
           .trim()
-          .slice(0, 12000);
+          .slice(0, 12_000);
       }
     } catch {
       // fetch failed — fall through to error below
@@ -74,17 +100,23 @@ export async function createApplicationAction(
 ): Promise<CreateApplicationState> {
   const { supabase, user } = await requireUser();
 
-  const companyName = String(formData.get("company_name") || "").trim();
-  const roleTitle = String(formData.get("role_title") || "").trim();
-  const jobUrl = String(formData.get("job_url") || "").trim();
-  const rawJobText = String(formData.get("raw_job_text") || "").trim();
-  const parsedJobRaw = String(formData.get("parsed_job_json") || "").trim();
+  const createLimit = checkRateLimit(`create-application:${user.id}`, {
+    max: 30,
+    windowMs: 60 * 60_000,
+  });
+  if (!createLimit.allowed) {
+    return { error: `Too many applications created. Try again in ${createLimit.retryAfterSec}s.` };
+  }
+
+  const companyName = cleanSingleLine(formData.get("company_name"), MAX_TITLE_LENGTH);
+  const roleTitle = cleanSingleLine(formData.get("role_title"), MAX_TITLE_LENGTH);
+  const jobUrlResult = validateSafeHttpUrl(formData.get("job_url"));
+  if (!jobUrlResult.ok) return { error: jobUrlResult.error };
+  const jobUrl = jobUrlResult.url;
+  const rawJobText = cleanText(formData.get("raw_job_text"), MAX_JOB_TEXT_LENGTH);
+  const parsedJobRaw = cleanText(formData.get("parsed_job_json"), MAX_JOB_TEXT_LENGTH);
 
   if (!rawJobText) return { error: "Please paste the job description." };
-
-  if (jobUrl && !/^https?:\/\//i.test(jobUrl)) {
-    return { error: "Job URL must start with http:// or https://." };
-  }
 
   // Use pre-parsed data from review step if available, otherwise parse fresh
   let parsedJob: ParsedJob | null = null;
@@ -135,8 +167,9 @@ export async function createApplicationAction(
 export async function updateStatusAction(formData: FormData) {
   const { supabase, user } = await requireUser();
   const id = String(formData.get("id") || "");
-  const status = String(formData.get("status") || "") as ApplicationStatus;
-  if (!id || !status) return;
+  const statusResult = applicationStatusSchema.safeParse(formData.get("status"));
+  if (!uuidSchema.safeParse(id).success || !statusResult.success) return;
+  const status = statusResult.data as ApplicationStatus;
 
   const { data: current } = await supabase
     .from("job_applications")
@@ -169,8 +202,8 @@ export async function updateStatusAction(formData: FormData) {
 export async function updateNotesAction(formData: FormData) {
   const { supabase, user } = await requireUser();
   const id = String(formData.get("application_id") || "");
-  const notes = String(formData.get("notes") || "");
-  if (!id) return;
+  const notes = cleanText(formData.get("notes"), MAX_NOTES_LENGTH);
+  if (!uuidSchema.safeParse(id).success) return;
 
   await supabase
     .from("job_applications")
@@ -184,7 +217,7 @@ export async function updateNotesAction(formData: FormData) {
 export async function deleteApplicationAction(formData: FormData): Promise<void> {
   const { supabase, user } = await requireUser();
   const id = String(formData.get("id") || "");
-  if (!id) return;
+  if (!uuidSchema.safeParse(id).success) return;
 
   await supabase
     .from("job_applications")

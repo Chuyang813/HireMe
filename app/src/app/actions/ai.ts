@@ -11,6 +11,13 @@ import { extractTextFromUpload } from "@/lib/parsers/resume-text";
 import { logTimelineEvent } from "@/lib/db/timeline";
 import { aiJson, AI_PROVIDER, DEFAULT_MODEL, PROMPT_VERSION } from "@/lib/ai/provider";
 import { resumeScoreSchema } from "@/lib/ai/schemas";
+import {
+  cleanText,
+  documentTypeSchema,
+  MAX_GENERATED_DOCUMENT_LENGTH,
+  uuidSchema,
+} from "@/lib/security/limits";
+import { checkRateLimit } from "@/lib/security/rate-limit";
 import type {
   AssessmentAnalysis,
   DocumentType,
@@ -39,9 +46,20 @@ export async function generateDocumentAction(
   const { supabase, user } = await requireUser();
 
   const applicationId = String(formData.get("application_id") || "");
-  const documentType = String(formData.get("document_type") || "") as DocumentType;
+  const documentTypeResult = documentTypeSchema.safeParse(formData.get("document_type"));
 
-  if (!applicationId || !documentType) return { error: "Missing required fields." };
+  if (!uuidSchema.safeParse(applicationId).success || !documentTypeResult.success) {
+    return { error: "Missing required fields." };
+  }
+  const documentType = documentTypeResult.data as DocumentType;
+
+  const limit = checkRateLimit(`generate-document-action:${user.id}`, {
+    max: 20,
+    windowMs: 60 * 60_000,
+  });
+  if (!limit.allowed) {
+    return { error: `Too many document generations. Try again in ${limit.retryAfterSec}s.` };
+  }
 
   const { data: app } = await supabase
     .from("job_applications")
@@ -120,11 +138,17 @@ export async function saveDocumentAction(
   const { supabase, user } = await requireUser();
 
   const applicationId = String(formData.get("application_id") || "");
-  const documentType = String(formData.get("document_type") || "") as DocumentType;
-  const content = String(formData.get("content") || "");
+  const documentTypeResult = documentTypeSchema.safeParse(formData.get("document_type"));
+  const content = cleanText(formData.get("content"), MAX_GENERATED_DOCUMENT_LENGTH);
   const existingId = String(formData.get("document_id") || "");
 
-  if (!applicationId || !documentType) return { error: "Missing required fields." };
+  if (!uuidSchema.safeParse(applicationId).success || !documentTypeResult.success) {
+    return { error: "Missing required fields." };
+  }
+  if (existingId && !uuidSchema.safeParse(existingId).success) {
+    return { error: "Invalid document ID." };
+  }
+  const documentType = documentTypeResult.data as DocumentType;
 
   if (existingId) {
     // Archive the current content before overwriting.
@@ -192,11 +216,19 @@ export async function analyzeAssessmentAction(
   const applicationId = String(formData.get("application_id") || "");
   const file = formData.get("file");
 
-  if (!applicationId) return { error: "Missing application ID." };
+  if (!uuidSchema.safeParse(applicationId).success) return { error: "Missing application ID." };
   if (!(file instanceof File) || file.size === 0)
     return { error: "Please select a PDF, DOCX, or TXT file." };
   if (file.size > 10 * 1024 * 1024)
     return { error: "File must be 10 MB or smaller." };
+  if (!isAllowedUpload(file)) {
+    return { error: "Please upload a PDF, DOCX, or TXT file." };
+  }
+
+  const limit = checkRateLimit(`assessment:${user.id}`, { max: 10, windowMs: 60 * 60_000 });
+  if (!limit.allowed) {
+    return { error: `Too many assessment analyses. Try again in ${limit.retryAfterSec}s.` };
+  }
 
   const { data: app } = await supabase
     .from("job_applications")
@@ -257,7 +289,12 @@ export async function generateInterviewPrepAction(
   const { supabase, user } = await requireUser();
 
   const applicationId = String(formData.get("application_id") || "");
-  if (!applicationId) return { error: "Missing application ID." };
+  if (!uuidSchema.safeParse(applicationId).success) return { error: "Missing application ID." };
+
+  const limit = checkRateLimit(`interview-prep:${user.id}`, { max: 20, windowMs: 60 * 60_000 });
+  if (!limit.allowed) {
+    return { error: `Too many interview prep generations. Try again in ${limit.retryAfterSec}s.` };
+  }
 
   const [{ data: app }, { data: resume }] = await Promise.all([
     supabase
@@ -315,7 +352,12 @@ export async function scoreResumeAction(
   const { supabase, user } = await requireUser();
 
   const applicationId = String(formData.get("application_id") || "");
-  if (!applicationId) return { error: "Missing application ID." };
+  if (!uuidSchema.safeParse(applicationId).success) return { error: "Missing application ID." };
+
+  const limit = checkRateLimit(`score-resume:${user.id}`, { max: 20, windowMs: 60 * 60_000 });
+  if (!limit.allowed) {
+    return { error: `Too many scoring requests. Try again in ${limit.retryAfterSec}s.` };
+  }
 
   const [{ data: app }, { data: resume }] = await Promise.all([
     supabase
@@ -396,6 +438,9 @@ export async function getDocumentVersionsAction(
   documentId: string,
 ): Promise<GetDocumentVersionsState> {
   const { supabase } = await requireUser();
+  if (!uuidSchema.safeParse(documentId).success) {
+    return { error: "Invalid document ID." };
+  }
   const { data, error } = await supabase
     .from("document_versions")
     .select("id, content, created_at")
@@ -407,4 +452,17 @@ export async function getDocumentVersionsAction(
     return { error: "Failed to load history." };
   }
   return { versions: (data ?? []) as DocumentVersion[] };
+}
+
+function isAllowedUpload(file: File) {
+  const name = file.name.toLowerCase();
+  const type = file.type.toLowerCase();
+  return (
+    type === "application/pdf" ||
+    type === "text/plain" ||
+    type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
+    name.endsWith(".pdf") ||
+    name.endsWith(".txt") ||
+    name.endsWith(".docx")
+  );
 }

@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/Button";
 import { Field, TextareaField } from "@/components/ui/Field";
 
 type Step = "input" | "review";
+const MAX_JOB_TEXT_LENGTH = 30_000;
 
 export function NewApplicationForm() {
   const t = useTranslations("Applications");
@@ -39,7 +40,7 @@ export function NewApplicationForm() {
   function handleAnalyze(e: React.FormEvent) {
     e.preventDefault();
     if (!rawJobText.trim() && !jobUrl.trim()) {
-      setError("Paste the job description below, or provide a URL.");
+      setError(t("jobDescriptionOrUrlRequired"));
       return;
     }
     if (jobUrl && !/^https?:\/\//i.test(jobUrl)) {
@@ -110,18 +111,21 @@ export function NewApplicationForm() {
           <Field
             name="parsed_company"
             label={t("companyName")}
+            maxLength={120}
             value={parsedCompany}
             onChange={(e) => setParsedCompany(e.target.value)}
           />
           <Field
             name="parsed_role"
             label={t("positionTitle")}
+            maxLength={120}
             value={parsedRole}
             onChange={(e) => setParsedRole(e.target.value)}
           />
           <Field
             name="parsed_location"
             label={t("location")}
+            maxLength={120}
             value={parsedLocation}
             onChange={(e) => setParsedLocation(e.target.value)}
           />
@@ -131,6 +135,7 @@ export function NewApplicationForm() {
           name="parsed_summary"
           label={t("roleSummary")}
           rows={3}
+          maxLength={2000}
           value={parsedSummary}
           onChange={(e) => setParsedSummary(e.target.value)}
           hint={t("roleSummaryHint")}
@@ -140,6 +145,7 @@ export function NewApplicationForm() {
           name="parsed_required"
           label={t("requiredSkills")}
           rows={3}
+          maxLength={2000}
           value={parsedRequired}
           onChange={(e) => setParsedRequired(e.target.value)}
           hint={t("skillsHint")}
@@ -149,6 +155,7 @@ export function NewApplicationForm() {
           name="parsed_desired"
           label={t("desiredSkills")}
           rows={2}
+          maxLength={2000}
           value={parsedDesired}
           onChange={(e) => setParsedDesired(e.target.value)}
           hint={t("skillsHint")}
@@ -158,6 +165,7 @@ export function NewApplicationForm() {
           name="parsed_responsibilities"
           label={t("responsibilities")}
           rows={5}
+          maxLength={5000}
           value={parsedResponsibilities}
           onChange={(e) => setParsedResponsibilities(e.target.value)}
           hint={t("responsibilitiesHint")}
@@ -196,6 +204,7 @@ export function NewApplicationForm() {
           label={t("companyName")}
           placeholder={t("companyNamePlaceholder")}
           hint={t("companyNameHint")}
+          maxLength={120}
           value={companyName}
           onChange={(e) => setCompanyName(e.target.value)}
         />
@@ -204,6 +213,7 @@ export function NewApplicationForm() {
           label={t("positionTitle")}
           placeholder={t("positionTitlePlaceholder")}
           hint={t("positionTitleHint")}
+          maxLength={120}
           value={roleTitle}
           onChange={(e) => setRoleTitle(e.target.value)}
         />
@@ -211,9 +221,11 @@ export function NewApplicationForm() {
 
       <Field
         name="job_url"
-        label="Job URL (optional)"
+        label={t("jobUrl")}
         type="url"
         placeholder={t("jobUrlPlaceholder")}
+        hint={t("jobUrlHint")}
+        maxLength={2000}
         value={jobUrl}
         onChange={(e) => setJobUrl(e.target.value)}
       />
@@ -223,6 +235,7 @@ export function NewApplicationForm() {
         label={t("jobDescription")}
         required={!jobUrl.trim()}
         rows={16}
+        maxLength={MAX_JOB_TEXT_LENGTH}
         placeholder={t("jobDescriptionPlaceholder")}
         hint={t("jobDescriptionHint")}
         className="min-h-72 font-mono text-xs"

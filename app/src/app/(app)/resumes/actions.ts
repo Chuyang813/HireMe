@@ -5,6 +5,9 @@ import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/auth/current-user";
 import { extractTextFromUpload } from "@/lib/parsers/resume-text";
 import { parseResume } from "@/lib/ai/resume-parser";
+import { cleanSingleLine, MAX_TITLE_LENGTH, uuidSchema } from "@/lib/security/limits";
+import { sanitizePreviewHtml } from "@/lib/security/html";
+import { checkRateLimit } from "@/lib/security/rate-limit";
 
 export type UploadState = { error?: string; ok?: boolean } | undefined;
 
@@ -14,7 +17,7 @@ export async function uploadResumeAction(
 ): Promise<UploadState> {
   const { supabase, user } = await requireUser();
 
-  const title = String(formData.get("title") || "").trim() || "Base resume";
+  const title = cleanSingleLine(formData.get("title"), MAX_TITLE_LENGTH) || "Base resume";
   const makeDefault = formData.get("isDefault") === "on";
   const file = formData.get("file");
   if (!(file instanceof File) || file.size === 0) {
@@ -22,6 +25,14 @@ export async function uploadResumeAction(
   }
   if (file.size > 10 * 1024 * 1024) {
     return { error: "File must be 10 MB or smaller." };
+  }
+  if (!isAllowedResumeUpload(file)) {
+    return { error: "Please upload a PDF, DOCX, or TXT file." };
+  }
+
+  const limit = checkRateLimit(`resume-upload:${user.id}`, { max: 12, windowMs: 60 * 60_000 });
+  if (!limit.allowed) {
+    return { error: `Too many resume uploads. Try again in ${limit.retryAfterSec}s.` };
   }
 
   const bytes = Buffer.from(await file.arrayBuffer());
@@ -95,7 +106,7 @@ export async function uploadResumeAction(
 export async function deleteResumeAction(formData: FormData) {
   const { supabase, user } = await requireUser();
   const id = String(formData.get("id") || "");
-  if (!id) return;
+  if (!uuidSchema.safeParse(id).success) return;
   const { data } = await supabase
     .from("base_resumes")
     .select("source_file_path")
@@ -117,6 +128,9 @@ export type PreviewResult =
 
 export async function getResumePreviewAction(id: string): Promise<PreviewResult> {
   const { supabase, user } = await requireUser();
+  if (!uuidSchema.safeParse(id).success) {
+    return { error: "Resume not found." };
+  }
   const { data } = await supabase
     .from("base_resumes")
     .select("source_file_path, source_file_type, raw_text")
@@ -149,7 +163,7 @@ export async function getResumePreviewAction(id: string): Promise<PreviewResult>
       const mammoth = await import("mammoth");
       const arrayBuffer = await res.data.arrayBuffer();
       const result = await mammoth.convertToHtml({ buffer: Buffer.from(arrayBuffer) });
-      return { type: "docx", html: result.value };
+      return { type: "docx", html: sanitizePreviewHtml(result.value) };
     } catch {
       return { error: "Could not render DOCX preview." };
     }
@@ -161,7 +175,7 @@ export async function getResumePreviewAction(id: string): Promise<PreviewResult>
 export async function setDefaultResumeAction(formData: FormData) {
   const { supabase, user } = await requireUser();
   const id = String(formData.get("id") || "");
-  if (!id) return;
+  if (!uuidSchema.safeParse(id).success) return;
   await supabase
     .from("base_resumes")
     .update({ is_default: false })
@@ -173,4 +187,17 @@ export async function setDefaultResumeAction(formData: FormData) {
     .eq("id", id)
     .eq("user_id", user.id);
   revalidatePath("/resumes");
+}
+
+function isAllowedResumeUpload(file: File) {
+  const name = file.name.toLowerCase();
+  const type = file.type.toLowerCase();
+  return (
+    type === "application/pdf" ||
+    type === "text/plain" ||
+    type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
+    name.endsWith(".pdf") ||
+    name.endsWith(".txt") ||
+    name.endsWith(".docx")
+  );
 }

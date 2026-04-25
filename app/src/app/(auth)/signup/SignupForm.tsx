@@ -25,6 +25,13 @@ export function SignupForm() {
         autoComplete="new-password"
         hint={t("passwordHint")}
       />
+      <Field
+        label={t("inviteCode")}
+        name="inviteCode"
+        type="text"
+        autoComplete="off"
+        hint={t("inviteCodeHint")}
+      />
       {state?.error ? (
         <p className="text-sm text-danger">{state.error}</p>
       ) : null}

@@ -4,6 +4,8 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { getSupabaseServer } from "@/lib/supabase/server";
 import { safeRedirectTarget } from "@/lib/auth/safe-redirect";
+import { checkRateLimit } from "@/lib/security/rate-limit";
+import { getClientIp } from "@/lib/security/request";
 
 const credentialsSchema = z.object({
   email: z.string().email("Enter a valid email address."),
@@ -15,6 +17,7 @@ const signupSchema = credentialsSchema.extend({
     .string()
     .min(1, "Name is required.")
     .max(80, "Name is too long."),
+  inviteCode: z.string().max(120).optional(),
 });
 
 export type FormState = { error?: string } | undefined;
@@ -23,6 +26,12 @@ export async function loginAction(
   _prev: FormState,
   formData: FormData,
 ): Promise<FormState> {
+  const ip = await getClientIp();
+  const limit = checkRateLimit(`login:${ip}`, { max: 12, windowMs: 5 * 60_000 });
+  if (!limit.allowed) {
+    return { error: `Too many login attempts. Try again in ${limit.retryAfterSec}s.` };
+  }
+
   const parsed = credentialsSchema.safeParse({
     email: formData.get("email"),
     password: formData.get("password"),
@@ -43,13 +52,25 @@ export async function signupAction(
   _prev: FormState,
   formData: FormData,
 ): Promise<FormState> {
+  const ip = await getClientIp();
+  const limit = checkRateLimit(`signup:${ip}`, { max: 5, windowMs: 15 * 60_000 });
+  if (!limit.allowed) {
+    return { error: `Too many signup attempts. Try again in ${limit.retryAfterSec}s.` };
+  }
+
   const parsed = signupSchema.safeParse({
     email: formData.get("email"),
     password: formData.get("password"),
     displayName: formData.get("displayName"),
+    inviteCode: formData.get("inviteCode"),
   });
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Invalid input." };
+  }
+
+  const betaInviteCode = process.env.BETA_INVITE_CODE?.trim();
+  if (betaInviteCode && parsed.data.inviteCode?.trim() !== betaInviteCode) {
+    return { error: "Invalid beta invite code." };
   }
 
   const supabase = await getSupabaseServer();

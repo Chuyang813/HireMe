@@ -2,36 +2,13 @@ import { type NextRequest } from "next/server";
 import { getOptionalUser } from "@/lib/auth/current-user";
 import { aiText, AI_PROVIDER, DEFAULT_MODEL, PROMPT_VERSION } from "@/lib/ai/provider";
 import { logTimelineEvent } from "@/lib/db/timeline";
+import { documentTypeSchema, MAX_REQUEST_BODY_LENGTH, uuidSchema } from "@/lib/security/limits";
+import { checkRateLimit } from "@/lib/security/rate-limit";
+import { getClientIpFromHeaders } from "@/lib/security/request";
 import type { DocumentType, ParsedJob, ParsedResume } from "@/lib/db/types";
 
 const AI_TIMEOUT_MS = 65_000;
 const AI_AUDIT_NOTE = `provider=${AI_PROVIDER} model=${DEFAULT_MODEL} prompt_version=${PROMPT_VERSION}`;
-
-// ---------------------------------------------------------------------------
-// Per-user rate limiter: max 10 streaming requests per user per minute
-// ---------------------------------------------------------------------------
-
-const RATE_LIMIT_MAX = 10;
-const RATE_LIMIT_WINDOW_MS = 60_000;
-
-const rateLimitStore = new Map<string, { count: number; resetAt: number }>();
-
-function checkRateLimit(userId: string): { allowed: boolean; retryAfterSec: number } {
-  const now = Date.now();
-  const entry = rateLimitStore.get(userId);
-
-  if (!entry || now >= entry.resetAt) {
-    rateLimitStore.set(userId, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS });
-    return { allowed: true, retryAfterSec: 0 };
-  }
-
-  if (entry.count >= RATE_LIMIT_MAX) {
-    return { allowed: false, retryAfterSec: Math.ceil((entry.resetAt - now) / 1000) };
-  }
-
-  entry.count += 1;
-  return { allowed: true, retryAfterSec: 0 };
-}
 
 // ---------------------------------------------------------------------------
 // System prompts
@@ -182,32 +159,45 @@ function buildPrompt(
 // ---------------------------------------------------------------------------
 
 export async function POST(req: NextRequest) {
+  const contentLength = Number(req.headers.get("content-length") || "0");
+  if (contentLength > MAX_REQUEST_BODY_LENGTH) {
+    return Response.json({ error: "Request body is too large." }, { status: 413 });
+  }
+
   let body: { application_id?: string; document_type?: string };
   try {
-    body = await req.json();
+    const rawBody = await req.text();
+    if (rawBody.length > MAX_REQUEST_BODY_LENGTH) {
+      return Response.json({ error: "Request body is too large." }, { status: 413 });
+    }
+    body = JSON.parse(rawBody);
   } catch {
     return Response.json({ error: "Invalid request body." }, { status: 400 });
   }
 
   const applicationId = String(body.application_id || "");
-  const documentType = String(body.document_type || "") as DocumentType;
+  const documentTypeResult = documentTypeSchema.safeParse(body.document_type);
 
-  if (!applicationId || !documentType) {
+  if (!uuidSchema.safeParse(applicationId).success || !documentTypeResult.success) {
     return Response.json({ error: "Missing application_id or document_type." }, { status: 400 });
   }
+  const documentType = documentTypeResult.data as DocumentType;
 
   const { supabase, user } = await getOptionalUser();
   if (!user) {
     return Response.json({ error: "Unauthorized." }, { status: 401 });
   }
 
-  const rateLimit = checkRateLimit(user.id);
-  if (!rateLimit.allowed) {
+  const ip = getClientIpFromHeaders(req.headers);
+  const userLimit = checkRateLimit(`generate:user:${user.id}`, { max: 8, windowMs: 60_000 });
+  const ipLimit = checkRateLimit(`generate:ip:${ip}`, { max: 30, windowMs: 60_000 });
+  const retryAfterSec = Math.max(userLimit.retryAfterSec, ipLimit.retryAfterSec);
+  if (!userLimit.allowed || !ipLimit.allowed) {
     return Response.json(
       { error: "Too many requests. Please wait before generating again." },
       {
         status: 429,
-        headers: { "Retry-After": String(rateLimit.retryAfterSec) },
+        headers: { "Retry-After": String(retryAfterSec) },
       },
     );
   }
@@ -278,7 +268,9 @@ export async function POST(req: NextRequest) {
         clearTimeout(timer);
         const msg = e instanceof Error ? e.message : String(e);
         console.error("[generate-document] Streaming error:", msg, e);
-        controller.enqueue(encoder.encode(`\n\n[Error: ${msg}]`));
+        controller.enqueue(
+          encoder.encode("\n\n[Error: Generation failed. Please try again shortly.]"),
+        );
       } finally {
         controller.close();
       }
@@ -286,6 +278,10 @@ export async function POST(req: NextRequest) {
   });
 
   return new Response(readable, {
-    headers: { "Content-Type": "text/plain; charset=utf-8" },
+    headers: {
+      "Content-Type": "text/plain; charset=utf-8",
+      "Cache-Control": "no-store",
+      "X-Content-Type-Options": "nosniff",
+    },
   });
 }
