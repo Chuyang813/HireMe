@@ -11,6 +11,7 @@ export const documentTypeSchema = z.enum([
   "tailored_resume",
   "cover_letter",
   "email_draft",
+  "interview_prep",
 ]);
 
 export const applicationStatusSchema = z.enum([

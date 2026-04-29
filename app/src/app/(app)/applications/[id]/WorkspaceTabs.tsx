@@ -965,6 +965,32 @@ function categoryLabel(t: ReturnType<typeof useTranslations>, category: string):
   return category;
 }
 
+function parseInterviewPrepContent(content?: string | null): InterviewPrep | null {
+  if (!content) return null;
+  try {
+    const parsed = JSON.parse(content) as Partial<InterviewPrep>;
+    if (!Array.isArray(parsed.likely_questions)) return null;
+    return {
+      likely_questions: parsed.likely_questions.filter(
+        (q): q is InterviewPrep["likely_questions"][number] =>
+          !!q && typeof q === "object" && typeof q.question === "string",
+      ),
+      preparation_checklist: Array.isArray(parsed.preparation_checklist)
+        ? parsed.preparation_checklist.filter((item): item is string => typeof item === "string")
+        : [],
+      talking_points: Array.isArray(parsed.talking_points)
+        ? parsed.talking_points.filter((item): item is string => typeof item === "string")
+        : [],
+    };
+  } catch {
+    return null;
+  }
+}
+
+function serializeInterviewPrep(result: InterviewPrep): string {
+  return JSON.stringify(result, null, 2);
+}
+
 function QuestionCard({
   q,
   isOpen,
@@ -1021,18 +1047,52 @@ function QuestionCard({
 function InterviewPrepPanel({
   applicationId,
   hasResume,
+  existingDoc,
 }: {
   applicationId: string;
   hasResume: boolean;
+  existingDoc: ApplicationDocument | null;
 }) {
   const t = useTranslations("Workspace");
-  const [result, setResult] = useState<InterviewPrep | null>(null);
+  const [result, setResult] = useState<InterviewPrep | null>(
+    () => parseInterviewPrepContent(existingDoc?.text_content),
+  );
+  const [docId, setDocId] = useState(existingDoc?.id ?? "");
   const [error, setError] = useState("");
+  const [saveStatus, setSaveStatus] = useState<"idle" | "saved" | "error">("idle");
+  const [autoSaving, setAutoSaving] = useState(false);
   const [expandedIdx, setExpandedIdx] = useState<number | null>(null);
   const [generating, startGenerate] = useTransition();
 
+  async function saveInterviewPrep(nextResult: InterviewPrep) {
+    setSaveStatus("idle");
+    setAutoSaving(true);
+
+    const fd = new FormData();
+    fd.set("application_id", applicationId);
+    fd.set("document_type", "interview_prep");
+    fd.set("content", serializeInterviewPrep(nextResult));
+    if (docId) fd.set("document_id", docId);
+
+    try {
+      const res = await saveDocumentAction(undefined, fd);
+      if (res && "ok" in res && res.ok) {
+        setDocId(res.documentId);
+        setSaveStatus("saved");
+        return;
+      }
+    } catch {
+      // Keep the generated prep visible even if persistence fails.
+    } finally {
+      setAutoSaving(false);
+    }
+
+    setSaveStatus("error");
+  }
+
   function handleGenerate() {
     setError("");
+    setSaveStatus("idle");
     const fd = new FormData();
     fd.set("application_id", applicationId);
     startGenerate(async () => {
@@ -1042,6 +1102,7 @@ function InterviewPrepPanel({
       } else if (res && "result" in res && res.result) {
         setResult(res.result);
         setExpandedIdx(null);
+        await saveInterviewPrep(res.result);
       }
     });
   }
@@ -1074,6 +1135,10 @@ function InterviewPrepPanel({
           {error}
         </p>
       )}
+
+      {autoSaving && <p className="text-xs text-muted-foreground">{t("saving")}</p>}
+      {saveStatus === "saved" && <p className="text-xs text-success">{t("saved")}</p>}
+      {saveStatus === "error" && <p className="text-xs text-danger">{t("saveFailed")}</p>}
 
       {result && (
         <div className="space-y-6">
@@ -1277,6 +1342,7 @@ export function WorkspaceTabs({
     tailored_resume: ApplicationDocument | null;
     cover_letter: ApplicationDocument | null;
     email_draft: ApplicationDocument | null;
+    interview_prep: ApplicationDocument | null;
   };
   roleTitle?: string;
   userFirstName?: string;
@@ -1296,6 +1362,7 @@ export function WorkspaceTabs({
     tailored_resume: !!documents.tailored_resume,
     cover_letter: !!documents.cover_letter,
     email_draft: !!documents.email_draft,
+    interview_prep: !!documents.interview_prep,
   };
 
   const activeLabel = t(TABS.find((tab) => tab.id === activeTab)?.labelKey ?? "tabResume");
@@ -1405,6 +1472,7 @@ export function WorkspaceTabs({
             <InterviewPrepPanel
               applicationId={applicationId}
               hasResume={hasResume}
+              existingDoc={documents.interview_prep}
             />
           )}
         </section>

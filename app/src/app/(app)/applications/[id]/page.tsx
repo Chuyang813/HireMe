@@ -285,6 +285,7 @@ export default async function ApplicationPage({
                 tailored_resume: docMap.get("tailored_resume") ?? null,
                 cover_letter: docMap.get("cover_letter") ?? null,
                 email_draft: docMap.get("email_draft") ?? null,
+                interview_prep: docMap.get("interview_prep") ?? null,
               }}
               roleTitle={application.role_title ?? undefined}
               userFirstName={userFirstName}
