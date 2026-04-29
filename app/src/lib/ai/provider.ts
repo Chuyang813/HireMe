@@ -16,7 +16,17 @@ const DEFAULT_GEMINI_FALLBACK_MODELS = [
   "gemma-3-4b-it",
 ];
 
-export const AI_PROVIDER = getGlmApiKeyOptional() ? "glm" : "gemini";
+function getRequestedProvider(): ProviderName {
+  return process.env.AI_PROVIDER === "glm" && getGlmApiKeyOptional()
+    ? "glm"
+    : "gemini";
+}
+
+function shouldUseGlmFallback(): boolean {
+  return process.env.ENABLE_GLM_FALLBACK === "true" && !!getGlmApiKeyOptional();
+}
+
+export const AI_PROVIDER = getRequestedProvider();
 export const DEFAULT_MODEL =
   AI_PROVIDER === "glm" ? DEFAULT_GLM_MODEL : DEFAULT_GEMINI_MODEL;
 
@@ -140,8 +150,12 @@ function getProviderChain(primary: string, preferredProvider: ProviderName): Pro
     : [
         { provider: "gemini" as const, model: primary },
         ...geminiFallbackModels.map((model) => ({ provider: "gemini" as const, model })),
-        { provider: "glm" as const, model: DEFAULT_GLM_MODEL },
-        ...glmFallbackModels.map((model) => ({ provider: "glm" as const, model })),
+        ...(shouldUseGlmFallback()
+          ? [
+              { provider: "glm" as const, model: DEFAULT_GLM_MODEL },
+              ...glmFallbackModels.map((model) => ({ provider: "glm" as const, model })),
+            ]
+          : []),
       ];
 
   return uniqueModels(ordered).filter((candidate) =>
