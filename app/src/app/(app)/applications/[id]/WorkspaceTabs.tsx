@@ -686,6 +686,11 @@ function DocumentPanel({
             >
               {generating ? t("generating") : t("generate")}
             </Button>
+            {content && (
+              <Button variant="outline" onClick={handleCopy}>
+                {copied ? t("copied") : t("copyToClipboard")}
+              </Button>
+            )}
             {docId && (
               <HistoryDropdown
                 documentId={docId}
@@ -694,11 +699,6 @@ function DocumentPanel({
                   void saveContent(restored);
                 }}
               />
-            )}
-            {content && (
-              <Button variant="outline" onClick={handleCopy}>
-                {copied ? t("copied") : t("copyToClipboard")}
-              </Button>
             )}
           </div>
         </div>
@@ -763,15 +763,6 @@ function DocumentPanel({
               </span>
             ) : t("generate")}
           </Button>
-          {docId && (
-            <HistoryDropdown
-              documentId={docId}
-              onRestore={(restored) => {
-                setContent(restored);
-                void saveContent(restored);
-              }}
-            />
-          )}
           {content && (
             <>
               <Button variant="outline" onClick={handleCopy}>
@@ -794,6 +785,15 @@ function DocumentPanel({
                 {t("downloadDOCX")}
               </Button>
             </>
+          )}
+          {docId && (
+            <HistoryDropdown
+              documentId={docId}
+              onRestore={(restored) => {
+                setContent(restored);
+                void saveContent(restored);
+              }}
+            />
           )}
         </div>
       </div>

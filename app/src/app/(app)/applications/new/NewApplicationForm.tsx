@@ -57,6 +57,7 @@ export function NewApplicationForm() {
         setError(result.error);
       } else if (result?.parsed) {
         const p = result.parsed;
+        if (result.rawJobText) setRawJobText(result.rawJobText);
         setParsedCompany(p.company_name ?? companyName);
         setParsedRole(p.role_title ?? roleTitle);
         setParsedLocation(p.location ?? "");

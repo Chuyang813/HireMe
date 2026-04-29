@@ -20,7 +20,116 @@ import { getClientIp } from "@/lib/security/request";
 import type { ApplicationStatus, ParsedJob } from "@/lib/db/types";
 
 export type CreateApplicationState = { error?: string } | undefined;
-export type AnalyzeJobState = { parsed?: ParsedJob; error?: string } | undefined;
+export type AnalyzeJobState = { parsed?: ParsedJob; rawJobText?: string; error?: string } | undefined;
+
+const MIN_FETCHED_JOB_TEXT_LENGTH = 300;
+
+function decodeBasicEntities(value: string): string {
+  return value
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;|&apos;/gi, "'");
+}
+
+function extractTextFromHtml(html: string): string {
+  return decodeBasicEntities(
+    html
+      .replace(/<script[\s\S]*?<\/script>/gi, " ")
+      .replace(/<style[\s\S]*?<\/style>/gi, " ")
+      .replace(/<noscript[\s\S]*?<\/noscript>/gi, " ")
+      .replace(/<svg[\s\S]*?<\/svg>/gi, " ")
+      .replace(/<\/(p|div|section|article|li|h[1-6]|br|tr)>/gi, "\n")
+      .replace(/<[^>]+>/g, " "),
+  );
+}
+
+function normalizeFetchedJobText(value: string): string {
+  const markdownContent = value.match(/Markdown Content:\s*([\s\S]*)/i)?.[1] ?? value;
+  return cleanText(markdownContent, MAX_JOB_TEXT_LENGTH)
+    .replace(/[ \t]+\n/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+function looksLikeJobPosting(text: string): boolean {
+  const normalized = text.toLowerCase();
+  const signals = [
+    "job",
+    "role",
+    "responsibilities",
+    "requirements",
+    "qualifications",
+    "skills",
+    "experience",
+    "apply",
+    "position",
+    "about the",
+  ];
+  const signalCount = signals.filter((signal) => normalized.includes(signal)).length;
+  return text.length >= MIN_FETCHED_JOB_TEXT_LENGTH && signalCount >= 2;
+}
+
+async function fetchReadableText(url: string): Promise<string> {
+  const response = await fetch(url, {
+    headers: {
+      Accept: "text/html,text/plain,application/xhtml+xml",
+      "Accept-Language": "en-US,en;q=0.9",
+      "User-Agent":
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36 HireMe/1.0",
+    },
+    signal: AbortSignal.timeout(7000),
+    redirect: "follow",
+  });
+  if (!response.ok) return "";
+
+  const contentType = response.headers.get("content-type") || "";
+  if (!/text\/html|text\/plain|application\/xhtml\+xml/i.test(contentType)) return "";
+
+  const body = await response.text();
+  const readable = /text\/html|application\/xhtml\+xml/i.test(contentType)
+    ? extractTextFromHtml(body)
+    : body;
+  return normalizeFetchedJobText(readable);
+}
+
+async function fetchReaderText(url: string): Promise<string> {
+  const readerUrl = `https://r.jina.ai/http://${url}`;
+  const response = await fetch(readerUrl, {
+    headers: {
+      Accept: "text/plain",
+      "User-Agent": "HireMe/1.0",
+    },
+    signal: AbortSignal.timeout(12000),
+    redirect: "follow",
+  });
+  if (!response.ok) return "";
+  return normalizeFetchedJobText(await response.text());
+}
+
+async function fetchJobTextFromUrl(jobUrl: string): Promise<string> {
+  let best = "";
+
+  try {
+    const directText = await fetchReadableText(jobUrl);
+    if (looksLikeJobPosting(directText)) return directText;
+    best = directText;
+  } catch {
+    best = "";
+  }
+
+  try {
+    const readerText = await fetchReaderText(jobUrl);
+    if (looksLikeJobPosting(readerText)) return readerText;
+    if (readerText.length > best.length) best = readerText;
+  } catch {
+    // Job boards often block direct access. The caller will show a paste fallback.
+  }
+
+  return looksLikeJobPosting(best) ? best : "";
+}
 
 export async function analyzeJobAction(
   _prev: AnalyzeJobState,
@@ -49,43 +158,21 @@ export async function analyzeJobAction(
   if (!jobUrlResult.ok) return { error: jobUrlResult.error };
   const jobUrl = jobUrlResult.url;
 
-  // If no description but URL given, try to fetch the page content.
   if (!rawJobText && jobUrl) {
-    try {
-      const res = await fetch(jobUrl, {
-        headers: { "User-Agent": "Mozilla/5.0 (compatible; HireMe/1.0)" },
-        signal: AbortSignal.timeout(8000),
-        redirect: "follow",
-      });
-      if (res.ok) {
-        const contentType = res.headers.get("content-type") || "";
-        if (!/text\/html|text\/plain|application\/xhtml\+xml/i.test(contentType)) {
-          return { error: "That URL does not look like a readable job posting." };
-        }
-        const html = await res.text();
-        rawJobText = html
-          .replace(/<script[\s\S]*?<\/script>/gi, "")
-          .replace(/<style[\s\S]*?<\/style>/gi, "")
-          .replace(/<[^>]+>/g, " ")
-          .replace(/\s+/g, " ")
-          .trim()
-          .slice(0, 12_000);
-      }
-    } catch {
-      // fetch failed — fall through to error below
-    }
-    if (!rawJobText) {
-      return {
-        error:
-          "Couldn't fetch that URL (job boards often block automated access). Please paste the job description directly.",
-      };
-    }
+    rawJobText = await fetchJobTextFromUrl(jobUrl);
+  }
+
+  if (!rawJobText && jobUrl) {
+    return {
+      error:
+        "Couldn't fetch enough readable text from that URL. Some job boards block automated access, so please paste the job description directly.",
+    };
   }
 
   if (!rawJobText) return { error: "Please paste the job description." };
   try {
     const parsed = await parseJobPosting(rawJobText);
-    return { parsed };
+    return { parsed, rawJobText };
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     console.error("[analyzeJobAction] parseJobPosting failed:", msg, e);

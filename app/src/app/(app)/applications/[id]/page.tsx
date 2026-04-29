@@ -215,7 +215,7 @@ export default async function ApplicationPage({
     new Date(application.created_at) < staleCutoff;
 
   return (
-    <div className="mx-auto w-full max-w-6xl px-6 py-12">
+    <div className="mx-auto w-full max-w-7xl px-6 py-12 xl:px-8">
       <div className="label-caps mb-2">
         <Link href="/applications" className="hover:underline">
           {t("heading")}
@@ -275,7 +275,7 @@ export default async function ApplicationPage({
         />
       )}
 
-      <div className="mt-10 grid grid-cols-1 items-start gap-8 lg:grid-cols-[1fr_240px]">
+      <div className="mt-10 grid grid-cols-1 items-start gap-8 lg:grid-cols-[minmax(0,1fr)_220px] xl:gap-10">
         <WorkspaceTabs
           applicationId={application.id}
           hasResume={!!resume}
