@@ -17,7 +17,6 @@ const signupSchema = credentialsSchema.extend({
     .string()
     .min(1, "Name is required.")
     .max(80, "Name is too long."),
-  inviteCode: z.string().max(120).optional(),
 });
 
 export type FormState = { error?: string } | undefined;
@@ -62,15 +61,9 @@ export async function signupAction(
     email: formData.get("email"),
     password: formData.get("password"),
     displayName: formData.get("displayName"),
-    inviteCode: formData.get("inviteCode"),
   });
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Invalid input." };
-  }
-
-  const betaInviteCode = process.env.BETA_INVITE_CODE?.trim();
-  if (betaInviteCode && parsed.data.inviteCode?.trim() !== betaInviteCode) {
-    return { error: "Invalid beta invite code." };
   }
 
   const supabase = await getSupabaseServer();
@@ -80,7 +73,6 @@ export async function signupAction(
     options: {
       data: {
         display_name: parsed.data.displayName,
-        beta_invite_ok: "true",
       },
       emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL ?? ""}/auth/callback`,
     },

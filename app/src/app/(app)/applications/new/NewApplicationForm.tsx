@@ -198,6 +198,14 @@ export function NewApplicationForm() {
 
   return (
     <form onSubmit={handleAnalyze} className="flex flex-col gap-6">
+      <div className="rounded-lg border border-border bg-muted/35 p-5">
+        <p className="label-caps mb-2">{t("inputGuideTitle")}</p>
+        <div className="grid gap-4 text-sm leading-6 text-muted-foreground md:grid-cols-2">
+          <p>{t("inputGuideUrl")}</p>
+          <p>{t("inputGuideText")}</p>
+        </div>
+      </div>
+
       <div className="grid gap-4 sm:grid-cols-2">
         <Field
           name="company_name"

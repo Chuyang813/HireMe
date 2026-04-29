@@ -26,9 +26,8 @@ export default async function AppLayout({
     <div className="flex flex-1 flex-col">
       <header className="border-b border-border bg-background/95">
         <div className="mx-auto flex h-20 w-full max-w-7xl items-center justify-between px-6">
-          <Link href="/dashboard" className="flex items-baseline gap-2">
-            <span className="font-display text-2xl leading-none">HireMe</span>
-            <span className="label-caps text-[0.65rem]">No 01</span>
+          <Link href="/dashboard" className="font-display text-2xl leading-none">
+            HireMe
           </Link>
 
           <nav className="hidden h-full items-center gap-8 md:flex">

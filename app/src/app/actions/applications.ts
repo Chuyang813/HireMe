@@ -26,7 +26,18 @@ export async function analyzeJobAction(
   _prev: AnalyzeJobState,
   formData: FormData,
 ): Promise<AnalyzeJobState> {
-  const { user } = await requireUser();
+  const { supabase, user } = await requireUser();
+  const { data: defaultResume } = await supabase
+    .from("base_resumes")
+    .select("id")
+    .eq("user_id", user.id)
+    .eq("is_default", true)
+    .limit(1)
+    .maybeSingle();
+  if (!defaultResume) {
+    return { error: "Please upload a base resume before creating an application." };
+  }
+
   const ip = await getClientIp();
   const limit = checkRateLimit(`analyze:${user.id}:${ip}`, { max: 8, windowMs: 60_000 });
   if (!limit.allowed) {
@@ -100,6 +111,17 @@ export async function createApplicationAction(
 ): Promise<CreateApplicationState> {
   const { supabase, user } = await requireUser();
 
+  const { data: defaultResume } = await supabase
+    .from("base_resumes")
+    .select("id")
+    .eq("user_id", user.id)
+    .eq("is_default", true)
+    .limit(1)
+    .maybeSingle();
+  if (!defaultResume) {
+    return { error: "Please upload a base resume before creating an application." };
+  }
+
   const createLimit = checkRateLimit(`create-application:${user.id}`, {
     max: 30,
     windowMs: 60 * 60_000,
@@ -141,6 +163,7 @@ export async function createApplicationAction(
       user_id: user.id,
       company_name: companyName || parsedJob?.company_name || null,
       role_title: roleTitle || parsedJob?.role_title || null,
+      base_resume_id: defaultResume.id,
       location: parsedJob?.location ?? null,
       job_url: jobUrl || null,
       raw_job_text: rawJobText,

@@ -1,108 +1,16 @@
 "use client";
 
-import { useActionState, useEffect, useRef, useState } from "react";
+import { useActionState, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/Button";
-import { Field } from "@/components/ui/Field";
 import {
-  saveProfileStep1Action,
   uploadOnboardingResumeAction,
-  completeOnboardingAction,
-  type SaveProfileState,
   type UploadOnboardingResumeState,
 } from "@/app/actions/onboarding";
 
-// ---------------------------------------------------------------------------
-// Step indicators
-// ---------------------------------------------------------------------------
-
-function StepIndicator({ current, total }: { current: number; total: number }) {
-  return (
-    <div className="flex items-center gap-2">
-      {Array.from({ length: total }, (_, i) => (
-        <div key={i} className="flex items-center gap-2">
-          <span
-            className={`flex h-6 w-6 items-center justify-center rounded-full border text-xs font-medium ${
-              i + 1 === current
-                ? "border-foreground bg-foreground text-background"
-                : i + 1 < current
-                ? "border-muted-foreground bg-muted text-muted-foreground"
-                : "border-border text-muted-foreground"
-            }`}
-          >
-            {i + 1 < current ? "✓" : i + 1}
-          </span>
-          {i < total - 1 && (
-            <div className={`h-px w-8 ${i + 1 < current ? "bg-muted-foreground" : "bg-border"}`} />
-          )}
-        </div>
-      ))}
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Step 1 — Basic info
-// ---------------------------------------------------------------------------
-
-function Step1({ onSuccess }: { onSuccess: () => void }) {
-  const t = useTranslations("Onboarding");
-  const [state, action, pending] = useActionState<SaveProfileState, FormData>(
-    saveProfileStep1Action,
-    undefined,
-  );
-
-  if (state?.ok) {
-    onSuccess();
-    return null;
-  }
-
-  return (
-    <form action={action} className="flex flex-col gap-5">
-      <Field label={t("fullName")} name="full_name" placeholder={t("fullNamePlaceholder")} required />
-      <Field
-        label={t("targetRole")}
-        name="target_role"
-        placeholder={t("targetRolePlaceholder")}
-        required
-      />
-      <div className="flex flex-col gap-1.5">
-        <label className="label-caps" htmlFor="years_experience">
-          {t("yearsExperience")}
-        </label>
-        <input
-          id="years_experience"
-          name="years_experience"
-          type="number"
-          min="0"
-          max="50"
-          placeholder="3"
-          className="h-10 w-32 rounded-sm border border-border bg-background px-3 text-sm outline-none focus:border-foreground"
-        />
-      </div>
-      {state?.error && <p className="text-sm text-danger">{state.error}</p>}
-      <div className="flex justify-end">
-        <Button type="submit" disabled={pending}>
-          {pending ? t("saving") : t("next")}
-        </Button>
-      </div>
-    </form>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Step 2 — Resume upload (no skip allowed)
-// ---------------------------------------------------------------------------
-
-const UPLOAD_MESSAGES = [
-  "Uploading your resume…",
-  "Reading document…",
-  "AI is analyzing your experience…",
-  "Building your profile…",
-];
 const UPLOAD_TIMEOUT_MS = 60_000;
 
-function Step2({ onSuccess }: { onSuccess: () => void }) {
+export default function OnboardingPage() {
   const t = useTranslations("Onboarding");
   const [state, action, pending] = useActionState<UploadOnboardingResumeState, FormData>(
     uploadOnboardingResumeAction,
@@ -114,6 +22,16 @@ function Step2({ onSuccess }: { onSuccess: () => void }) {
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  const uploadMessages = useMemo(
+    () => [
+      t("loadingUploading"),
+      t("loadingReading"),
+      t("loadingAnalyzing"),
+      t("loadingBuilding"),
+    ],
+    [t],
+  );
+
   useEffect(() => {
     if (pending) {
       queueMicrotask(() => {
@@ -121,7 +39,7 @@ function Step2({ onSuccess }: { onSuccess: () => void }) {
         setTimedOut(false);
       });
       intervalRef.current = setInterval(() => {
-        setMsgIndex((i) => (i + 1 < UPLOAD_MESSAGES.length ? i + 1 : i));
+        setMsgIndex((i) => (i + 1 < uploadMessages.length ? i + 1 : i));
       }, 4000);
       timeoutRef.current = setTimeout(() => setTimedOut(true), UPLOAD_TIMEOUT_MS);
     } else {
@@ -132,135 +50,60 @@ function Step2({ onSuccess }: { onSuccess: () => void }) {
       if (intervalRef.current) clearInterval(intervalRef.current);
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
     };
-  }, [pending]);
-
-  if (state?.ok) {
-    onSuccess();
-    return null;
-  }
+  }, [pending, uploadMessages.length]);
 
   return (
-    <form action={action} className="flex flex-col gap-5">
-      <p className="text-sm text-muted-foreground">{t("resumeUploadSub")}</p>
-      <label className="flex flex-col gap-1.5" htmlFor="onboarding-file">
-        <span className="label-caps">{t("resumeFile")}</span>
-        <input
-          id="onboarding-file"
-          name="file"
-          type="file"
-          required
-          accept=".pdf,.docx,.txt,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain"
-          className="h-10 rounded-sm border border-border bg-background px-3 text-sm file:mr-3 file:rounded-sm file:border-0 file:bg-muted file:px-3 file:py-1.5 file:text-sm"
-          onChange={(e) => setHasFile(!!e.target.files?.length)}
-        />
-        <span className="text-xs text-muted-foreground">{t("resumeFileHint")}</span>
-      </label>
-
-      {state?.error && <p className="text-sm text-danger">{state.error}</p>}
-
-      {pending && (
-        <div className="flex flex-col gap-2 rounded-sm border border-border bg-muted/40 px-4 py-3">
-          <div className="flex items-center gap-2.5">
-            <div className="h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-border border-t-accent" />
-            <span className="text-sm text-foreground">{UPLOAD_MESSAGES[msgIndex]}</span>
-          </div>
-          {timedOut && (
-            <p className="text-xs text-muted-foreground pl-6.5">
-              This is taking longer than usual — still working, please wait…
-            </p>
-          )}
-          <div className="mt-1 h-1 w-full overflow-hidden rounded-full bg-border">
-            <div className="h-full animate-[progress_16s_linear_forwards] rounded-full bg-accent" />
-          </div>
-        </div>
-      )}
-
-      {!pending && (
-        <div className="flex justify-end">
-          <Button type="submit" disabled={!hasFile}>
-            {t("uploadAndContinue")}
-          </Button>
-        </div>
-      )}
-    </form>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Step 3 — Target industries & companies
-// ---------------------------------------------------------------------------
-
-function Step3() {
-  const t = useTranslations("Onboarding");
-  const [state, action, pending] = useActionState<SaveProfileState, FormData>(
-    completeOnboardingAction,
-    undefined,
-  );
-
-  return (
-    <form action={action} className="flex flex-col gap-5">
-      <p className="text-sm text-muted-foreground">{t("targetIndustriesSub")}</p>
-      <div className="flex flex-col gap-1.5">
-        <label className="label-caps" htmlFor="target_industries">
-          {t("targetIndustries")}
-        </label>
-        <input
-          id="target_industries"
-          name="target_industries"
-          type="text"
-          placeholder={t("targetIndustriesPlaceholder")}
-          className="h-10 w-full rounded-sm border border-border bg-background px-3 text-sm outline-none focus:border-foreground"
-        />
-        <span className="text-xs text-muted-foreground">{t("commaSeparated")}</span>
-      </div>
-      <div className="flex flex-col gap-1.5">
-        <label className="label-caps" htmlFor="target_companies">
-          {t("dreamCompanies")}
-        </label>
-        <input
-          id="target_companies"
-          name="target_companies"
-          type="text"
-          placeholder={t("dreamCompaniesPlaceholder")}
-          className="h-10 w-full rounded-sm border border-border bg-background px-3 text-sm outline-none focus:border-foreground"
-        />
-        <span className="text-xs text-muted-foreground">{t("commaSeparated")}</span>
-      </div>
-      {state?.error && <p className="text-sm text-danger">{state.error}</p>}
-      <div className="flex justify-end">
-        <Button type="submit" disabled={pending}>
-          {pending ? t("finishing") : t("finishSetup")}
-        </Button>
-      </div>
-    </form>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Page root
-// ---------------------------------------------------------------------------
-
-export default function OnboardingPage() {
-  const t = useTranslations("Onboarding");
-  const [step, setStep] = useState(1);
-
-  const stepLabels = [t("stepBasicInfo"), t("stepResume"), t("stepPreferences")];
-
-  return (
-    <div className="mx-auto w-full max-w-lg px-6 py-16">
+    <div className="mx-auto w-full max-w-2xl px-6 py-16">
       <div className="label-caps mb-2">{t("setupLabel")}</div>
       <h1 className="font-display text-4xl leading-tight">{t("heading")}</h1>
-      <p className="mt-2 text-muted-foreground text-sm">{t("sub")}</p>
+      <p className="mt-3 text-sm leading-6 text-muted-foreground">{t("sub")}</p>
 
-      <div className="mt-8 flex items-center justify-between">
-        <StepIndicator current={step} total={3} />
-        <span className="label-caps text-muted-foreground">{stepLabels[step - 1]}</span>
-      </div>
+      <div className="mt-8 rounded-lg border border-border bg-background p-8 shadow-sm">
+        <div className="mb-6 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-800">
+          {t("resumeRequiredNotice")}
+        </div>
 
-      <div className="mt-8 rounded-sm border border-border bg-background p-6">
-        {step === 1 && <Step1 onSuccess={() => setStep(2)} />}
-        {step === 2 && <Step2 onSuccess={() => setStep(3)} />}
-        {step === 3 && <Step3 />}
+        <form action={action} className="flex flex-col gap-5">
+          <p className="text-sm leading-6 text-muted-foreground">{t("resumeUploadSub")}</p>
+          <label className="flex flex-col gap-1.5" htmlFor="onboarding-file">
+            <span className="label-caps">{t("resumeFile")}</span>
+            <input
+              id="onboarding-file"
+              name="file"
+              type="file"
+              required
+              accept=".pdf,.docx,.txt,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain"
+              className="h-10 rounded-sm border border-border bg-background px-3 text-sm file:mr-3 file:rounded-sm file:border-0 file:bg-muted file:px-3 file:py-1.5 file:text-sm"
+              onChange={(e) => setHasFile(!!e.target.files?.length)}
+            />
+            <span className="text-xs text-muted-foreground">{t("resumeFileHint")}</span>
+          </label>
+
+          {state?.error ? <p className="text-sm text-danger">{state.error}</p> : null}
+
+          {pending ? (
+            <div className="flex flex-col gap-2 rounded-md border border-border bg-muted/40 px-4 py-3">
+              <div className="flex items-center gap-2.5">
+                <div className="h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-border border-t-accent" />
+                <span className="text-sm text-foreground">{uploadMessages[msgIndex]}</span>
+              </div>
+              {timedOut ? (
+                <p className="pl-6 text-xs text-muted-foreground">
+                  {t("takingLonger")}
+                </p>
+              ) : null}
+              <div className="mt-1 h-1 w-full overflow-hidden rounded-full bg-border">
+                <div className="h-full animate-[progress_16s_linear_forwards] rounded-full bg-accent" />
+              </div>
+            </div>
+          ) : (
+            <div className="flex justify-end">
+              <Button type="submit" disabled={!hasFile}>
+                {t("uploadAndContinue")}
+              </Button>
+            </div>
+          )}
+        </form>
       </div>
 
       <p className="mt-4 text-center text-xs text-muted-foreground">{t("profileNote")}</p>

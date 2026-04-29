@@ -122,7 +122,23 @@ export async function uploadOnboardingResumeAction(
     console.error("[uploadOnboardingResumeAction] DB insert error:", insertError);
     return { error: "Failed to save resume. Please try again." };
   }
-  return { ok: true };
+
+  const { error: profileError } = await supabase
+    .from("profiles")
+    .upsert({
+      id: user.id,
+      onboarding_complete: true,
+      updated_at: new Date().toISOString(),
+    });
+
+  if (profileError) {
+    console.error("[uploadOnboardingResumeAction] Profile update error:", profileError);
+    return { error: "Resume saved, but setup could not be completed. Please try again." };
+  }
+
+  revalidatePath("/dashboard");
+  revalidatePath("/resumes");
+  redirect("/dashboard");
 }
 
 // ---------------------------------------------------------------------------
@@ -162,6 +178,6 @@ export async function completeOnboardingAction(
     return { error: "Something went wrong. Please try again." };
   }
 
-  revalidatePath("/resumes");
-  redirect("/resumes?welcome=1");
+  revalidatePath("/dashboard");
+  redirect("/dashboard");
 }

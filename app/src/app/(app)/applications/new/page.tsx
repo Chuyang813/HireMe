@@ -1,10 +1,24 @@
 import { getTranslations } from "next-intl/server";
+import { redirect } from "next/navigation";
+import { requireUser } from "@/lib/auth/current-user";
 import { NewApplicationForm } from "./NewApplicationForm";
 
 export const metadata = { title: "New application" };
 
 export default async function NewApplicationPage() {
+  const { supabase, user } = await requireUser();
   const t = await getTranslations("Applications");
+  const { data: defaultResume } = await supabase
+    .from("base_resumes")
+    .select("id")
+    .eq("user_id", user.id)
+    .eq("is_default", true)
+    .limit(1)
+    .maybeSingle();
+
+  if (!defaultResume) {
+    redirect("/onboarding");
+  }
 
   return (
     <div className="mx-auto w-full max-w-3xl px-6 py-12">

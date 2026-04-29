@@ -183,13 +183,22 @@ export default async function DashboardPage() {
   const { supabase, user } = await requireUser();
   const t = await getTranslations("Dashboard");
 
-  const { data: profile } = await supabase
+  const [{ data: profile }, { data: defaultResume }] = await Promise.all([
+    supabase
     .from("profiles")
     .select("onboarding_complete, full_name, display_name")
     .eq("id", user.id)
-    .single();
+      .single(),
+    supabase
+      .from("base_resumes")
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("is_default", true)
+      .limit(1)
+      .maybeSingle(),
+  ]);
 
-  if (!(profile as Profile | null)?.onboarding_complete) {
+  if (!defaultResume) {
     redirect("/onboarding");
   }
 
@@ -216,6 +225,7 @@ export default async function DashboardPage() {
   const applications: JobApplication[] = (recentData ?? []) as JobApplication[];
   const events = (eventsData ?? []) as TimelineEventWithApp[];
   const profileData = profile as Pick<Profile, "full_name" | "display_name"> | null;
+  const hasApplications = allApps.length > 0;
 
   const activeCount = allApps.filter(
     (a) => !INACTIVE_STATUSES.includes(a.current_status),
@@ -271,10 +281,12 @@ export default async function DashboardPage() {
           <div className="mt-6 space-y-1 text-lg text-muted-foreground">
             <p>{t("welcomeBack", { name: fullNameFromProfile(profileData).split(" ")[0] })}</p>
             <p className="text-base">
-              {t("summary", {
-                active: activeCount,
-                interviews: interviewCount,
-              })}
+              {hasApplications
+                ? t("summary", {
+                    active: activeCount,
+                    interviews: interviewCount,
+                  })
+                : t("emptySummary")}
             </p>
           </div>
         </div>
@@ -311,10 +323,10 @@ export default async function DashboardPage() {
                     ? t("nextActionTitle", {
                         role: nextActionApp.role_title ?? t("untitledRole"),
                       })
-                    : t("noAppsHeading")}
+                    : t("firstApplicationTitle")}
                 </h2>
                 <p className="mt-2 max-w-xl text-sm leading-relaxed text-muted-foreground">
-                  {nextActionApp ? t("nextActionBody") : t("noAppsSub")}
+                  {nextActionApp ? t("nextActionBody") : t("firstApplicationBody")}
                 </p>
               </div>
             </div>
