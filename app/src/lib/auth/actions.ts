@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 import { z } from "zod";
 import { getSupabaseServer } from "@/lib/supabase/server";
 import { safeRedirectTarget } from "@/lib/auth/safe-redirect";
@@ -20,6 +21,24 @@ const signupSchema = credentialsSchema.extend({
 });
 
 export type FormState = { error?: string } | undefined;
+
+async function getAuthCallbackUrl() {
+  const configuredOrigin = process.env.NEXT_PUBLIC_APP_URL?.trim();
+  if (configuredOrigin && /^https?:\/\//i.test(configuredOrigin)) {
+    return `${configuredOrigin.replace(/\/$/, "")}/auth/callback`;
+  }
+
+  const h = await headers();
+  const origin = h.get("origin");
+  if (origin && /^https?:\/\//i.test(origin)) {
+    return `${origin.replace(/\/$/, "")}/auth/callback`;
+  }
+
+  const host = h.get("x-forwarded-host") ?? h.get("host");
+  if (!host) return undefined;
+  const proto = h.get("x-forwarded-proto") ?? "https";
+  return `${proto}://${host}/auth/callback`;
+}
 
 export async function loginAction(
   _prev: FormState,
@@ -74,7 +93,7 @@ export async function signupAction(
       data: {
         display_name: parsed.data.displayName,
       },
-      emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL ?? ""}/auth/callback`,
+      emailRedirectTo: await getAuthCallbackUrl(),
     },
   });
   if (error) return { error: error.message };
