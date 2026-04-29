@@ -215,7 +215,7 @@ export default async function ApplicationPage({
     new Date(application.created_at) < staleCutoff;
 
   return (
-    <div className="mx-auto w-full max-w-7xl px-6 py-12 xl:px-8">
+    <div className="mx-auto w-full max-w-[1500px] px-6 py-12 xl:px-10">
       <div className="label-caps mb-2">
         <Link href="/applications" className="hover:underline">
           {t("heading")}
@@ -268,27 +268,31 @@ export default async function ApplicationPage({
         </div>
       </div>
 
-      {job && (
-        <JobAnalysisCard
-          job={job}
-          resume={parsedResume}
-        />
-      )}
+      <div className="mt-10 grid grid-cols-1 items-start gap-8 lg:grid-cols-[minmax(0,1fr)_220px] xl:grid-cols-[minmax(0,1fr)_240px] xl:gap-10">
+        <main className="min-w-0">
+          {job && (
+            <JobAnalysisCard
+              job={job}
+              resume={parsedResume}
+            />
+          )}
 
-      <div className="mt-10 grid grid-cols-1 items-start gap-8 lg:grid-cols-[minmax(0,1fr)_220px] xl:gap-10">
-        <WorkspaceTabs
-          applicationId={application.id}
-          hasResume={!!resume}
-          documents={{
-            tailored_resume: docMap.get("tailored_resume") ?? null,
-            cover_letter: docMap.get("cover_letter") ?? null,
-            email_draft: docMap.get("email_draft") ?? null,
-          }}
-          roleTitle={application.role_title ?? undefined}
-          userFirstName={userFirstName}
-          companyName={application.company_name ?? undefined}
-          statusLabel={statusLabel(t, application.current_status)}
-        />
+          <div className={job ? "mt-8" : undefined}>
+            <WorkspaceTabs
+              applicationId={application.id}
+              hasResume={!!resume}
+              documents={{
+                tailored_resume: docMap.get("tailored_resume") ?? null,
+                cover_letter: docMap.get("cover_letter") ?? null,
+                email_draft: docMap.get("email_draft") ?? null,
+              }}
+              roleTitle={application.role_title ?? undefined}
+              userFirstName={userFirstName}
+              companyName={application.company_name ?? undefined}
+              statusLabel={statusLabel(t, application.current_status)}
+            />
+          </div>
+        </main>
         <TimelineSidebar events={events} locale={locale} t={t} />
       </div>
     </div>

@@ -41,3 +41,13 @@ Reasoning: This is the smallest coherent change: the backend fetches and returns
 Killed trade-off: The UI is improved for desktop width, but this is not a full redesign of the application detail page.
 
 Revisit trigger: Recheck with a real beta user after they create three applications: one from pasted text, one from a public ATS URL, and one from a blocked job board URL.
+
+## Follow-up Correction: Detail Page Column Ownership
+
+Decision: The application detail page uses one parent two-column layout below the title. The left column owns both job analysis and the document workspace; the right column owns activity history.
+
+Reasoning: Putting activity only next to the workspace made the job analysis card wider than the generation area, which visually implied that the lower workspace was cramped. Sharing one parent grid keeps the job summary and generated document area the same width.
+
+Killed trade-off: Activity starts higher on the page beside the job summary, rather than only beside generated documents.
+
+Revisit trigger: If the activity rail feels too visually noisy during document generation, collapse it behind a History button on medium-width screens.

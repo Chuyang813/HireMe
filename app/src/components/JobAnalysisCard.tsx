@@ -94,7 +94,7 @@ export async function JobAnalysisCard({
   const fit = getFitLabel({ keySkills, resume });
 
   return (
-    <div className="mt-8 flex items-start gap-5 rounded-md border border-border bg-muted/40 p-5 shadow-sm">
+    <div className="flex items-start gap-5 rounded-md border border-border bg-muted/40 p-5 shadow-sm">
       <div className="shrink-0">
         <div
           className={`flex min-h-16 w-24 items-center justify-center rounded-md border px-3 text-center text-sm font-semibold leading-tight ${fit.className}`}
