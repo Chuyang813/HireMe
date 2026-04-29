@@ -10,8 +10,16 @@ export default async function AppLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { user } = await requireUser();
+  const { supabase, user } = await requireUser();
   const t = await getTranslations("Nav");
+  const { data: defaultResume } = await supabase
+    .from("base_resumes")
+    .select("id")
+    .eq("user_id", user.id)
+    .eq("is_default", true)
+    .limit(1)
+    .maybeSingle();
+  const hasRequiredResume = !!defaultResume;
 
   const navItems = [
     { href: "/dashboard", label: t("dashboard") },
@@ -26,15 +34,22 @@ export default async function AppLayout({
     <div className="flex flex-1 flex-col">
       <header className="border-b border-border bg-background/95">
         <div className="mx-auto flex h-20 w-full max-w-7xl items-center justify-between px-6">
-          <Link href="/dashboard" className="font-display text-2xl leading-none">
+          <Link
+            href={hasRequiredResume ? "/dashboard" : "/onboarding"}
+            className="font-display text-2xl leading-none"
+          >
             HireMe
           </Link>
 
-          <nav className="hidden h-full items-center gap-8 md:flex">
-            {navItems.map((n) => (
-              <AppNavLink key={n.href} href={n.href} label={n.label} />
-            ))}
-          </nav>
+          {hasRequiredResume ? (
+            <nav className="hidden h-full items-center gap-8 md:flex">
+              {navItems.map((n) => (
+                <AppNavLink key={n.href} href={n.href} label={n.label} />
+              ))}
+            </nav>
+          ) : (
+            <div className="hidden md:block" />
+          )}
 
           <div className="flex items-center gap-4 text-sm">
             <LanguageSwitcher />
@@ -53,13 +68,15 @@ export default async function AppLayout({
           </div>
         </div>
 
-        <nav className="border-t border-border md:hidden">
-          <div className="mx-auto flex w-full max-w-7xl items-center gap-5 overflow-x-auto px-6 text-sm">
-            {navItems.map((n) => (
-              <AppNavLink key={n.href} href={n.href} label={n.label} />
-            ))}
-          </div>
-        </nav>
+        {hasRequiredResume ? (
+          <nav className="border-t border-border md:hidden">
+            <div className="mx-auto flex w-full max-w-7xl items-center gap-5 overflow-x-auto px-6 text-sm">
+              {navItems.map((n) => (
+                <AppNavLink key={n.href} href={n.href} label={n.label} />
+              ))}
+            </div>
+          </nav>
+        ) : null}
       </header>
       <main className="flex-1">{children}</main>
     </div>
