@@ -30,12 +30,12 @@ type TabId =
   | "assessment"
   | "interview_prep";
 
-const TABS: { id: TabId; labelKey: string }[] = [
-  { id: "resume", labelKey: "tabResume" },
-  { id: "cover_letter", labelKey: "tabCoverLetter" },
-  { id: "email", labelKey: "tabEmail" },
-  { id: "assessment", labelKey: "tabAssessment" },
-  { id: "interview_prep", labelKey: "tabInterviewPrep" },
+const TABS: { id: TabId; labelKey: string; shortLabelKey: string; docType?: DocumentType }[] = [
+  { id: "resume", labelKey: "tabResume", shortLabelKey: "sideResume", docType: "tailored_resume" },
+  { id: "cover_letter", labelKey: "tabCoverLetter", shortLabelKey: "sideCoverLetter", docType: "cover_letter" },
+  { id: "email", labelKey: "tabEmail", shortLabelKey: "sideEmail", docType: "email_draft" },
+  { id: "assessment", labelKey: "tabAssessment", shortLabelKey: "sideAssessment" },
+  { id: "interview_prep", labelKey: "tabInterviewPrep", shortLabelKey: "sideInterviewPrep" },
 ];
 
 // ---------------------------------------------------------------------------
@@ -1266,8 +1266,10 @@ export function WorkspaceTabs({
   applicationId,
   hasResume,
   documents,
+  roleTitle,
   userFirstName,
   companyName,
+  statusLabel,
 }: {
   applicationId: string;
   hasResume: boolean;
@@ -1276,8 +1278,10 @@ export function WorkspaceTabs({
     cover_letter: ApplicationDocument | null;
     email_draft: ApplicationDocument | null;
   };
+  roleTitle?: string;
   userFirstName?: string;
   companyName?: string;
+  statusLabel?: string;
 }) {
   const t = useTranslations("Workspace");
   const [activeTab, setActiveTab] = useState<TabId>("resume");
@@ -1288,71 +1292,122 @@ export function WorkspaceTabs({
   const resumeFilename = `${firstName}_${company}_Resume`;
   const coverFilename = `${firstName}_${company}_CoverLetter`;
 
+  const documentStatus: Partial<Record<DocumentType, boolean>> = {
+    tailored_resume: !!documents.tailored_resume,
+    cover_letter: !!documents.cover_letter,
+    email_draft: !!documents.email_draft,
+  };
+
+  const activeLabel = t(TABS.find((tab) => tab.id === activeTab)?.labelKey ?? "tabResume");
+
   return (
-    <div>
-      <div className="flex flex-wrap gap-0 border-b border-border">
-        {TABS.map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            className={`px-4 py-2.5 text-sm transition-colors ${
-              activeTab === tab.id
-                ? "border-b-2 border-accent font-medium text-accent"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            {t(tab.labelKey)}
-          </button>
-        ))}
+    <div className="overflow-hidden rounded-lg border border-border bg-background shadow-sm">
+      <div className="flex flex-wrap items-center justify-between gap-4 border-b border-border px-6 py-5">
+        <div className="min-w-0">
+          <p className="font-display text-2xl leading-tight">
+            {roleTitle || t("workspaceUntitledRole")}
+          </p>
+          <p className="mt-1 truncate text-sm text-muted-foreground">
+            {companyName || t("workspaceUnknownCompany")}
+          </p>
+        </div>
+        {statusLabel ? (
+          <span className="rounded-full bg-slate-100 px-4 py-1.5 text-sm font-medium text-slate-700">
+            {statusLabel}
+          </span>
+        ) : null}
       </div>
 
-      <div className="mt-6">
-        {activeTab === "resume" && (
-          <>
+      <div className="grid min-h-[40rem] grid-cols-1 lg:grid-cols-[15.5rem_1fr]">
+        <nav className="border-b border-border bg-muted/25 p-4 lg:border-b-0 lg:border-r">
+          <div className="flex gap-2 overflow-x-auto lg:flex-col lg:overflow-visible">
+            {TABS.map((tab) => {
+              const isActive = activeTab === tab.id;
+              const isDone = tab.docType ? documentStatus[tab.docType] : false;
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setActiveTab(tab.id)}
+                  className={[
+                    "group flex min-w-fit items-center gap-3 rounded-md px-4 py-3 text-left text-sm transition-colors",
+                    isActive
+                      ? "bg-background text-foreground shadow-sm ring-1 ring-border"
+                      : "text-muted-foreground hover:bg-background/70 hover:text-foreground",
+                  ].join(" ")}
+                  aria-current={isActive ? "page" : undefined}
+                >
+                  <span
+                    className={[
+                      "flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-xs",
+                      isDone
+                        ? "bg-accent text-accent-foreground"
+                        : isActive
+                          ? "border border-accent text-accent"
+                          : "border border-border text-muted-foreground",
+                    ].join(" ")}
+                    aria-hidden="true"
+                  >
+                    {isDone ? "✓" : ""}
+                  </span>
+                  <span className="whitespace-nowrap font-medium">
+                    {t(tab.shortLabelKey)}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </nav>
+
+        <section className="min-w-0 p-5 sm:p-8">
+          <p className="label-caps mb-5 text-muted-foreground">{activeLabel}</p>
+          {activeTab === "resume" && (
+            <>
+              <DocumentPanel
+                applicationId={applicationId}
+                documentType="tailored_resume"
+                existingDoc={documents.tailored_resume}
+                hasResume={hasResume}
+                exportFilename={resumeFilename}
+              />
+              <div className="mt-6 border-t border-border pt-6">
+                <p className="label-caps mb-1">{t("resumeScoringLabel")}</p>
+                <p className="mb-3 text-xs text-muted-foreground">
+                  {t("resumeScoringDesc")}
+                </p>
+                <ScorePanel applicationId={applicationId} hasResume={hasResume} />
+              </div>
+            </>
+          )}
+          {activeTab === "cover_letter" && (
             <DocumentPanel
               applicationId={applicationId}
-              documentType="tailored_resume"
-              existingDoc={documents.tailored_resume}
+              documentType="cover_letter"
+              existingDoc={documents.cover_letter}
               hasResume={hasResume}
-              exportFilename={resumeFilename}
+              exportFilename={coverFilename}
             />
-            <div className="mt-6 border-t border-border pt-6">
-              <p className="label-caps mb-1">{t("resumeScoringLabel")}</p>
-              <p className="text-xs text-muted-foreground mb-3">
-                {t("resumeScoringDesc")}
-              </p>
-              <ScorePanel applicationId={applicationId} hasResume={hasResume} />
-            </div>
-          </>
-        )}
-        {activeTab === "cover_letter" && (
-          <DocumentPanel
-            applicationId={applicationId}
-            documentType="cover_letter"
-            existingDoc={documents.cover_letter}
-            hasResume={hasResume}
-            exportFilename={coverFilename}
-          />
-        )}
-        {activeTab === "email" && (
-          <DocumentPanel
-            applicationId={applicationId}
-            documentType="email_draft"
-            existingDoc={documents.email_draft}
-            hasResume={hasResume}
-            exportFilename=""
-            showEmail
-          />
-        )}
-        {activeTab === "assessment" && (
-          <AssessmentPanel applicationId={applicationId} />
-        )}
-        {activeTab === "interview_prep" && (
-          <InterviewPrepPanel
-            applicationId={applicationId}
-            hasResume={hasResume}
-          />
-        )}
+          )}
+          {activeTab === "email" && (
+            <DocumentPanel
+              applicationId={applicationId}
+              documentType="email_draft"
+              existingDoc={documents.email_draft}
+              hasResume={hasResume}
+              exportFilename=""
+              showEmail
+            />
+          )}
+          {activeTab === "assessment" && (
+            <AssessmentPanel applicationId={applicationId} />
+          )}
+          {activeTab === "interview_prep" && (
+            <InterviewPrepPanel
+              applicationId={applicationId}
+              hasResume={hasResume}
+            />
+          )}
+        </section>
       </div>
     </div>
   );

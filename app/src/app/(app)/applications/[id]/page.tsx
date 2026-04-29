@@ -284,8 +284,10 @@ export default async function ApplicationPage({
             cover_letter: docMap.get("cover_letter") ?? null,
             email_draft: docMap.get("email_draft") ?? null,
           }}
+          roleTitle={application.role_title ?? undefined}
           userFirstName={userFirstName}
           companyName={application.company_name ?? undefined}
+          statusLabel={statusLabel(t, application.current_status)}
         />
         <TimelineSidebar events={events} locale={locale} t={t} />
       </div>
