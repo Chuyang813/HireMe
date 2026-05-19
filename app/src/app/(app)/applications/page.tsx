@@ -1,9 +1,19 @@
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { requireUser } from "@/lib/auth/current-user";
-import { APPLICATION_STATUS_LABEL } from "@/lib/db/types";
-import type { JobApplication } from "@/lib/db/types";
+import type { JobApplication, ApplicationStatus } from "@/lib/db/types";
 import { DeleteApplicationButton } from "@/components/DeleteApplicationButton";
+
+const STATUS_LABEL_KEYS: Record<ApplicationStatus, string> = {
+  saved: "statusSaved",
+  ready_to_apply: "statusReadyToApply",
+  applied: "statusApplied",
+  assessment: "statusAssessment",
+  interview: "statusInterview",
+  rejected: "statusRejected",
+  offer: "statusOffer",
+  withdrawn: "statusWithdrawn",
+};
 
 export const metadata = { title: "Applications" };
 
@@ -54,9 +64,9 @@ export default async function ApplicationsPage() {
             <path fillRule="evenodd" d="M18 10a8 8 0 1 1-16 0 8 8 0 0 1 16 0Zm-7-4a1 1 0 1 1-2 0 1 1 0 0 1 2 0ZM9 9a.75.75 0 0 0 0 1.5h.253a.25.25 0 0 1 .244.304l-.459 2.066A1.75 1.75 0 0 0 10.747 15H11a.75.75 0 0 0 0-1.5h-.253a.25.25 0 0 1-.244-.304l.459-2.066A1.75 1.75 0 0 0 9.253 9H9Z" clipRule="evenodd" />
           </svg>
           <span>
-            Upload a base resume to get the most out of HireMe — AI will use it to tailor your documents.{" "}
+            {t("noResumeBanner")}{" "}
             <Link href="/resumes" className="font-medium text-accent underline underline-offset-2 hover:opacity-80">
-              Upload now
+              {t("uploadNow")}
             </Link>
           </span>
         </div>
@@ -87,10 +97,10 @@ export default async function ApplicationsPage() {
                   <div className="flex items-baseline justify-between gap-4">
                     <div>
                       <h3 className="font-display text-xl">
-                        {app.role_title ?? "Untitled role"}
+                        {app.role_title ?? t("untitledRole")}
                       </h3>
                       <p className="mt-0.5 text-sm text-muted-foreground">
-                        {app.company_name ?? "Unknown company"}
+                        {app.company_name ?? t("unknownCompany")}
                         {app.location ? ` · ${app.location}` : ""}
                       </p>
                     </div>
@@ -98,14 +108,14 @@ export default async function ApplicationsPage() {
                       {isStale(app) && (
                         <span
                           className="inline-flex items-center gap-1 rounded-full bg-yellow-100 px-2 py-0.5 text-[10px] font-medium text-yellow-700"
-                          title="Saved over 1 day ago — did you apply?"
+                          title={t("staleTooltip")}
                         >
                           <span className="h-1.5 w-1.5 rounded-full bg-yellow-400" />
-                          Update status
+                          {t("staleUpdateStatus")}
                         </span>
                       )}
                       <span className="label-caps whitespace-nowrap rounded-md border border-border px-1.5 py-0.5">
-                        {APPLICATION_STATUS_LABEL[app.current_status]}
+                        {t(STATUS_LABEL_KEYS[app.current_status as ApplicationStatus] as Parameters<typeof t>[0])}
                       </span>
                       <DeleteApplicationButton applicationId={app.id} variant="icon" />
                     </div>

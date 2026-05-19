@@ -8,9 +8,9 @@ const RETRYABLE_STATUS = new Set([503]);
 const DEFAULT_GLM_MODEL = process.env.GLM_MODEL || "glm-4.5-flash";
 const DEFAULT_GLM_FALLBACK_MODELS = ["glm-4.7-flash"];
 const DEFAULT_GEMINI_MODEL =
-  process.env.GEMINI_MODEL || "gemini-3.1-flash-lite-preview";
+  process.env.GEMINI_MODEL || "gemini-3.1-flash-lite";
 const DEFAULT_GEMINI_FALLBACK_MODELS = [
-  "gemini-3.1-flash-lite-preview",
+  "gemini-3.1-flash-lite",
   "gemma-3-27b-it",
   "gemma-3-12b-it",
   "gemma-3-4b-it",
