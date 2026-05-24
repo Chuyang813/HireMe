@@ -66,7 +66,7 @@ Done when:
 
 ## 5. AI-Specific Tests
 
-Status: Not started
+Status: Done
 
 Goal: Increase confidence in provider behavior, parsing, and guardrail logic.
 
@@ -100,3 +100,4 @@ Done when:
 - 2026-05-24: Replaced the default Next.js README with a project-specific README covering product scope, AI workflow, provider design, validation, setup, commands, and the AI engineering roadmap.
 - 2026-05-24: Added an offline AI evaluation harness with job/resume parsing fixtures, mocked model outputs, JSON extraction checks, shape validation, and expected-field accuracy reporting.
 - 2026-05-24: Added a post-generation grounding checker for generated documents, persisted grounding warnings to document metadata, and surfaced review warnings in the application workspace UI.
+- 2026-05-24: Added Vitest unit tests for JSON extraction, grounding warnings, and AI rate limiting behavior.

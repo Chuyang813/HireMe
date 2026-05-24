@@ -96,6 +96,7 @@ Open `http://localhost:3000`.
 
 ```bash
 npm run lint
+npm run test:unit
 npm run eval:ai
 npm run build
 npm run test:e2e

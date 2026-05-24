@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "eval:ai": "node scripts/run-ai-evals.mjs",
+    "test:unit": "vitest run",
     "test:e2e": "playwright test"
   },
   "dependencies": {
@@ -33,6 +34,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.2.4",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^4.1.7"
   }
 }

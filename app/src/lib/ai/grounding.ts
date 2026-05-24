@@ -136,7 +136,7 @@ function extractMatches(content: string, pattern: RegExp) {
 function extractImportantNumbers(content: string) {
   const values = extractMatches(
     content,
-    /\b(?:\$?\d+(?:,\d{3})*(?:\.\d+)?%?|\d{4})\b/g,
+    /(?:\$?\d+(?:,\d{3})*(?:\.\d+)?%?|\b\d{4}\b)/g,
   );
 
   return values.filter((value) => {
@@ -212,10 +212,13 @@ function collectSourceTerms(resume: ParsedResume, job: ParsedJob | null) {
 }
 
 function extractPossibleEntities(content: string) {
-  const candidates = extractMatches(
+  const multiWordCandidates = extractMatches(
     content,
     /\b[A-Z][A-Za-z0-9+.#-]*(?:\s+[A-Z][A-Za-z0-9+.#-]*){1,4}\b/g,
   );
+  const contextualSingleWords = [...content.matchAll(/\b(?:at|from|for|with)\s+([A-Z][A-Za-z0-9+.#-]{2,})\b/g)]
+    .map((match) => match[1]);
+  const candidates = [...multiWordCandidates, ...contextualSingleWords];
 
   return candidates.filter((candidate) => {
     const trimmed = candidate.trim();
