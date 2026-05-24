@@ -1,4 +1,5 @@
 import { aiJson } from "./provider";
+import { formatResumeEvidence, selectResumeEvidence } from "./evidence";
 import type { ParsedJob, ParsedResume } from "@/lib/db/types";
 
 const SYSTEM = `You are an email drafting assistant for job applications submitted by email.
@@ -45,6 +46,8 @@ export async function generateEmailDraft({
   job: ParsedJob;
   rawJobText?: string | null;
 }): Promise<EmailDraft> {
+  const matchedEvidence = formatResumeEvidence(selectResumeEvidence({ resume, job, limit: 5 }));
+
   return aiJson<EmailDraft>({
     system: SYSTEM,
     messages: [
@@ -53,6 +56,7 @@ export async function generateEmailDraft({
         content: [
           `Candidate parsed resume (JSON):\n${JSON.stringify(resume, null, 2)}`,
           `Parsed job posting (JSON):\n${JSON.stringify(job, null, 2)}`,
+          `Most relevant candidate evidence selected for this job:\n${matchedEvidence}`,
           rawJobText ? `Raw job posting text:\n${rawJobText}` : "",
           "Return the email JSON.",
         ].filter(Boolean).join("\n\n"),

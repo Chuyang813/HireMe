@@ -1,4 +1,5 @@
 import { aiJson } from "./provider";
+import { formatResumeEvidence, selectResumeEvidence } from "./evidence";
 import { interviewPrepSchema } from "./schemas";
 import type { InterviewPrep, ParsedJob, ParsedResume } from "@/lib/db/types";
 
@@ -35,6 +36,8 @@ export async function generateInterviewPrep({
   job: ParsedJob;
   interviewStage?: string;
 }): Promise<InterviewPrep> {
+  const matchedEvidence = formatResumeEvidence(selectResumeEvidence({ resume, job }));
+
   const raw = await aiJson<InterviewPrep>({
     system: SYSTEM,
     messages: [
@@ -43,6 +46,7 @@ export async function generateInterviewPrep({
         content: [
           `Candidate parsed resume (JSON):\n${JSON.stringify(resume, null, 2)}`,
           `Parsed job posting (JSON):\n${JSON.stringify(job, null, 2)}`,
+          `Most relevant candidate evidence selected for this job:\n${matchedEvidence}`,
           interviewStage
             ? `Interview stage: ${interviewStage}`
             : "Interview stage: not specified",

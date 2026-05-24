@@ -51,7 +51,7 @@ Done when:
 
 ## 4. Context Engineering / Retrieval
 
-Status: Not started
+Status: Done
 
 Goal: Show that the app can select relevant candidate evidence instead of stuffing all context into one prompt.
 
@@ -101,3 +101,4 @@ Done when:
 - 2026-05-24: Added an offline AI evaluation harness with job/resume parsing fixtures, mocked model outputs, JSON extraction checks, shape validation, and expected-field accuracy reporting.
 - 2026-05-24: Added a post-generation grounding checker for generated documents, persisted grounding warnings to document metadata, and surfaced review warnings in the application workspace UI.
 - 2026-05-24: Added Vitest unit tests for JSON extraction, grounding warnings, and AI rate limiting behavior.
+- 2026-05-24: Added deterministic resume evidence selection and inserted matched evidence into tailored resume, cover letter, email draft, interview prep, and streaming document prompts.

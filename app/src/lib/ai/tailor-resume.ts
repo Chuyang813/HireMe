@@ -1,4 +1,5 @@
 import { aiText } from "./provider";
+import { formatResumeEvidence, selectResumeEvidence } from "./evidence";
 import type { ParsedJob, ParsedResume } from "@/lib/db/types";
 
 const SYSTEM = `You are a resume tailoring assistant.
@@ -22,6 +23,8 @@ export async function tailorResume({
   job: ParsedJob;
   extraInstructions?: string;
 }): Promise<string> {
+  const matchedEvidence = formatResumeEvidence(selectResumeEvidence({ resume, job }));
+
   return aiText({
     system: SYSTEM,
     messages: [
@@ -30,6 +33,7 @@ export async function tailorResume({
         content: [
           `Candidate parsed resume (JSON):\n${JSON.stringify(resume, null, 2)}`,
           `Parsed job posting (JSON):\n${JSON.stringify(job, null, 2)}`,
+          `Most relevant candidate evidence selected for this job:\n${matchedEvidence}`,
           extraInstructions
             ? `Additional instructions from the candidate:\n${extraInstructions}`
             : "",

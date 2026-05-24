@@ -32,7 +32,7 @@ The project is built as a full-stack TypeScript application with Next.js, Supaba
 
 1. Resume ingestion: uploaded resumes are converted into raw text through format-specific extractors in `src/lib/parsers/resume-text.ts`.
 2. Structured parsing: resume and job text are converted into typed JSON objects by LLM prompts plus Zod schemas in `src/lib/ai`.
-3. Context assembly: server actions load the user's default parsed resume and the selected parsed job posting.
+3. Context assembly: server actions load the user's default parsed resume and the selected parsed job posting, then select the most relevant resume evidence for the role.
 4. Generation: document-specific prompts produce tailored resumes, cover letters, email drafts, interview prep, or assessment notes.
 5. Validation and audit: structured outputs are schema-checked where applicable, and generated timeline events include provider, model, and prompt version metadata.
 6. Persistence: generated documents can be saved, versioned, restored, and exported.
@@ -43,6 +43,7 @@ The project is built as a full-stack TypeScript application with Next.js, Supaba
 - Prompt traceability: generation events record `provider`, `model`, and `prompt_version` so output quality can be debugged later.
 - Structured output handling: parsing and scoring flows use Zod schemas to reduce runtime failures from malformed model JSON.
 - Upload resilience: PDF parsing first uses Gemini document understanding when configured, then falls back to `unpdf` for text-based PDFs.
+- Context engineering: document prompts include a deterministic evidence-selection step that matches resume experience, projects, skills, and certifications against job requirements.
 - Safety-oriented prompts: resume and cover-letter prompts explicitly prohibit fabricated employers, schools, dates, titles, degrees, certifications, metrics, and accomplishments.
 - Post-generation grounding checks: saved generated documents are scanned for unsupported emails, links, metrics, dates, and named entities, with warnings persisted to document metadata and shown in the workspace.
 - Product security: private user data is protected with server-side auth checks, Supabase RLS, storage policies, safe redirects, request limits, and HTML sanitization.
@@ -56,7 +57,7 @@ Priority improvements:
 - Add an AI evaluation harness for parser accuracy, schema validity, format compliance, and hallucination checks.
 - Expand post-generation grounding checks with richer source attribution and lower false-positive rates.
 - Add AI-specific unit tests for JSON extraction, provider fallback behavior, schema validation, and rate limiting.
-- Add a lightweight evidence-selection step before generation so prompts emphasize the most relevant resume bullets for each job.
+- Extend the evidence-selection layer with embeddings or source citations if deterministic matching becomes insufficient.
 - Store richer observability metadata such as latency, failure reason, fallback usage, and validation failures.
 
 ## Local Setup

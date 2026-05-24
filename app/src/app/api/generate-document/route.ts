@@ -1,6 +1,7 @@
 import { type NextRequest } from "next/server";
 import { getOptionalUser } from "@/lib/auth/current-user";
 import { aiText, AI_PROVIDER, DEFAULT_MODEL, PROMPT_VERSION } from "@/lib/ai/provider";
+import { formatResumeEvidence, selectResumeEvidence } from "@/lib/ai/evidence";
 import { logTimelineEvent } from "@/lib/db/timeline";
 import { documentTypeSchema, MAX_REQUEST_BODY_LENGTH, uuidSchema } from "@/lib/security/limits";
 import { checkRateLimit } from "@/lib/security/rate-limit";
@@ -115,6 +116,7 @@ function buildPrompt(
 ): { system: string; userMessage: string; maxTokens: number } | null {
   const resumeJson = JSON.stringify(resume, null, 2);
   const jobJson = JSON.stringify(job, null, 2);
+  const matchedEvidence = formatResumeEvidence(selectResumeEvidence({ resume, job }));
 
   if (documentType === "tailored_resume") {
     return {
@@ -123,6 +125,7 @@ function buildPrompt(
       userMessage: [
         `Candidate parsed resume (JSON):\n${resumeJson}`,
         `Parsed job posting (JSON):\n${jobJson}`,
+        `Most relevant candidate evidence selected for this job:\n${matchedEvidence}`,
         "Write the tailored resume as Markdown. Only output the resume.",
       ].join("\n\n"),
     };
@@ -135,6 +138,7 @@ function buildPrompt(
       userMessage: [
         `Candidate parsed resume (JSON):\n${resumeJson}`,
         `Parsed job posting (JSON):\n${jobJson}`,
+        `Most relevant candidate evidence selected for this job:\n${matchedEvidence}`,
         "Write the complete cover letter.",
       ].join("\n\n"),
     };
@@ -147,6 +151,7 @@ function buildPrompt(
       userMessage: [
         `Candidate parsed resume (JSON):\n${resumeJson}`,
         `Parsed job posting (JSON):\n${jobJson}`,
+        `Most relevant candidate evidence selected for this job:\n${matchedEvidence}`,
         rawJobText ? `Raw job posting text:\n${rawJobText}` : "",
         "Write the application email. Tailor the attachments list to what THIS posting actually asks for.",
       ].filter(Boolean).join("\n\n"),
