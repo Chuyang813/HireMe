@@ -1,0 +1,18 @@
+{
+  "id": "job-email-data-analyst",
+  "task": "job_parser",
+  "description": "Email-based application with explicit attachments.",
+  "input": "Civic Insights is seeking a Junior Data Analyst based in Montreal. Responsibilities include cleaning survey datasets, building SQL reports, and presenting weekly findings. Must have SQL, Excel, and data visualization experience. Experience with Python or Tableau is preferred. Send your resume and cover letter to hiring@civicinsights.example with the subject line Junior Data Analyst Application.",
+  "expected": {
+    "company_name": "Civic Insights",
+    "role_title": "Junior Data Analyst",
+    "location": "Montreal",
+    "required_skills": ["SQL", "Excel", "data visualization"],
+    "desired_skills": ["Python", "Tableau"],
+    "application_method": "email",
+    "application_email": "hiring@civicinsights.example",
+    "cover_letter_requested": true,
+    "key_skills": ["SQL", "Excel", "data visualization"]
+  },
+  "modelOutput": "{\n  \"company_name\": \"Civic Insights\",\n  \"role_title\": \"Junior Data Analyst\",\n  \"location\": \"Montreal\",\n  \"responsibilities\": [\"cleaning survey datasets\", \"building SQL reports\", \"presenting weekly findings\"],\n  \"required_skills\": [\"SQL\", \"Excel\", \"data visualization\"],\n  \"desired_skills\": [\"Python\", \"Tableau\"],\n  \"application_method\": \"email\",\n  \"application_email\": \"hiring@civicinsights.example\",\n  \"cover_letter_requested\": true,\n  \"key_skills\": [\"SQL\", \"Excel\", \"data visualization\"],\n  \"verdict\": \"The role prioritizes SQL reporting and clear data communication.\"\n}"
+}

@@ -95,9 +95,12 @@ Open `http://localhost:3000`.
 
 ```bash
 npm run lint
+npm run eval:ai
 npm run build
 npm run test:e2e
 ```
+
+`npm run eval:ai` runs the offline AI evaluation harness in `evals/`. It uses checked-in fixtures and mocked model outputs, so it does not require API keys or production user data. The current report measures JSON validity, schema shape validity, and expected-field accuracy for job and resume parsing tasks.
 
 ## Project Structure
 

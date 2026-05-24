@@ -1,0 +1,41 @@
+{
+  "id": "resume-early-career-ai-engineer",
+  "task": "resume_parser",
+  "description": "Resume extraction for an early-career AI/full-stack candidate.",
+  "input": "Maya Chen\\nToronto, ON | maya@example.com | github.com/mayachen\\n\\nEducation\\nUniversity of Waterloo, BSc Computer Science, 2022-2026\\n\\nExperience\\nAI Product Intern, BrightApps, May 2025-Aug 2025\\n- Built a prompt evaluation dashboard for support-ticket summarization.\\n- Added schema validation for LLM JSON outputs using Zod.\\n\\nProjects\\nHireFlow Assistant\\n- Built a Next.js and Supabase app that parses resumes and generates tailored cover letters.\\n\\nSkills\\nTypeScript, Python, React, Next.js, Supabase, PostgreSQL, Zod, Playwright",
+  "expected": {
+    "name": "Maya Chen",
+    "contact": {
+      "email": "maya@example.com",
+      "location": "Toronto, ON",
+      "links": ["github.com/mayachen"]
+    },
+    "education": [
+      {
+        "school": "University of Waterloo",
+        "degree": "BSc Computer Science",
+        "start": "2022",
+        "end": "2026"
+      }
+    ],
+    "experience": [
+      {
+        "company": "BrightApps",
+        "title": "AI Product Intern",
+        "start": "May 2025",
+        "end": "Aug 2025",
+        "bullets": [
+          "Built a prompt evaluation dashboard for support-ticket summarization.",
+          "Added schema validation for LLM JSON outputs using Zod."
+        ]
+      }
+    ],
+    "projects": [
+      {
+        "name": "HireFlow Assistant"
+      }
+    ],
+    "skills": ["TypeScript", "Python", "React", "Next.js", "Supabase", "PostgreSQL", "Zod", "Playwright"]
+  },
+  "modelOutput": "{\n  \"name\": \"Maya Chen\",\n  \"contact\": {\n    \"email\": \"maya@example.com\",\n    \"location\": \"Toronto, ON\",\n    \"links\": [\"github.com/mayachen\"]\n  },\n  \"education\": [\n    {\n      \"school\": \"University of Waterloo\",\n      \"degree\": \"BSc Computer Science\",\n      \"start\": \"2022\",\n      \"end\": \"2026\"\n    }\n  ],\n  \"experience\": [\n    {\n      \"company\": \"BrightApps\",\n      \"title\": \"AI Product Intern\",\n      \"start\": \"May 2025\",\n      \"end\": \"Aug 2025\",\n      \"bullets\": [\n        \"Built a prompt evaluation dashboard for support-ticket summarization.\",\n        \"Added schema validation for LLM JSON outputs using Zod.\"\n      ]\n    }\n  ],\n  \"projects\": [\n    {\n      \"name\": \"HireFlow Assistant\",\n      \"bullets\": [\"Built a Next.js and Supabase app that parses resumes and generates tailored cover letters.\"]\n    }\n  ],\n  \"skills\": [\"TypeScript\", \"Python\", \"React\", \"Next.js\", \"Supabase\", \"PostgreSQL\", \"Zod\", \"Playwright\"]\n}"
+}

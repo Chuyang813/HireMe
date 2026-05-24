@@ -1,0 +1,18 @@
+{
+  "id": "job-basic-software-intern",
+  "task": "job_parser",
+  "description": "Structured extraction from a concise internship posting.",
+  "input": "Northstar Labs is hiring a Software Engineering Intern in Toronto for Summer 2026. You will build React and TypeScript features, write API integrations, and collaborate with product designers. Required: JavaScript, React, TypeScript, Git. Nice to have: Python, PostgreSQL, accessibility testing. Apply through our careers portal by June 15, 2026.",
+  "expected": {
+    "company_name": "Northstar Labs",
+    "role_title": "Software Engineering Intern",
+    "location": "Toronto",
+    "employment_type": "Internship",
+    "required_skills": ["JavaScript", "React", "TypeScript", "Git"],
+    "desired_skills": ["Python", "PostgreSQL", "accessibility testing"],
+    "application_method": "website",
+    "deadline": "June 15, 2026",
+    "key_skills": ["JavaScript", "React", "TypeScript", "Git"]
+  },
+  "modelOutput": "```json\n{\n  \"company_name\": \"Northstar Labs\",\n  \"role_title\": \"Software Engineering Intern\",\n  \"location\": \"Toronto\",\n  \"employment_type\": \"Internship\",\n  \"responsibilities\": [\"build React and TypeScript features\", \"write API integrations\", \"collaborate with product designers\"],\n  \"required_skills\": [\"JavaScript\", \"React\", \"TypeScript\", \"Git\"],\n  \"desired_skills\": [\"Python\", \"PostgreSQL\", \"accessibility testing\"],\n  \"application_method\": \"website\",\n  \"deadline\": \"June 15, 2026\",\n  \"key_skills\": [\"JavaScript\", \"React\", \"TypeScript\", \"Git\"],\n  \"verdict\": \"Frontend engineering fundamentals with TypeScript and collaboration are the bar.\"\n}\n```"
+}
