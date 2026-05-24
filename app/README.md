@@ -44,6 +44,7 @@ The project is built as a full-stack TypeScript application with Next.js, Supaba
 - Structured output handling: parsing and scoring flows use Zod schemas to reduce runtime failures from malformed model JSON.
 - Upload resilience: PDF parsing first uses Gemini document understanding when configured, then falls back to `unpdf` for text-based PDFs.
 - Safety-oriented prompts: resume and cover-letter prompts explicitly prohibit fabricated employers, schools, dates, titles, degrees, certifications, metrics, and accomplishments.
+- Post-generation grounding checks: saved generated documents are scanned for unsupported emails, links, metrics, dates, and named entities, with warnings persisted to document metadata and shown in the workspace.
 - Product security: private user data is protected with server-side auth checks, Supabase RLS, storage policies, safe redirects, request limits, and HTML sanitization.
 
 ## Current AI Engineering Roadmap
@@ -53,7 +54,7 @@ The next upgrades are tracked in `../docs/ai-engineering-todo.md`.
 Priority improvements:
 
 - Add an AI evaluation harness for parser accuracy, schema validity, format compliance, and hallucination checks.
-- Add post-generation grounding checks so unsupported claims can be flagged before users save or export documents.
+- Expand post-generation grounding checks with richer source attribution and lower false-positive rates.
 - Add AI-specific unit tests for JSON extraction, provider fallback behavior, schema validation, and rate limiting.
 - Add a lightweight evidence-selection step before generation so prompts emphasize the most relevant resume bullets for each job.
 - Store richer observability metadata such as latency, failure reason, fallback usage, and validation failures.

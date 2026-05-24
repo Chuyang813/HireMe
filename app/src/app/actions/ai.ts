@@ -7,6 +7,10 @@ import { generateCoverLetter } from "@/lib/ai/cover-letter";
 import { generateEmailDraft } from "@/lib/ai/email-draft";
 import { analyzeAssessment } from "@/lib/ai/assessment";
 import { generateInterviewPrep } from "@/lib/ai/interview-prep";
+import {
+  checkGeneratedDocumentGrounding,
+  type GroundingWarning,
+} from "@/lib/ai/grounding";
 import { extractTextFromUpload } from "@/lib/parsers/resume-text";
 import { logTimelineEvent } from "@/lib/db/timeline";
 import { aiJson, AI_PROVIDER, DEFAULT_MODEL, PROMPT_VERSION } from "@/lib/ai/provider";
@@ -127,7 +131,7 @@ export async function generateDocumentAction(
 // ---------------------------------------------------------------------------
 
 export type SaveDocumentState =
-  | { ok: true; documentId: string; error?: never }
+  | { ok: true; documentId: string; groundingWarnings: GroundingWarning[]; error?: never }
   | { error: string; ok?: never }
   | undefined;
 
@@ -150,6 +154,37 @@ export async function saveDocumentAction(
   }
   const documentType = documentTypeResult.data as DocumentType;
 
+  const [{ data: app }, { data: resume }] = await Promise.all([
+    supabase
+      .from("job_applications")
+      .select("id, parsed_job_json, raw_job_text")
+      .eq("id", applicationId)
+      .eq("user_id", user.id)
+      .single(),
+    supabase
+      .from("base_resumes")
+      .select("parsed_resume_json, raw_text")
+      .eq("user_id", user.id)
+      .eq("is_default", true)
+      .single(),
+  ]);
+
+  if (!app) return { error: "Application not found." };
+
+  const groundingWarnings = checkGeneratedDocumentGrounding({
+    content,
+    documentType,
+    resume: (resume?.parsed_resume_json as ParsedResume | null) ?? {},
+    rawResumeText: resume?.raw_text,
+    job: app.parsed_job_json as ParsedJob | null,
+    rawJobText: app.raw_job_text,
+  });
+
+  const metadata = {
+    grounding_warnings: groundingWarnings,
+    grounding_checked_at: new Date().toISOString(),
+  };
+
   if (existingId) {
     // Archive the current content before overwriting.
     const { data: existing } = await supabase
@@ -166,7 +201,7 @@ export async function saveDocumentAction(
 
     const { error } = await supabase
       .from("application_documents")
-      .update({ text_content: content })
+      .update({ text_content: content, metadata_json: metadata })
       .eq("id", existingId)
       .eq("user_id", user.id);
     if (error) {
@@ -174,7 +209,7 @@ export async function saveDocumentAction(
       return { error: "Failed to save document. Please try again." };
     }
     revalidatePath(`/applications/${applicationId}`);
-    return { ok: true, documentId: existingId };
+    return { ok: true, documentId: existingId, groundingWarnings };
   }
 
   const { data, error } = await supabase
@@ -185,6 +220,7 @@ export async function saveDocumentAction(
       document_type: documentType,
       version: 1,
       text_content: content,
+      metadata_json: metadata,
     })
     .select("id")
     .single();
@@ -195,7 +231,7 @@ export async function saveDocumentAction(
   }
 
   revalidatePath(`/applications/${applicationId}`);
-  return { ok: true, documentId: data.id };
+  return { ok: true, documentId: data.id, groundingWarnings };
 }
 
 // ---------------------------------------------------------------------------

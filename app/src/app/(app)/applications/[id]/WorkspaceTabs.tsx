@@ -18,6 +18,7 @@ import type {
   InterviewPrep,
   ResumeScore,
 } from "@/lib/db/types";
+import type { GroundingWarning } from "@/lib/ai/grounding";
 
 // ---------------------------------------------------------------------------
 // Tab config — Notes tab removed
@@ -561,6 +562,7 @@ function DocumentPanel({
   const [copied, setCopied] = useState(false);
   const [autoSaving, setAutoSaving] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [groundingWarnings, setGroundingWarnings] = useState<GroundingWarning[]>([]);
 
   async function saveContent(nextContent: string) {
     if (!nextContent.trim() || nextContent.includes("[Error:")) return false;
@@ -577,6 +579,7 @@ function DocumentPanel({
       const result = await saveDocumentAction(undefined, fd);
       if (result && "ok" in result && result.ok) {
         setDocId(result.documentId);
+        setGroundingWarnings(result.groundingWarnings ?? []);
         setSaveStatus("saved");
         return true;
       }
@@ -708,6 +711,7 @@ function DocumentPanel({
             {generateError}
           </p>
         )}
+        <GroundingWarnings warnings={groundingWarnings} />
 
         {generating && !content ? (
           <div className="flex min-h-[18rem] items-center justify-center rounded-md border border-border bg-white shadow-sm">
@@ -803,6 +807,7 @@ function DocumentPanel({
           {generateError}
         </p>
       )}
+      <GroundingWarnings warnings={groundingWarnings} />
 
       {generating && (
         <div className="flex min-h-[28rem] items-center justify-center rounded-md border border-border bg-white shadow-sm">
@@ -817,6 +822,23 @@ function DocumentPanel({
       {autoSaving && <p className="text-xs text-muted-foreground">{t("saving")}</p>}
       {saveStatus === "saved" && <p className="text-xs text-success">{t("saved")}</p>}
       {saveStatus === "error" && <p className="text-xs text-danger">{t("saveFailed")}</p>}
+    </div>
+  );
+}
+
+function GroundingWarnings({ warnings }: { warnings: GroundingWarning[] }) {
+  if (!warnings.length) return null;
+
+  return (
+    <div className="rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+      <p className="font-medium">AI grounding review suggested</p>
+      <ul className="mt-2 list-disc space-y-1 pl-5">
+        {warnings.slice(0, 5).map((warning) => (
+          <li key={`${warning.kind}:${warning.value}`}>
+            {warning.message}
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

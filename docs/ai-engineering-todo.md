@@ -36,7 +36,7 @@ Done when:
 
 ## 3. Hallucination And Grounding Guardrails
 
-Status: Not started
+Status: Done
 
 Goal: Turn "never invent facts" from a prompt instruction into a code-level safety check.
 
@@ -99,3 +99,4 @@ Done when:
 - 2026-05-24: Created the AI engineering upgrade tracker and initial milestone list.
 - 2026-05-24: Replaced the default Next.js README with a project-specific README covering product scope, AI workflow, provider design, validation, setup, commands, and the AI engineering roadmap.
 - 2026-05-24: Added an offline AI evaluation harness with job/resume parsing fixtures, mocked model outputs, JSON extraction checks, shape validation, and expected-field accuracy reporting.
+- 2026-05-24: Added a post-generation grounding checker for generated documents, persisted grounding warnings to document metadata, and surfaced review warnings in the application workspace UI.
