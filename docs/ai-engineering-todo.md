@@ -82,7 +82,7 @@ Done when:
 
 ## 6. Observability And Quality Logs
 
-Status: Not started
+Status: Done
 
 Goal: Make model quality and reliability debuggable.
 
@@ -102,3 +102,4 @@ Done when:
 - 2026-05-24: Added a post-generation grounding checker for generated documents, persisted grounding warnings to document metadata, and surfaced review warnings in the application workspace UI.
 - 2026-05-24: Added Vitest unit tests for JSON extraction, grounding warnings, and AI rate limiting behavior.
 - 2026-05-24: Added deterministic resume evidence selection and inserted matched evidence into tailored resume, cover letter, email draft, interview prep, and streaming document prompts.
+- 2026-05-24: Added an `ai_events` migration and logging helper, then instrumented document generation paths with provider, model, prompt version, latency, success state, and redacted error summaries.

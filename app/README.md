@@ -46,6 +46,7 @@ The project is built as a full-stack TypeScript application with Next.js, Supaba
 - Context engineering: document prompts include a deterministic evidence-selection step that matches resume experience, projects, skills, and certifications against job requirements.
 - Safety-oriented prompts: resume and cover-letter prompts explicitly prohibit fabricated employers, schools, dates, titles, degrees, certifications, metrics, and accomplishments.
 - Post-generation grounding checks: saved generated documents are scanned for unsupported emails, links, metrics, dates, and named entities, with warnings persisted to document metadata and shown in the workspace.
+- AI observability: generation requests can be recorded in `ai_events` with provider, model, prompt version, document type, latency, success state, and redacted error summaries.
 - Product security: private user data is protected with server-side auth checks, Supabase RLS, storage policies, safe redirects, request limits, and HTML sanitization.
 
 ## Current AI Engineering Roadmap
@@ -58,7 +59,7 @@ Priority improvements:
 - Expand post-generation grounding checks with richer source attribution and lower false-positive rates.
 - Add AI-specific unit tests for JSON extraction, provider fallback behavior, schema validation, and rate limiting.
 - Extend the evidence-selection layer with embeddings or source citations if deterministic matching becomes insufficient.
-- Store richer observability metadata such as latency, failure reason, fallback usage, and validation failures.
+- Add dashboards or admin views for recent `ai_events`, fallback usage, and validation failures.
 
 ## Local Setup
 

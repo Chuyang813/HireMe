@@ -13,6 +13,7 @@ import {
 } from "@/lib/ai/grounding";
 import { extractTextFromUpload } from "@/lib/parsers/resume-text";
 import { logTimelineEvent } from "@/lib/db/timeline";
+import { logAiEvent } from "@/lib/db/ai-events";
 import { aiJson, AI_PROVIDER, DEFAULT_MODEL, PROMPT_VERSION } from "@/lib/ai/provider";
 import { resumeScoreSchema } from "@/lib/ai/schemas";
 import {
@@ -87,6 +88,7 @@ export async function generateDocumentAction(
   const parsedResume = (resume?.parsed_resume_json as ParsedResume | null) ?? {};
 
   let content: string;
+  const aiStartedAt = Date.now();
   try {
     if (documentType === "tailored_resume") {
       content = await tailorResume({ resume: parsedResume, job });
@@ -112,8 +114,32 @@ export async function generateDocumentAction(
     }
   } catch (e) {
     console.error("[generateDocumentAction] AI error:", e);
+    await logAiEvent(supabase, {
+      user_id: user.id,
+      application_id: applicationId,
+      event_type: "document_generation",
+      provider: AI_PROVIDER,
+      model: DEFAULT_MODEL,
+      prompt_version: PROMPT_VERSION,
+      document_type: documentType,
+      latency_ms: Date.now() - aiStartedAt,
+      success: false,
+      error_message: e instanceof Error ? e.message : String(e),
+    });
     return { error: "AI generation failed. Please try again." };
   }
+
+  await logAiEvent(supabase, {
+    user_id: user.id,
+    application_id: applicationId,
+    event_type: "document_generation",
+    provider: AI_PROVIDER,
+    model: DEFAULT_MODEL,
+    prompt_version: PROMPT_VERSION,
+    document_type: documentType,
+    latency_ms: Date.now() - aiStartedAt,
+    success: true,
+  });
 
   await logTimelineEvent(supabase, {
     application_id: applicationId,

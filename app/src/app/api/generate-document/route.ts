@@ -3,6 +3,7 @@ import { getOptionalUser } from "@/lib/auth/current-user";
 import { aiText, AI_PROVIDER, DEFAULT_MODEL, PROMPT_VERSION } from "@/lib/ai/provider";
 import { formatResumeEvidence, selectResumeEvidence } from "@/lib/ai/evidence";
 import { logTimelineEvent } from "@/lib/db/timeline";
+import { logAiEvent } from "@/lib/db/ai-events";
 import { documentTypeSchema, MAX_REQUEST_BODY_LENGTH, uuidSchema } from "@/lib/security/limits";
 import { checkRateLimit } from "@/lib/security/rate-limit";
 import { getClientIpFromHeaders } from "@/lib/security/request";
@@ -254,6 +255,7 @@ export async function POST(req: NextRequest) {
 
       try {
         console.log(`[generate-document] Starting ${AI_PROVIDER} generation for ${documentType}`);
+        const aiStartedAt = Date.now();
         const content = await aiText({
           system: prompt.system,
           messages: [{ role: "user", content: prompt.userMessage }],
@@ -263,6 +265,18 @@ export async function POST(req: NextRequest) {
         controller.enqueue(encoder.encode(content));
 
         clearTimeout(timer);
+
+        await logAiEvent(supabase, {
+          user_id: user.id,
+          application_id: applicationId,
+          event_type: "document_generation_stream",
+          provider: AI_PROVIDER,
+          model: DEFAULT_MODEL,
+          prompt_version: PROMPT_VERSION,
+          document_type: documentType,
+          latency_ms: Date.now() - aiStartedAt,
+          success: true,
+        });
 
         await logTimelineEvent(supabase, {
           application_id: applicationId,
@@ -275,6 +289,17 @@ export async function POST(req: NextRequest) {
         clearTimeout(timer);
         const msg = e instanceof Error ? e.message : String(e);
         console.error("[generate-document] Streaming error:", msg, e);
+        await logAiEvent(supabase, {
+          user_id: user.id,
+          application_id: applicationId,
+          event_type: "document_generation_stream",
+          provider: AI_PROVIDER,
+          model: DEFAULT_MODEL,
+          prompt_version: PROMPT_VERSION,
+          document_type: documentType,
+          success: false,
+          error_message: msg,
+        });
         controller.enqueue(
           encoder.encode("\n\n[Error: Generation failed. Please try again shortly.]"),
         );
