@@ -1,6 +1,7 @@
 import { type NextRequest } from "next/server";
 import { getOptionalUser } from "@/lib/auth/current-user";
-import { aiText, AI_PROVIDER, DEFAULT_MODEL, PROMPT_VERSION } from "@/lib/ai/provider";
+import { aiText, AI_PROVIDER, DEFAULT_MODEL } from "@/lib/ai/provider";
+import { PROMPT_VERSIONS, type PromptType } from "@/lib/ai/prompt-versions";
 import { selectResumeEvidenceSemantic, resumeToText, jobToText } from "@/lib/ai/evidence";
 import { logTimelineEvent } from "@/lib/db/timeline";
 import { logAiEvent } from "@/lib/db/ai-events";
@@ -10,7 +11,17 @@ import { getClientIpFromHeaders } from "@/lib/security/request";
 import type { DocumentType, ParsedJob, ParsedResume } from "@/lib/db/types";
 
 const AI_TIMEOUT_MS = 65_000;
-const AI_AUDIT_NOTE = `provider=${AI_PROVIDER} model=${DEFAULT_MODEL} prompt_version=${PROMPT_VERSION}`;
+
+function docTypeToPromptType(dt: DocumentType): PromptType {
+  if (dt === 'tailored_resume') return 'resume-tailor';
+  if (dt === 'cover_letter') return 'cover-letter';
+  if (dt === 'email_draft') return 'email-draft';
+  return 'resume-tailor';
+}
+
+function auditNote(promptType: PromptType) {
+  return `provider=${AI_PROVIDER} model=${DEFAULT_MODEL} prompt_type=${promptType} prompt_version=${PROMPT_VERSIONS[promptType]}`;
+}
 
 // ---------------------------------------------------------------------------
 // System prompts
@@ -268,13 +279,15 @@ export async function POST(req: NextRequest) {
 
         clearTimeout(timer);
 
+        const pt = docTypeToPromptType(documentType);
         await logAiEvent(supabase, {
           user_id: user.id,
           application_id: applicationId,
           event_type: "document_generation_stream",
           provider: AI_PROVIDER,
           model: DEFAULT_MODEL,
-          prompt_version: PROMPT_VERSION,
+          prompt_type: pt,
+          prompt_version: PROMPT_VERSIONS[pt],
           document_type: documentType,
           latency_ms: Date.now() - aiStartedAt,
           success: true,
@@ -285,19 +298,21 @@ export async function POST(req: NextRequest) {
           user_id: user.id,
           event_type: "document_generated",
           new_value: documentType,
-          note: AI_AUDIT_NOTE,
+          note: auditNote(pt),
         });
       } catch (e) {
         clearTimeout(timer);
         const msg = e instanceof Error ? e.message : String(e);
         console.error("[generate-document] Streaming error:", msg, e);
+        const pt = docTypeToPromptType(documentType);
         await logAiEvent(supabase, {
           user_id: user.id,
           application_id: applicationId,
           event_type: "document_generation_stream",
           provider: AI_PROVIDER,
           model: DEFAULT_MODEL,
-          prompt_version: PROMPT_VERSION,
+          prompt_type: pt,
+          prompt_version: PROMPT_VERSIONS[pt],
           document_type: documentType,
           success: false,
           error_message: msg,

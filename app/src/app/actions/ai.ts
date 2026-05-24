@@ -14,7 +14,8 @@ import {
 import { extractTextFromUpload } from "@/lib/parsers/resume-text";
 import { logTimelineEvent } from "@/lib/db/timeline";
 import { logAiEvent } from "@/lib/db/ai-events";
-import { aiJson, AI_PROVIDER, DEFAULT_MODEL, PROMPT_VERSION } from "@/lib/ai/provider";
+import { aiJson, AI_PROVIDER, DEFAULT_MODEL } from "@/lib/ai/provider";
+import { PROMPT_VERSIONS, type PromptType } from "@/lib/ai/prompt-versions";
 import { resumeScoreSchema } from "@/lib/ai/schemas";
 import {
   cleanText,
@@ -32,7 +33,16 @@ import type {
   ResumeScore,
 } from "@/lib/db/types";
 
-const AI_AUDIT_NOTE = `provider=${AI_PROVIDER} model=${DEFAULT_MODEL} prompt_version=${PROMPT_VERSION}`;
+function auditNote(promptType: PromptType) {
+  return `provider=${AI_PROVIDER} model=${DEFAULT_MODEL} prompt_type=${promptType} prompt_version=${PROMPT_VERSIONS[promptType]}`;
+}
+
+function docTypeToPromptType(dt: DocumentType): PromptType {
+  if (dt === 'tailored_resume') return 'resume-tailor';
+  if (dt === 'cover_letter') return 'cover-letter';
+  if (dt === 'email_draft') return 'email-draft';
+  return 'resume-tailor';
+}
 
 // ---------------------------------------------------------------------------
 // Generate document (non-streaming fallback — kept for types; streaming is via
@@ -114,13 +124,15 @@ export async function generateDocumentAction(
     }
   } catch (e) {
     console.error("[generateDocumentAction] AI error:", e);
+    const pt = docTypeToPromptType(documentType);
     await logAiEvent(supabase, {
       user_id: user.id,
       application_id: applicationId,
       event_type: "document_generation",
       provider: AI_PROVIDER,
       model: DEFAULT_MODEL,
-      prompt_version: PROMPT_VERSION,
+      prompt_type: pt,
+      prompt_version: PROMPT_VERSIONS[pt],
       document_type: documentType,
       latency_ms: Date.now() - aiStartedAt,
       success: false,
@@ -129,13 +141,15 @@ export async function generateDocumentAction(
     return { error: "AI generation failed. Please try again." };
   }
 
+  const pt = docTypeToPromptType(documentType);
   await logAiEvent(supabase, {
     user_id: user.id,
     application_id: applicationId,
     event_type: "document_generation",
     provider: AI_PROVIDER,
     model: DEFAULT_MODEL,
-    prompt_version: PROMPT_VERSION,
+    prompt_type: pt,
+    prompt_version: PROMPT_VERSIONS[pt],
     document_type: documentType,
     latency_ms: Date.now() - aiStartedAt,
     success: true,
@@ -146,7 +160,7 @@ export async function generateDocumentAction(
     user_id: user.id,
     event_type: "document_generated",
     new_value: documentType,
-    note: AI_AUDIT_NOTE,
+    note: auditNote(pt),
   });
 
   return { content, documentType };
@@ -329,7 +343,7 @@ export async function analyzeAssessmentAction(
     application_id: applicationId,
     user_id: user.id,
     event_type: "assessment_added",
-    note: AI_AUDIT_NOTE,
+    note: auditNote('assessment'),
   });
 
   return { result };
@@ -392,7 +406,7 @@ export async function generateInterviewPrepAction(
     application_id: applicationId,
     user_id: user.id,
     event_type: "interview_prep_generated",
-    note: AI_AUDIT_NOTE,
+    note: auditNote('interview-prep'),
   });
 
   return { result };

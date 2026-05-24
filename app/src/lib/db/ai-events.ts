@@ -7,6 +7,7 @@ export type AiEventInput = {
   event_type: string;
   provider?: string;
   model?: string;
+  prompt_type?: string;
   prompt_version?: string;
   document_type?: DocumentType;
   latency_ms?: number;

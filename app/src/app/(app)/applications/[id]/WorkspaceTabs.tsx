@@ -11,6 +11,7 @@ import {
   type DocumentVersion,
 } from "@/app/actions/ai";
 import { Button } from "@/components/ui/Button";
+import { FeedbackButtons } from "@/components/FeedbackButtons";
 import type {
   ApplicationDocument,
   AssessmentAnalysis,
@@ -220,7 +221,7 @@ function applyInline(text: string): React.ReactNode[] {
   });
 }
 
-function MarkdownViewer({ content }: { content: string }) {
+function MarkdownViewer({ content, isStreaming }: { content: string; isStreaming?: boolean }) {
   const t = useTranslations("Workspace");
 
   if (!content.trim()) {
@@ -294,7 +295,7 @@ function MarkdownViewer({ content }: { content: string }) {
   flushList();
 
   return (
-    <div className="rounded-md border border-border bg-white p-6 min-h-[28rem] shadow-sm">
+    <div className={`rounded-md border border-border bg-white p-6 min-h-[28rem] shadow-sm${isStreaming ? ' streaming' : ''}`}>
       {nodes}
     </div>
   );
@@ -621,12 +622,20 @@ function DocumentPanel({
 
       const decoder = new TextDecoder();
       let accumulated = "";
+      let rafId: ReturnType<typeof requestAnimationFrame> | null = null;
+
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
         accumulated += decoder.decode(value, { stream: true });
+
+        // Throttle state updates with requestAnimationFrame
+        if (rafId) cancelAnimationFrame(rafId);
+        const snapshot = accumulated;
+        rafId = requestAnimationFrame(() => setContent(snapshot));
       }
-      // Set content once after full generation — no incremental flicker
+      // Final flush
+      if (rafId) cancelAnimationFrame(rafId);
       setContent(accumulated);
       if (accumulated.includes("[Error:")) {
         setGenerateError(t("generationFailed"));
@@ -733,6 +742,11 @@ function DocumentPanel({
           </div>
         )}
 
+        {docId && content && !generating && (
+          <div className="flex justify-end">
+            <FeedbackButtons documentId={docId} feedbackType="email" />
+          </div>
+        )}
         {autoSaving && <p className="text-xs text-muted-foreground">{t("saving")}</p>}
         {saveStatus === "saved" && <p className="text-xs text-success">{t("saved")}</p>}
         {saveStatus === "error" && <p className="text-xs text-danger">{t("saveFailed")}</p>}
@@ -809,7 +823,7 @@ function DocumentPanel({
       )}
       <GroundingWarnings warnings={groundingWarnings} />
 
-      {generating && (
+      {generating && !content && (
         <div className="flex min-h-[28rem] items-center justify-center rounded-md border border-border bg-white shadow-sm">
           <div className="flex flex-col items-center gap-3">
             <div className="h-8 w-8 animate-spin rounded-full border-2 border-border border-t-accent" />
@@ -817,8 +831,16 @@ function DocumentPanel({
           </div>
         </div>
       )}
-      {!generating && <MarkdownViewer content={content} />}
+      {(!generating || content) && <MarkdownViewer content={content} isStreaming={generating} />}
 
+      {docId && content && !generating && (
+        <div className="flex justify-end">
+          <FeedbackButtons
+            documentId={docId}
+            feedbackType={documentType === 'cover_letter' ? 'cover_letter' : 'resume'}
+          />
+        </div>
+      )}
       {autoSaving && <p className="text-xs text-muted-foreground">{t("saving")}</p>}
       {saveStatus === "saved" && <p className="text-xs text-success">{t("saved")}</p>}
       {saveStatus === "error" && <p className="text-xs text-danger">{t("saveFailed")}</p>}
