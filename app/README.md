@@ -49,17 +49,25 @@ The project is built as a full-stack TypeScript application with Next.js, Supaba
 - AI observability: generation requests can be recorded in `ai_events` with provider, model, prompt version, document type, latency, success state, and redacted error summaries.
 - Product security: private user data is protected with server-side auth checks, Supabase RLS, storage policies, safe redirects, request limits, and HTML sanitization.
 
-## Current AI Engineering Roadmap
+## Current AI Engineering Status
 
 The next upgrades are tracked in `../docs/ai-engineering-todo.md`.
 
-Priority improvements:
+Completed portfolio-grade AI engineering work:
 
-- Add an AI evaluation harness for parser accuracy, schema validity, format compliance, and hallucination checks.
-- Expand post-generation grounding checks with richer source attribution and lower false-positive rates.
-- Add AI-specific unit tests for JSON extraction, provider fallback behavior, schema validation, and rate limiting.
-- Extend the evidence-selection layer with embeddings or source citations if deterministic matching becomes insufficient.
-- Add dashboards or admin views for recent `ai_events`, fallback usage, and validation failures.
+- Offline AI evaluation harness for parser JSON validity, schema shape, and expected-field accuracy.
+- AI-specific unit tests for JSON extraction, grounding warnings, evidence selection, and rate limiting.
+- Post-generation grounding warnings for unsupported emails, links, metrics, dates, and named entities.
+- Deterministic resume evidence selection before document generation.
+- AI observability events in Supabase through the `ai_events` migration.
+
+Remaining future upgrades:
+
+- Add live model eval mode for Gemini/GLM quality comparisons.
+- Add richer source citations and lower-false-positive grounding review.
+- Add an admin/dashboard view for `ai_events`, fallback usage, and validation failures.
+- Add idempotency keys for generation endpoints.
+- Add deeper RLS and multi-user isolation tests.
 
 ## Local Setup
 

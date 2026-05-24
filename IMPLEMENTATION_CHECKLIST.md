@@ -21,7 +21,7 @@ Execution-ready checklist for improving security, reliability, product quality, 
 - [x] Add request timeouts for all AI calls.
 - [x] Add bounded retries with backoff for transient provider failures.
 - [ ] Add idempotency keys for generation endpoints.
-- [ ] Add post-generation non-fabrication checks.
+- [x] Add post-generation non-fabrication checks.
 - [x] Enforce schema validation for structured AI outputs.
 - [x] Version prompts and model configurations for traceability.
 
@@ -35,7 +35,7 @@ Execution-ready checklist for improving security, reliability, product quality, 
 
 ## 5) Engineering Quality and Ops (P1)
 
-- [ ] Add E2E tests for the critical user flow.
+- [x] Add E2E smoke tests for landing, auth, and protected-route redirects.
 - [ ] Add API contract tests for core server actions/routes.
 - [x] Add observability (error tracking + latency/success metrics).
 - [x] Add per-user rate limiting on generation/upload endpoints.
@@ -46,7 +46,7 @@ Execution-ready checklist for improving security, reliability, product quality, 
 - [ ] Align product plan architecture with implemented stack.
 - [ ] Clarify MVP boundary vs post-MVP features consistently across sections.
 - [ ] Add explicit security/compliance section (RLS, logging, retention, deletion).
-- [ ] Add AI governance references to `AI_AGENT_POLICY.md`.
+- [x] Add AI governance references to `AI_AGENT_POLICY.md`.
 
 ## 7) Suggested Execution Order (2 Weeks)
 
@@ -60,6 +60,6 @@ Execution-ready checklist for improving security, reliability, product quality, 
 
 - [ ] All P0 items completed and verified in staging.
 - [ ] No high-severity security findings remain open.
-- [ ] AI policy constraints are implemented and testable.
-- [ ] Core E2E flow is green in CI.
+- [x] Core AI policy constraints are implemented and testable.
+- [x] E2E smoke flow is green locally.
 - [ ] Product plan and implementation state are aligned.

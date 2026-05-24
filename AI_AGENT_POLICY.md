@@ -48,11 +48,10 @@ This policy defines mandatory constraints for all AI agents and assistant workfl
 
 ## 7. Enforcement Checklist
 
-- [ ] Non-fabrication checks implemented in generation pipeline.
-- [ ] Input sanitization and URL validation in place.
-- [ ] Structured output validation enabled for parser/scorer/generator flows.
-- [ ] User confirmation required for side-effect actions.
-- [ ] PII-safe logging and redaction policies enforced.
-- [ ] Idempotency, timeout, retry, and rate limiting enabled.
-- [ ] Audit metadata persisted for all generated artifacts.
-
+- [x] Non-fabrication checks implemented in generation pipeline through post-generation grounding warnings.
+- [x] Input sanitization and URL validation in place.
+- [x] Structured output validation enabled for parser/scorer/generator flows.
+- [x] User confirmation required for side-effect actions such as sending/submitting externally.
+- [x] PII-safe AI observability logging enforced by storing metadata and redacted error summaries, not prompt or generated content.
+- [ ] Idempotency, timeout, retry, and rate limiting enabled. Timeouts, retries, and rate limiting are implemented; idempotency keys remain pending.
+- [ ] Audit metadata persisted for all generated artifacts. Document generation records provider/model/prompt metadata and `ai_events`; full coverage across every AI flow remains pending.
