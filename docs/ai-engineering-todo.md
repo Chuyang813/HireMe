@@ -4,7 +4,7 @@ This tracker turns HireMe from a full-stack LLM application into a stronger entr
 
 ## 1. Project Narrative And Demo Evidence
 
-Status: In progress
+Status: Done
 
 Goal: Make the project easy for a recruiter or AI engineering interviewer to evaluate in under five minutes.
 
@@ -97,3 +97,4 @@ Done when:
 ## Working Log
 
 - 2026-05-24: Created the AI engineering upgrade tracker and initial milestone list.
+- 2026-05-24: Replaced the default Next.js README with a project-specific README covering product scope, AI workflow, provider design, validation, setup, commands, and the AI engineering roadmap.
