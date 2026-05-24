@@ -456,8 +456,8 @@ function EmailDraftView({ content }: { content: string }) {
                   <span className="font-medium">{a.name}</span>
                 </span>
                 {a.reason && (
-                  <span className="leading-relaxed text-muted-foreground">
-                    - {a.reason}
+                  <span className="leading-relaxed text-muted-foreground italic">
+                    {a.reason}
                   </span>
                 )}
               </li>

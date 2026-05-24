@@ -77,29 +77,31 @@ Best regards,
 [Candidate Email][ | Candidate Phone if present in resume][ | Candidate Location if present in resume]
 
 Attachments:
-- [Filename.pdf] - [one short reason tying it to the posting]
-- [Filename.pdf] - [one short reason tying it to the posting]
+- [Filename.pdf] - [one short reason citing what in the posting prompted it]
 
-Rules for the signature block:
-- Always include "Best regards," then the candidate's full name on the next line, then a single contact line.
-- The contact line is "Email | Phone | Location" — drop any field that is missing from the resume (do not write "N/A" or leave blanks).
-- Never fabricate contact details; pull them from the parsed resume only.
+SIGN-OFF RULES (mandatory — never omit):
+- "Best regards," MUST appear on its own line, immediately after the closing sentence and before the Attachments section.
+- The line immediately after "Best regards," must be the candidate's full name (no comma, no extra text on that line).
+- The line after the name must be the contact line in the format: Email | Phone | Location — drop any field absent from the resume (never write "N/A" or leave a blank placeholder).
+- Never fabricate contact details; pull them only from the parsed resume.
+- Do NOT skip or abbreviate the sign-off block for any reason.
 
-Rules for the attachments block:
-- Suggest only files the candidate should actually attach for THIS posting. Do not pad the list.
-- Always include the tailored resume (e.g. "[FirstName]_[LastName]_Resume.pdf").
-- Include a cover letter ONLY if the parsed job has cover_letter_requested = true OR the role_summary / responsibilities / required_skills / desired_skills mention "cover letter" or "motivation letter".
-- Include a transcript (e.g. "[FirstName]_[LastName]_Transcript.pdf") IF the posting mentions transcript, GPA, academic record, or "official records".
-- Include a portfolio (PDF or link) IF the posting mentions portfolio, work samples, design samples, or case studies.
-- Include writing samples IF the posting mentions writing samples or published work.
-- Include references IF the posting requests references with the application.
-- Include certifications IF the posting requires a specific certification the candidate holds.
-- Each attachment line MUST use " - " before the reason and cite what in the posting prompted it (e.g. "- posting requires unofficial transcript", "- role requests design portfolio").
-- Never invent a document the candidate doesn't plausibly have. If unsure, leave it out.
+ATTACHMENT RULES — carefully read both the parsed job JSON and the raw job posting text before building this list:
+1. Always include the tailored resume first: [FirstName]_[LastName]_Resume.pdf — with a one-line reason tied to the specific role.
+2. Transcript: include IF the posting mentions "transcript", "GPA", "academic record", "cumulative GPA", or "official/unofficial records" → [FirstName]_[LastName]_Transcript.pdf - posting requests academic records
+3. Portfolio/work samples: include IF the posting mentions "portfolio", "work samples", "project samples", "design samples", or "case studies" → Portfolio - posting requests work samples
+4. Cover letter: include IF the posting explicitly mentions "cover letter" or "motivation letter" → [FirstName]_[LastName]_CoverLetter.pdf - posting requests cover letter
+5. References: include IF the posting mentions "references", "reference letters", or "letters of recommendation" → References.pdf - posting requests professional references
+6. Writing sample: include IF the posting mentions "writing sample", "writing portfolio", or "published work" → [FirstName]_[LastName]_WritingSample.pdf - posting requests writing sample
+7. Certification: include IF the posting requires a specific certification AND the resume shows the candidate holds it → [CertName].pdf - posting requires this certification
+8. DEFAULT: if rules 2–7 added NO additional document, include a cover letter as the default second item: [FirstName]_[LastName]_CoverLetter.pdf - standard professional supplement
 
-Other rules:
-- Never fabricate experience, metrics, or employer names.
-- Output only the email in the format above. No subject duplication, no signature outside the signature block, no extra prose.`;
+Format every attachment line as: - [Filename or description] - [one-line reason]
+Suggest only files the candidate can plausibly provide. Do not pad the list.
+
+OTHER RULES:
+- Never fabricate employers, titles, degrees, metrics, or accomplishments.
+- Output only the email in the exact format above. No extra prose, no duplicate subject line, no commentary.`;
 
 // ---------------------------------------------------------------------------
 // Prompt builder
