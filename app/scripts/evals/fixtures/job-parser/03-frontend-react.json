@@ -1,0 +1,14 @@
+{
+  "id": "frontend-react",
+  "description": "Frontend engineer role emphasizing React and TypeScript",
+  "input": {
+    "jobDescription": "Frontend Engineer at StartupX\n\nStartupX is revolutionizing B2B SaaS. We need a Frontend Engineer who cares deeply about user experience and code quality.\n\nResponsibilities:\n- Build responsive, accessible UI components in React\n- Maintain and extend our TypeScript component library\n- Write end-to-end tests with Cypress\n- Collaborate with designers on Figma specs\n- Optimize for Core Web Vitals\n\nRequired:\n- 3+ years React experience\n- TypeScript (strict mode)\n- CSS/Tailwind CSS\n- Jest and React Testing Library for unit tests\n- Experience with Next.js or similar SSR framework\n\nDesired:\n- GraphQL and Apollo Client\n- Storybook\n\nFull-time, remote or hybrid in NYC. Email jobs@startupx.io to apply."
+  },
+  "expected": {
+    "requiredFields": ["title", "company", "skills", "description"],
+    "titleContains": "Engineer",
+    "companyContains": "StartupX",
+    "minSkillCount": 4,
+    "descriptionMinLength": 50
+  }
+}

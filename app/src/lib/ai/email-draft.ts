@@ -1,5 +1,5 @@
 import { aiJson } from "./provider";
-import { formatResumeEvidence, selectResumeEvidence } from "./evidence";
+import { selectResumeEvidenceSemantic, resumeToText, jobToText } from "./evidence";
 import type { ParsedJob, ParsedResume } from "@/lib/db/types";
 
 const SYSTEM = `You are an email drafting assistant for job applications submitted by email.
@@ -46,7 +46,7 @@ export async function generateEmailDraft({
   job: ParsedJob;
   rawJobText?: string | null;
 }): Promise<EmailDraft> {
-  const matchedEvidence = formatResumeEvidence(selectResumeEvidence({ resume, job, limit: 5 }));
+  const matchedEvidence = (await selectResumeEvidenceSemantic(resumeToText(resume), jobToText(job), 5)).join('\n\n');
 
   return aiJson<EmailDraft>({
     system: SYSTEM,

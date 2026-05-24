@@ -1,0 +1,14 @@
+{
+  "id": "design-ux",
+  "description": "UX/product designer role with Figma and design system requirements",
+  "input": {
+    "jobDescription": "Senior UX Designer at DesignLab\n\nDesignLab creates enterprise design tools used by 200,000 designers worldwide. We need a Senior UX Designer to evolve our product design language.\n\nWhat you'll do:\n- Lead UX research: user interviews, usability testing, contextual inquiry\n- Design end-to-end user flows and high-fidelity prototypes in Figma\n- Evolve and maintain our Figma-based design system (500+ components)\n- Ensure WCAG 2.1 AA accessibility compliance\n- Facilitate design sprints and collaborative workshops in Miro\n- Work closely with product managers and engineers\n\nRequired:\n- 5+ years UX design experience, 2+ on enterprise SaaS products\n- Expert Figma skills including component variants, auto layout, and prototyping\n- Experience building or maintaining design systems\n- User research methods: interviews, usability testing, surveys\n- Strong understanding of accessibility standards (WCAG)\n\nDesired:\n- Experience with motion design and Lottie animations\n- Familiarity with front-end development (HTML/CSS) to collaborate better with engineers\n\nPortfolio required. Apply at designlab.com/careers"
+  },
+  "expected": {
+    "requiredFields": ["title", "company", "skills", "description"],
+    "titleContains": "Designer",
+    "companyContains": "DesignLab",
+    "minSkillCount": 3,
+    "descriptionMinLength": 50
+  }
+}

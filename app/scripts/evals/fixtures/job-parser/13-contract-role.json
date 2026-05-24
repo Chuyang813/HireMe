@@ -1,0 +1,14 @@
+{
+  "id": "contract-role",
+  "description": "Contract position with potential FTE conversion — tests jobType extraction",
+  "input": {
+    "jobDescription": "Software Engineer (Contract) at FinanceHub\n\nFinanceHub is seeking a Software Engineer on a 6-month W2 contract basis with strong potential to convert to full-time employment based on performance.\n\nProject scope:\n- Migrate legacy Java monolith to Spring Boot microservices\n- Implement REST APIs consumed by mobile and web clients\n- Write comprehensive JUnit tests targeting 80%+ coverage\n\nRequired:\n- Java 17+ and Spring Boot\n- REST API design and OpenAPI/Swagger documentation\n- JUnit 5 and Mockito\n- Git and Maven or Gradle\n- Experience with microservices architecture\n\nThis is a W2 contract through our staffing partner. No C2C arrangements.\nDuration: 6 months with conversion option.\nLocation: Hybrid in Chicago, IL.\n\nApply at financehub.com/contractors"
+  },
+  "expected": {
+    "requiredFields": ["title", "company", "skills", "description"],
+    "titleContains": "Engineer",
+    "companyContains": "FinanceHub",
+    "minSkillCount": 3,
+    "descriptionMinLength": 50
+  }
+}

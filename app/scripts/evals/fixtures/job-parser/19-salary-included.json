@@ -1,0 +1,14 @@
+{
+  "id": "salary-included",
+  "description": "Job description with explicit salary range — model should extract it or at minimum not hallucinate",
+  "input": {
+    "jobDescription": "Senior Backend Engineer at PayRange\n\nPayRange is a payments infrastructure company. We process $2B in transactions annually and are growing our backend team.\n\nThe Role:\n- Build high-throughput payment processing APIs in Go\n- Design event sourcing and CQRS patterns for financial transactions\n- Integrate with Visa, Mastercard, and ACH networks\n- Ensure PCI DSS compliance across services\n- On-call rotation (1 week per quarter)\n\nRequired Skills:\n- Go (Golang) — 3+ years\n- PostgreSQL with strong query optimization skills\n- Redis for caching and distributed locks\n- gRPC and Protocol Buffers\n- Experience with payment systems or financial services\n\nCompensation:\n- Base salary: $160,000 – $210,000 depending on experience\n- Annual performance bonus up to 20%\n- Equity: 0.05% – 0.15% options\n- Comprehensive benefits including 401(k) match\n\nLocation: New York, NY (hybrid) or remote for senior candidates.\n\nApply at payrange.com/careers"
+  },
+  "expected": {
+    "requiredFields": ["title", "company", "skills", "description"],
+    "titleContains": "Engineer",
+    "companyContains": "PayRange",
+    "minSkillCount": 4,
+    "descriptionMinLength": 50
+  }
+}

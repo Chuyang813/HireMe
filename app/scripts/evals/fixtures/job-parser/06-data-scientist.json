@@ -1,0 +1,14 @@
+{
+  "id": "data-scientist",
+  "description": "Data scientist role with Python/ML stack and SQL requirements",
+  "input": {
+    "jobDescription": "Data Scientist at AnalyticsFirm\n\nAnalyticsFirm helps Fortune 500 companies make better decisions with data. We're hiring a Data Scientist to build predictive models and data pipelines.\n\nWhat you'll do:\n- Develop and deploy machine learning models for customer churn and demand forecasting\n- Perform exploratory data analysis and feature engineering\n- Build data pipelines with Apache Spark or dbt\n- Present findings to non-technical stakeholders\n\nRequired:\n- Python (pandas, NumPy, scikit-learn)\n- SQL (complex queries, window functions)\n- Statistical modeling and hypothesis testing\n- Data visualization (matplotlib, seaborn, or Tableau)\n- Jupyter notebooks\n\nBonus:\n- Experience with A/B testing at scale\n- MLflow or similar experiment tracking\n- Cloud data warehouses (Snowflake, BigQuery)\n\nFull-time in Chicago or remote. Send resume to data-jobs@analyticsfirm.com"
+  },
+  "expected": {
+    "requiredFields": ["title", "company", "skills", "description"],
+    "titleContains": "Data",
+    "companyContains": "Analytics",
+    "minSkillCount": 4,
+    "descriptionMinLength": 50
+  }
+}

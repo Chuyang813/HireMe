@@ -1,0 +1,14 @@
+{
+  "id": "multilocation",
+  "description": "Job posting with multiple office locations and remote option — tests location parsing",
+  "input": {
+    "jobDescription": "Software Engineer at MultiSite Corp\n\nMultiSite Corp is hiring Software Engineers across all of our offices. You can work from our New York City headquarters, our San Francisco R&D hub, our Austin engineering center, or fully remote within the United States.\n\nAbout the role:\n- Build scalable microservices with Java and Spring Boot\n- Contribute to our data platform using Kafka and Flink\n- Write clean, well-tested code with JUnit\n- Participate in cross-office design reviews via video\n\nRequired:\n- Java 11+ and Spring Boot\n- Apache Kafka\n- Microservices architecture experience\n- Docker and Kubernetes\n- PostgreSQL or MySQL\n\nBenefits include relocation assistance if moving to NYC, SF, or Austin.\n\nAll engineering levels considered (IC3–IC6). Apply at multisitecorp.com/engineering"
+  },
+  "expected": {
+    "requiredFields": ["title", "company", "skills", "description"],
+    "titleContains": "Engineer",
+    "companyContains": "MultiSite",
+    "minSkillCount": 4,
+    "descriptionMinLength": 50
+  }
+}

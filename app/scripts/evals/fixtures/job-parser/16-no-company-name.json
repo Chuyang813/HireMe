@@ -1,0 +1,13 @@
+{
+  "id": "no-company-name",
+  "description": "Job description that never mentions the company name — tests graceful fallback for missing company",
+  "input": {
+    "jobDescription": "Full Stack Developer\n\nWe are a growing technology company seeking a talented Full Stack Developer to join our engineering team. We build SaaS products for the logistics industry.\n\nResponsibilities:\n- Develop new features across the full stack\n- Maintain and improve React frontend applications\n- Build Node.js backend APIs with Express\n- Design and optimize PostgreSQL database schemas\n- Participate in agile sprint ceremonies\n\nRequired skills:\n- React and JavaScript/TypeScript\n- Node.js with Express or Fastify\n- PostgreSQL\n- REST API design\n- Git\n\nNice to have:\n- Redis\n- Docker\n- AWS\n\nCompetitive compensation and benefits. Hybrid work, 2 days in office per week.\n\nPlease apply through our website's careers page."
+  },
+  "expected": {
+    "requiredFields": ["title", "skills", "description"],
+    "titleContains": "Developer",
+    "minSkillCount": 4,
+    "descriptionMinLength": 50
+  }
+}

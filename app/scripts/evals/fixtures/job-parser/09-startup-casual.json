@@ -1,0 +1,14 @@
+{
+  "id": "startup-casual",
+  "description": "Informal startup tone — tests parsing of colloquial language and implicit role titles",
+  "input": {
+    "jobDescription": "Backend Engineer at Launchpad\n\nHey! We're Launchpad, a seed-stage startup building the next generation of developer tooling. We're a tiny team (5 people) moving fast and shipping constantly.\n\nYou'll be:\n- Hacking on our Go backend services\n- Designing and owning Postgres schemas\n- Building async job queues with Redis\n- Integrating third-party APIs (Stripe, SendGrid, Twilio)\n- Deploying to production multiple times a week\n- Making architecture decisions — no one will micromanage you\n\nYou should be comfortable with:\n- Go (or a strong desire to learn it fast)\n- PostgreSQL — you love SQL, not afraid of query plans\n- Docker and basic AWS (ECS or Lambda)\n- Working in a messy, fast-moving codebase\n\nBonus points for: experience with developer tools, CLI apps, or open source contributions.\n\nThis is a full-time role. We're remote-friendly. Shoot us your GitHub and a note at jobs@launchpad.dev"
+  },
+  "expected": {
+    "requiredFields": ["title", "company", "skills", "description"],
+    "titleContains": "Engineer",
+    "companyContains": "Launchpad",
+    "minSkillCount": 3,
+    "descriptionMinLength": 50
+  }
+}

@@ -1,5 +1,5 @@
 import { aiText } from "./provider";
-import { formatResumeEvidence, selectResumeEvidence } from "./evidence";
+import { selectResumeEvidenceSemantic, resumeToText, jobToText } from "./evidence";
 import type { ParsedJob, ParsedResume } from "@/lib/db/types";
 
 const SYSTEM = `You are a cover letter writing assistant.
@@ -24,7 +24,7 @@ export async function generateCoverLetter({
   job: ParsedJob;
   extraInstructions?: string;
 }): Promise<string> {
-  const matchedEvidence = formatResumeEvidence(selectResumeEvidence({ resume, job }));
+  const matchedEvidence = (await selectResumeEvidenceSemantic(resumeToText(resume), jobToText(job))).join('\n\n');
 
   return aiText({
     system: SYSTEM,

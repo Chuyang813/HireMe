@@ -1,0 +1,14 @@
+{
+  "id": "healthcare-clinical",
+  "description": "Healthcare clinical software role with HIPAA and HL7 FHIR requirements",
+  "input": {
+    "jobDescription": "Clinical Software Engineer at MedSystems\n\nMedSystems builds EHR and clinical decision support software used by 500+ hospitals. We are hiring a Clinical Software Engineer to develop integrations with major healthcare systems.\n\nResponsibilities:\n- Develop HL7 FHIR R4 APIs for clinical data exchange\n- Build integrations with Epic and Cerner EHR systems\n- Ensure all systems comply with HIPAA Privacy and Security Rules\n- Implement audit logging and access controls for PHI\n- Collaborate with clinical informatics specialists\n\nRequired Skills:\n- .NET (C#) or Java — our primary backend stacks\n- HL7 FHIR R4 specification and SMART on FHIR\n- RESTful API design\n- SQL Server or PostgreSQL\n- HIPAA compliance and security best practices\n\nDesired:\n- Epic App Orchard certification\n- Experience with ICD-10 and SNOMED CT coding systems\n- Clinical informatics background\n\nThis role requires passing a background check. Full-time, in Boston or remote.\n\nApply through medsystems.com/careers"
+  },
+  "expected": {
+    "requiredFields": ["title", "company", "skills", "description"],
+    "titleContains": "Engineer",
+    "companyContains": "MedSystems",
+    "minSkillCount": 3,
+    "descriptionMinLength": 50
+  }
+}

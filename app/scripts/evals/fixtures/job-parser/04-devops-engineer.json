@@ -1,0 +1,14 @@
+{
+  "id": "devops-engineer",
+  "description": "DevOps / platform engineering role with cloud and container skills",
+  "input": {
+    "jobDescription": "DevOps Engineer at MegaCorp\n\nMegaCorp's Platform Engineering team is seeking a DevOps Engineer to manage and evolve our cloud infrastructure serving millions of users.\n\nKey Responsibilities:\n- Design and maintain Kubernetes clusters on AWS EKS\n- Build and optimize CI/CD pipelines with GitHub Actions and Jenkins\n- Manage infrastructure as code with Terraform and Helm\n- Monitor systems with Prometheus, Grafana, and PagerDuty\n- Drive incident response and postmortems\n\nRequired:\n- Kubernetes administration (CKA preferred)\n- Docker containerization\n- AWS (EC2, S3, RDS, IAM, VPC)\n- Terraform\n- Strong Linux/bash scripting\n- CI/CD pipeline design\n\nDesired:\n- Istio service mesh\n- Vault for secrets management\n\nLocation: San Francisco, CA or Remote. Apply at megacorp.com/careers"
+  },
+  "expected": {
+    "requiredFields": ["title", "company", "skills", "description"],
+    "titleContains": "DevOps",
+    "companyContains": "MegaCorp",
+    "minSkillCount": 5,
+    "descriptionMinLength": 50
+  }
+}

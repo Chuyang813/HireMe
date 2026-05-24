@@ -1,0 +1,13 @@
+{
+  "id": "short-jd",
+  "description": "Very short job description — tests graceful handling of minimal information",
+  "input": {
+    "jobDescription": "Software Developer at CodeShop\n\nWe are looking for a software developer to join our small team. You will build and maintain web applications. Experience with coding required.\n\nPlease send your resume to hire@codeshop.io"
+  },
+  "expected": {
+    "requiredFields": ["title", "company", "description"],
+    "titleContains": "Developer",
+    "companyContains": "CodeShop",
+    "descriptionMinLength": 30
+  }
+}

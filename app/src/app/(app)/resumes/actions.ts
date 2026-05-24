@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/auth/current-user";
 import { extractTextFromUpload } from "@/lib/parsers/resume-text";
 import { parseResume } from "@/lib/ai/resume-parser";
+import { embedText } from "@/lib/ai/embeddings";
 import { cleanSingleLine, MAX_TITLE_LENGTH, uuidSchema } from "@/lib/security/limits";
 import { sanitizePreviewHtml } from "@/lib/security/html";
 import { checkRateLimit } from "@/lib/security/rate-limit";
@@ -85,18 +86,32 @@ export async function uploadResumeAction(
       .eq("is_default", true);
   }
 
-  const { error } = await supabase.from("base_resumes").insert({
-    user_id: user.id,
-    title,
-    source_file_path: storagePath,
-    source_file_type: sourceType,
-    raw_text: rawText,
-    parsed_resume_json: parsed,
-    is_default: makeDefault,
-  });
-  if (error) {
+  const { data: insertedResume, error } = await supabase
+    .from("base_resumes")
+    .insert({
+      user_id: user.id,
+      title,
+      source_file_path: storagePath,
+      source_file_type: sourceType,
+      raw_text: rawText,
+      parsed_resume_json: parsed,
+      is_default: makeDefault,
+    })
+    .select("id")
+    .single();
+  if (error || !insertedResume) {
     console.error("[uploadResumeAction] DB insert error:", error);
     return { error: "Failed to save resume. Please try again." };
+  }
+
+  try {
+    const embedding = await embedText(rawText);
+    await supabase
+      .from("base_resumes")
+      .update({ embedding: JSON.stringify(embedding) })
+      .eq("id", insertedResume.id);
+  } catch (e) {
+    console.warn("[uploadResumeAction] Embedding failed, continuing without:", e);
   }
 
   revalidatePath("/resumes");

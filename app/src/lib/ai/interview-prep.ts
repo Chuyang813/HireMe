@@ -1,5 +1,5 @@
 import { aiJson } from "./provider";
-import { formatResumeEvidence, selectResumeEvidence } from "./evidence";
+import { selectResumeEvidenceSemantic, resumeToText, jobToText } from "./evidence";
 import { interviewPrepSchema } from "./schemas";
 import type { InterviewPrep, ParsedJob, ParsedResume } from "@/lib/db/types";
 
@@ -36,7 +36,7 @@ export async function generateInterviewPrep({
   job: ParsedJob;
   interviewStage?: string;
 }): Promise<InterviewPrep> {
-  const matchedEvidence = formatResumeEvidence(selectResumeEvidence({ resume, job }));
+  const matchedEvidence = (await selectResumeEvidenceSemantic(resumeToText(resume), jobToText(job))).join('\n\n');
 
   const raw = await aiJson<InterviewPrep>({
     system: SYSTEM,

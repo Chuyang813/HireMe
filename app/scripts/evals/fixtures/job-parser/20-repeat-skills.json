@@ -1,0 +1,14 @@
+{
+  "id": "repeat-skills",
+  "description": "Job description that repeats Python and JavaScript many times — model should deduplicate skills",
+  "input": {
+    "jobDescription": "Full Stack Engineer at RepeatCo\n\nRepeatCo is looking for a skilled Full Stack Engineer.\n\nIn this role, Python will be your primary backend language. Our APIs are written in Python. Our data pipelines run on Python. Our ML scripts use Python. You should be very comfortable with Python.\n\nOn the frontend, we use JavaScript exclusively. All client code is JavaScript. Our React components are JavaScript. Our build tools are JavaScript-based. If you love JavaScript, you'll feel right at home.\n\nWe also use Python for automation scripts, Python for testing with pytest, and Python for our CLI tools.\n\nThe full list of what we use:\n- Python (backend, data pipelines, automation, CLI, tests)\n- JavaScript (frontend, React, build tooling)\n- Python with FastAPI for REST endpoints\n- PostgreSQL for primary data storage\n- Redis for caching\n- Docker for containerization\n- JavaScript with React for UI\n- Python type hints and mypy\n- JavaScript with Node.js for tooling\n\nApply at repeatco.com/jobs"
+  },
+  "expected": {
+    "requiredFields": ["title", "company", "skills", "description"],
+    "titleContains": "Engineer",
+    "companyContains": "RepeatCo",
+    "minSkillCount": 3,
+    "descriptionMinLength": 50
+  }
+}

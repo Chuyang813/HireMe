@@ -1,0 +1,13 @@
+{
+  "id": "executive-vp",
+  "description": "VP Engineering executive role — tests handling of leadership/strategy-heavy postings",
+  "input": {
+    "jobDescription": "VP of Engineering at ScaleUp Inc\n\nScaleUp Inc is a Series C SaaS company with $80M ARR, growing 3x year-over-year. We are searching for a VP of Engineering to lead our 80-person engineering organization.\n\nResponsibilities:\n- Define engineering vision and multi-year technology roadmap\n- Build and scale engineering teams across 4 product areas\n- Drive engineering culture: quality, velocity, and psychological safety\n- Own engineering P&L (~$15M annual budget)\n- Partner with CTO, CPO, and CEO on company strategy\n- Lead M&A technical due diligence as needed\n\nRequirements:\n- 10+ years of software engineering experience, 5+ in engineering leadership\n- Proven track record scaling engineering orgs from 20 to 100+ engineers\n- Experience running distributed teams across multiple time zones\n- Strong technical depth — must earn respect of IC engineers\n- Background in B2B SaaS product development\n\nThis is a senior executive role reporting directly to the CTO. Compensation includes base salary, bonus, and significant equity.\n\nApply at scaleup.io/leadership-roles"
+  },
+  "expected": {
+    "requiredFields": ["title", "company", "description"],
+    "titleContains": "VP",
+    "companyContains": "ScaleUp",
+    "descriptionMinLength": 50
+  }
+}

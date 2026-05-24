@@ -1,4 +1,5 @@
 import type { ParsedJob, ParsedResume } from "@/lib/db/types";
+import { embedText, cosineSimilarity, splitIntoSections } from "./embeddings";
 
 export type ResumeEvidence = {
   source: "experience" | "project" | "education" | "skill" | "certification";
@@ -120,6 +121,78 @@ function extractResumeEvidence(resume: ParsedResume): Omit<ResumeEvidence, "matc
   });
 
   return evidence;
+}
+
+export function resumeToText(resume: ParsedResume): string {
+  const parts: string[] = [];
+
+  for (const exp of (resume.experience ?? [])) {
+    const header = [exp.title, exp.company, exp.location, exp.start, exp.end]
+      .filter(Boolean)
+      .join(' | ');
+    const lines = [header, ...(exp.bullets ?? [])].filter(Boolean);
+    if (lines.length) parts.push(lines.join('\n'));
+  }
+
+  for (const proj of (resume.projects ?? [])) {
+    const header = [proj.name, proj.description].filter(Boolean).join(': ');
+    const lines = [header, ...(proj.bullets ?? [])].filter(Boolean);
+    if (lines.length) parts.push(lines.join('\n'));
+  }
+
+  for (const edu of (resume.education ?? [])) {
+    const line = [edu.degree, edu.field, edu.school, edu.start, edu.end, edu.notes]
+      .filter(Boolean)
+      .join(' | ');
+    if (line) parts.push(line);
+  }
+
+  if (resume.skills?.length) parts.push('Skills: ' + resume.skills.join(', '));
+  if (resume.certifications?.length) parts.push('Certifications: ' + resume.certifications.join(', '));
+
+  return parts.join('\n\n');
+}
+
+export function jobToText(job: ParsedJob): string {
+  return [
+    job.role_title,
+    job.company_name,
+    job.role_summary,
+    job.verdict,
+    ...(job.responsibilities ?? []),
+    ...(job.required_skills ?? []),
+    ...(job.desired_skills ?? []),
+    ...(job.keywords ?? []),
+    ...(job.key_skills ?? []),
+  ]
+    .filter(Boolean)
+    .join('\n');
+}
+
+export async function selectResumeEvidenceSemantic(
+  resumeText: string,
+  jobDescription: string,
+  topK = 8,
+): Promise<string[]> {
+  const jdEmbedding = await embedText(jobDescription.slice(0, 4000));
+
+  const sections = splitIntoSections(resumeText);
+  if (sections.length === 0) return [resumeText.slice(0, 2000)];
+
+  const sectionEmbeddings: number[][] = [];
+  for (const section of sections) {
+    sectionEmbeddings.push(await embedText(section));
+  }
+
+  const scored = sections.map((section, i) => ({
+    section,
+    score: cosineSimilarity(jdEmbedding, sectionEmbeddings[i]),
+  }));
+
+  return scored
+    .sort((a, b) => b.score - a.score)
+    .slice(0, topK)
+    .map(s => s.section);
 }
 
 function tokenize(text: string) {

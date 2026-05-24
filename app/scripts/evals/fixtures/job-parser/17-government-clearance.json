@@ -1,0 +1,14 @@
+{
+  "id": "government-clearance",
+  "description": "Government/defense role requiring TS/SCI clearance — tests handling of clearance requirements",
+  "input": {
+    "jobDescription": "Cybersecurity Engineer at DefenseLogic\n\nDefenseLogic provides cybersecurity solutions to U.S. federal government agencies. This position requires an active TS/SCI security clearance.\n\nResponsibilities:\n- Design and implement zero-trust network architecture for classified environments\n- Conduct vulnerability assessments and penetration testing\n- Develop security controls aligned with NIST SP 800-53 and CMMC frameworks\n- Implement SIEM solutions with Splunk\n- Support ATO (Authority to Operate) packages and RMF processes\n- Respond to cybersecurity incidents within classified networks\n\nRequired:\n- Active TS/SCI clearance (mandatory — candidates without will not be considered)\n- CISSP, CEH, or Security+ certification\n- NIST Risk Management Framework (RMF)\n- Splunk SIEM administration\n- Network security (firewalls, IDS/IPS, VPNs)\n- Python or PowerShell scripting\n\nU.S. citizenship required. Polygraph may be required post-hire.\n\nLocation: McLean, VA (on-site)\nApply at defenselogic.com/careers"
+  },
+  "expected": {
+    "requiredFields": ["title", "company", "skills", "description"],
+    "titleContains": "Engineer",
+    "companyContains": "DefenseLogic",
+    "minSkillCount": 3,
+    "descriptionMinLength": 50
+  }
+}

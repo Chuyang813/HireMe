@@ -1,0 +1,14 @@
+{
+  "id": "remote-only",
+  "description": "Explicitly remote-first role with timezone requirements — tests location extraction",
+  "input": {
+    "jobDescription": "Senior Software Engineer at RemoteFirst Co\n\nRemoteFirst Co is a fully distributed company with no physical offices. All 200+ employees work from home across 30 countries.\n\nThis role is 100% remote. We require availability within UTC-8 to UTC+2 for core collaboration hours (10am-2pm UTC).\n\nWhat you'll work on:\n- Building and scaling our event-driven microservices architecture\n- Node.js services and TypeScript throughout the stack\n- Apache Kafka for message streaming\n- PostgreSQL and Redis for data storage\n- Async-first communication: decisions in writing, meetings are a last resort\n\nRequired:\n- Node.js and TypeScript\n- Distributed systems design\n- Kafka or RabbitMQ\n- PostgreSQL\n- Experience working remotely (3+ years)\n- Excellent written communication skills\n\nWe do not sponsor visas for this role.\n\nApply at remotefirst.co/jobs"
+  },
+  "expected": {
+    "requiredFields": ["title", "company", "skills", "description"],
+    "titleContains": "Engineer",
+    "companyContains": "RemoteFirst",
+    "minSkillCount": 3,
+    "descriptionMinLength": 50
+  }
+}

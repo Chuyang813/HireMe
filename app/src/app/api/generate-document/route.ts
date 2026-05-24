@@ -1,7 +1,7 @@
 import { type NextRequest } from "next/server";
 import { getOptionalUser } from "@/lib/auth/current-user";
 import { aiText, AI_PROVIDER, DEFAULT_MODEL, PROMPT_VERSION } from "@/lib/ai/provider";
-import { formatResumeEvidence, selectResumeEvidence } from "@/lib/ai/evidence";
+import { selectResumeEvidenceSemantic, resumeToText, jobToText } from "@/lib/ai/evidence";
 import { logTimelineEvent } from "@/lib/db/timeline";
 import { logAiEvent } from "@/lib/db/ai-events";
 import { documentTypeSchema, MAX_REQUEST_BODY_LENGTH, uuidSchema } from "@/lib/security/limits";
@@ -109,15 +109,17 @@ OTHER RULES:
 // Prompt builder
 // ---------------------------------------------------------------------------
 
-function buildPrompt(
+async function buildPrompt(
   documentType: DocumentType,
   resume: ParsedResume,
   job: ParsedJob,
   rawJobText?: string | null,
-): { system: string; userMessage: string; maxTokens: number } | null {
+): Promise<{ system: string; userMessage: string; maxTokens: number } | null> {
   const resumeJson = JSON.stringify(resume, null, 2);
   const jobJson = JSON.stringify(job, null, 2);
-  const matchedEvidence = formatResumeEvidence(selectResumeEvidence({ resume, job }));
+  const matchedEvidence = (
+    await selectResumeEvidenceSemantic(resumeToText(resume), rawJobText ?? jobToText(job))
+  ).join('\n\n');
 
   if (documentType === "tailored_resume") {
     return {
@@ -238,7 +240,7 @@ export async function POST(req: NextRequest) {
   }
 
   const parsedResume = (resumeRow?.parsed_resume_json as ParsedResume | null) ?? {};
-  const prompt = buildPrompt(documentType, parsedResume, job, app.raw_job_text);
+  const prompt = await buildPrompt(documentType, parsedResume, job, app.raw_job_text);
   if (!prompt) {
     return Response.json({ error: `Unsupported document type: ${documentType}` }, { status: 400 });
   }

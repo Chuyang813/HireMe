@@ -1,0 +1,14 @@
+{
+  "id": "finance-quant",
+  "description": "Quantitative finance role with C++, Python, and financial modeling requirements",
+  "input": {
+    "jobDescription": "Quantitative Developer at Apex Capital\n\nApex Capital is a systematic hedge fund managing $8B in assets. We seek a Quantitative Developer to build high-performance trading infrastructure.\n\nResponsibilities:\n- Develop and optimize low-latency trading systems in C++\n- Implement quantitative models in Python for backtesting and signal generation\n- Build data pipelines ingesting Bloomberg and Refinitiv market data feeds\n- Collaborate with quant researchers to translate models into production code\n- Manage risk systems and real-time P&L monitoring\n\nRequired Skills:\n- C++ (C++17/20, templates, memory management, multi-threading)\n- Python (NumPy, pandas) for quantitative analysis\n- Strong understanding of financial instruments: equities, futures, options\n- Bloomberg Terminal and Bloomberg API (BLP)\n- SQL and time-series databases\n- Linux and low-latency systems programming\n\nQualifications:\n- BS/MS/PhD in Computer Science, Mathematics, Physics, or Financial Engineering\n- 3+ years developing in a quantitative finance environment\n- Experience with FIX protocol a plus\n\nApply at apexcapital.com/careers"
+  },
+  "expected": {
+    "requiredFields": ["title", "company", "skills", "description"],
+    "titleContains": "Developer",
+    "companyContains": "Apex",
+    "minSkillCount": 4,
+    "descriptionMinLength": 50
+  }
+}

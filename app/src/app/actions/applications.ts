@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/auth/current-user";
 import { parseJobPosting } from "@/lib/ai/job-parser";
+import { embedText } from "@/lib/ai/embeddings";
 import { logTimelineEvent } from "@/lib/db/timeline";
 import {
   applicationStatusSchema,
@@ -270,6 +271,26 @@ export async function createApplicationAction(
     user_id: user.id,
     event_type: "created",
   });
+
+  try {
+    const jdText = [
+      parsedJob?.role_title,
+      parsedJob?.company_name,
+      parsedJob?.role_summary,
+      rawJobText,
+    ]
+      .filter(Boolean)
+      .join('\n');
+    if (jdText) {
+      const jdEmbedding = await embedText(jdText);
+      await supabase
+        .from("job_applications")
+        .update({ jd_embedding: JSON.stringify(jdEmbedding) })
+        .eq("id", data.id);
+    }
+  } catch (e) {
+    console.warn("[createApplicationAction] JD embedding failed:", e);
+  }
 
   redirect(`/applications/${data.id}`);
 }

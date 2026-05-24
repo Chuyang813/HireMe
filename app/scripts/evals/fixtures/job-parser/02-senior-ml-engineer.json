@@ -1,0 +1,14 @@
+{
+  "id": "senior-ml-engineer",
+  "description": "Senior ML engineer role with deep learning framework requirements",
+  "input": {
+    "jobDescription": "Senior Machine Learning Engineer at NeuralTech\n\nNeuralTech is building next-generation AI infrastructure. We're hiring a Senior ML Engineer to design and train production-scale models.\n\nWhat you'll do:\n- Design, train, and deploy large-scale deep learning models\n- Optimize model performance and reduce inference latency\n- Build MLOps pipelines for continuous training and evaluation\n- Mentor junior engineers\n\nRequired Skills:\n- 5+ years of ML engineering experience\n- Expert-level Python\n- TensorFlow and PyTorch (hands-on production experience)\n- CUDA and GPU optimization\n- Distributed training with Horovod or PyTorch DDP\n- Experience with Kubernetes and Docker for ML workloads\n\nNice to have:\n- Experience with LLMs and RLHF\n- Publications in NeurIPS, ICML, or ICLR\n\nApply at neuraltech.ai/careers"
+  },
+  "expected": {
+    "requiredFields": ["title", "company", "skills", "description"],
+    "titleContains": "Engineer",
+    "companyContains": "NeuralTech",
+    "minSkillCount": 4,
+    "descriptionMinLength": 50
+  }
+}

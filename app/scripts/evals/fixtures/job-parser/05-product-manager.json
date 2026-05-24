@@ -1,0 +1,13 @@
+{
+  "id": "product-manager",
+  "description": "Product manager role with no hard technical skills — tests handling of non-technical postings",
+  "input": {
+    "jobDescription": "Product Manager at Horizon Ventures\n\nHorizon Ventures is a fast-growing fintech company. We're looking for an experienced Product Manager to lead our payments product.\n\nResponsibilities:\n- Define product vision, strategy, and roadmap for our payments platform\n- Collaborate with engineering, design, and business stakeholders\n- Write clear product requirements and user stories\n- Analyze user feedback and market data to prioritize features\n- Manage sprint planning in Jira\n- Drive go-to-market with marketing and sales teams\n\nQualifications:\n- 4+ years of product management experience\n- Strong communication and stakeholder management skills\n- Experience with fintech or payments products preferred\n- Data-driven decision making using SQL or analytics tools\n- MBA or equivalent experience a plus\n\nApply at horizonventures.com/jobs"
+  },
+  "expected": {
+    "requiredFields": ["title", "company", "description"],
+    "titleContains": "Product",
+    "companyContains": "Horizon",
+    "descriptionMinLength": 50
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "id": "basic-software-intern",
+  "description": "Standard software engineering intern posting with explicit company name and common skills",
+  "input": {
+    "jobDescription": "Software Engineering Intern at Acme Corp\n\nAcme Corp is looking for a motivated Software Engineering Intern to join our team for a 3-month summer program.\n\nResponsibilities:\n- Build and maintain features for our web platform\n- Write unit tests and documentation\n- Participate in code reviews and sprint planning\n\nRequirements:\n- Currently pursuing a BS/MS in Computer Science or related field\n- Proficiency in Python and JavaScript\n- Experience with Git version control\n- Familiarity with SQL databases\n- Strong problem-solving skills\n\nTo apply, visit careers.acmecorp.com"
+  },
+  "expected": {
+    "requiredFields": ["title", "company", "skills", "description"],
+    "titleContains": "Intern",
+    "companyContains": "Acme",
+    "minSkillCount": 3,
+    "descriptionMinLength": 50
+  }
+}
