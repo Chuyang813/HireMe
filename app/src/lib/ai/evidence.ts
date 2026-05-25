@@ -5,7 +5,6 @@ import {
   splitIntoSections,
   shouldUseSemanticEvidence,
 } from "./embeddings";
-import { aiJson } from "./provider";
 
 export type ResumeEvidence = {
   source: "experience" | "project" | "education" | "skill" | "certification";
@@ -205,59 +204,9 @@ export async function selectResumeEvidenceSemantic(
       .slice(0, topK)
       .map(s => s.section);
   } catch (error) {
-    console.warn(
-      "[selectResumeEvidenceSemantic] DeepSeek embedding selection failed, trying DeepSeek reranker:",
-      error,
-    );
-    return selectTextEvidenceByDeepSeek(resumeText, jobDescription, topK);
+    console.warn('[selectResumeEvidenceSemantic] Semantic selection failed, falling back to lexical overlap:', error);
+    return selectTextEvidenceByOverlap(resumeText, jobDescription, topK);
   }
-}
-
-async function selectTextEvidenceByDeepSeek(
-  resumeText: string,
-  jobDescription: string,
-  topK: number,
-) {
-  const sections = splitIntoSections(resumeText);
-  if (sections.length === 0) return [resumeText.slice(0, 2000)];
-
-  try {
-    const candidateSections = sections.slice(0, 24);
-    const result = await aiJson<{ selected_indices: number[] }>({
-      system: `You rank resume evidence for a job.
-Return only JSON in this exact shape: {"selected_indices":[number]}.
-Select the ${topK} most relevant zero-based section indices.
-Use only the provided section indices. Do not invent content.`,
-      messages: [
-        {
-          role: "user",
-          content: [
-            `Job description:\n${jobDescription.slice(0, 4000)}`,
-            "Resume sections:",
-            ...candidateSections.map(
-              (section, index) => `[${index}]\n${section.slice(0, 900)}`,
-            ),
-          ].join("\n\n"),
-        },
-      ],
-      maxTokens: 512,
-    });
-
-    const selected = [...new Set(result.selected_indices)]
-      .filter((index) => Number.isInteger(index))
-      .filter((index) => index >= 0 && index < candidateSections.length)
-      .slice(0, topK)
-      .map((index) => candidateSections[index]);
-
-    if (selected.length > 0) return selected;
-  } catch (error) {
-    console.warn(
-      "[selectResumeEvidenceSemantic] DeepSeek reranker failed, falling back to lexical overlap:",
-      error,
-    );
-  }
-
-  return selectTextEvidenceByOverlap(resumeText, jobDescription, topK);
 }
 
 function selectTextEvidenceByOverlap(

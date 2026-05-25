@@ -4,21 +4,20 @@
  * DeepSeek is used for chat/generation only — it has no embedding API.
  */
 
-const EMBEDDING_MODEL = 'text-embedding-004';
-const EMBED_URL = `https://generativelanguage.googleapis.com/v1/models/${EMBEDDING_MODEL}:embedContent`;
-
-export async function embedText(text: string): Promise<number[]> {
+async function embedTextWithModel(text: string, model: string): Promise<number[]> {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) throw new Error('GEMINI_API_KEY not set');
 
-  const res = await fetch(`${EMBED_URL}?key=${apiKey}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      model: `models/${EMBEDDING_MODEL}`,
-      content: { parts: [{ text: text.slice(0, 8000) }] },
-    }),
-  });
+  const res = await fetch(
+    `https://generativelanguage.googleapis.com/v1/models/${model}:embedContent?key=${apiKey}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        content: { parts: [{ text: text.slice(0, 8000) }] },
+      }),
+    }
+  );
 
   if (!res.ok) {
     const err = await res.text();
@@ -27,6 +26,15 @@ export async function embedText(text: string): Promise<number[]> {
 
   const data = await res.json();
   return data.embedding.values as number[];
+}
+
+export async function embedText(text: string): Promise<number[]> {
+  try {
+    return await embedTextWithModel(text, 'text-embedding-004');
+  } catch (e) {
+    console.warn('[embedText] text-embedding-004 failed, trying embedding-001:', e);
+    return await embedTextWithModel(text, 'embedding-001');
+  }
 }
 
 export function cosineSimilarity(a: number[], b: number[]): number {
