@@ -527,7 +527,7 @@ function HistoryDropdown({
         {t("historyButton")}
       </Button>
       {open && (
-        <div className="absolute right-0 top-full z-20 mt-1 w-72 rounded-md border border-border bg-background shadow-lg">
+        <div className="absolute right-0 top-full z-20 mt-1 w-72 rounded-md border border-border bg-background shadow-sm">
           {loading && <p className="px-4 py-3 text-sm text-muted-foreground">{t("historyLoading")}</p>}
           {error && <p className="px-4 py-3 text-sm text-danger">{error}</p>}
           {!loading && !error && versions.length === 0 && (
@@ -1205,7 +1205,7 @@ function ScoreCard({ result }: { result: ResumeScore }) {
     <div className="mt-4 rounded-md border border-border bg-white p-5 shadow-sm space-y-5">
       <div className="flex items-center gap-5">
         <div
-          className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full border-2 text-xl font-bold"
+          className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full border-2 text-xl font-semibold"
           style={{ borderColor: color, color }}
         >
           {result.score}

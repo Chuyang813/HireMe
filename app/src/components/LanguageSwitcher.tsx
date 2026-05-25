@@ -75,7 +75,7 @@ export function LanguageSwitcher() {
       {open && (
         <div
           role="menu"
-          className="absolute right-0 top-[calc(100%+0.375rem)] z-30 w-56 overflow-hidden rounded-md border border-border bg-background shadow-lg"
+          className="absolute right-0 top-[calc(100%+0.375rem)] z-30 w-56 overflow-hidden rounded-md border border-border bg-background shadow-sm"
         >
           <div className="border-b border-border bg-muted/40 px-3 py-2">
             <p className="label-caps">Language · Langue · 语言</p>

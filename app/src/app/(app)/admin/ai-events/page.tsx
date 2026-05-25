@@ -21,7 +21,7 @@ export default async function AiEventsPage() {
         <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
           Admin · Observability
         </p>
-        <h1 className="mt-1 text-3xl font-bold">AI Events</h1>
+        <h1 className="mt-1 text-3xl font-semibold">AI Events</h1>
         <p className="mt-1 text-sm text-muted-foreground">Last 100 events</p>
       </div>
 

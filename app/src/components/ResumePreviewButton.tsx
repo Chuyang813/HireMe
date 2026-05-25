@@ -44,7 +44,7 @@ export function ResumePreviewButton({ resumeId, title }: { resumeId: string; tit
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
           onClick={(e) => { if (e.target === e.currentTarget) setOpen(false); }}
         >
-          <div className="relative flex h-[90vh] w-full max-w-3xl flex-col rounded-lg bg-background shadow-xl overflow-hidden">
+          <div className="relative flex h-[90vh] w-full max-w-3xl flex-col rounded-lg bg-background shadow-md overflow-hidden">
             <div className="flex items-center justify-between border-b border-border px-5 py-3 shrink-0">
               <h2 className="font-display text-lg truncate">{title}</h2>
               <button

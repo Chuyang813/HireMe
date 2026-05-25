@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import type { JobApplication, ApplicationStatus } from "@/lib/db/types";
 import { StatusSelect } from "@/components/StatusSelect";
 import { DeleteApplicationButton } from "@/components/DeleteApplicationButton";
+import { Button } from "@/components/ui/Button";
 
 const STATUS_LABEL_KEYS: Record<ApplicationStatus, string> = {
   saved: "statusSaved",
@@ -146,12 +147,9 @@ export function ApplicationsView({
             <p className="mt-2 text-sm text-muted-foreground">
               {t("noAppsSub")}
             </p>
-            <Link
-              href="/applications/new"
-              className="mt-6 inline-flex h-9 items-center justify-center rounded-md bg-accent px-5 text-[13px] font-medium text-accent-foreground hover:bg-[var(--accent-hover)]"
-            >
-              {t("addApplication")}
-            </Link>
+            <Button variant="primary" className="mt-6">
+              <Link href="/applications/new">{t("addApplication")}</Link>
+            </Button>
           </div>
         ) : view === "cards" ? (
           <ul className="flex flex-col gap-3">
