@@ -457,6 +457,13 @@
     "resumeScoringLabel": "Évaluation du CV",
     "resumeScoringDesc": "Comparez votre CV de base avec cette description de poste.",
     "generationFailed": "Échec de la génération.",
-    "streamingUnsupported": "Ce navigateur ne prend pas en charge le flux."
+    "streamingUnsupported": "Ce navigateur ne prend pas en charge le flux.",
+    "styleSelectorLabel": "Style",
+    "styleProfessional": "Professionnel",
+    "styleConcise": "Concis",
+    "styleCreative": "Créatif",
+    "styleAcademic": "Académique",
+    "styleStory": "Narratif",
+    "styleEnthusiastic": "Enthousiaste"
   }
 }

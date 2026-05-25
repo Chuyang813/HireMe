@@ -16,7 +16,6 @@ import type {
   ApplicationDocument,
   AssessmentAnalysis,
   DocumentType,
-  InterviewPrep,
   ResumeScore,
 } from "@/lib/db/types";
 import type { GroundingWarning } from "@/lib/ai/grounding";
@@ -39,6 +38,24 @@ const TABS: { id: TabId; labelKey: string; shortLabelKey: string; docType?: Docu
   { id: "assessment", labelKey: "tabAssessment", shortLabelKey: "sideAssessment" },
   { id: "interview_prep", labelKey: "tabInterviewPrep", shortLabelKey: "sideInterviewPrep" },
 ];
+
+// ---------------------------------------------------------------------------
+// Style constants for document generation
+// ---------------------------------------------------------------------------
+
+const RESUME_STYLES = [
+  { value: 'professional', labelKey: 'styleProfessional' },
+  { value: 'concise', labelKey: 'styleConcise' },
+  { value: 'creative', labelKey: 'styleCreative' },
+  { value: 'academic', labelKey: 'styleAcademic' },
+] as const;
+
+const COVER_LETTER_STYLES = [
+  { value: 'professional', labelKey: 'styleProfessional' },
+  { value: 'story', labelKey: 'styleStory' },
+  { value: 'concise', labelKey: 'styleConcise' },
+  { value: 'enthusiastic', labelKey: 'styleEnthusiastic' },
+] as const;
 
 // ---------------------------------------------------------------------------
 // Export helpers (browser-only, loaded lazily)
@@ -564,6 +581,14 @@ function DocumentPanel({
   const [autoSaving, setAutoSaving] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [groundingWarnings, setGroundingWarnings] = useState<GroundingWarning[]>([]);
+  const [style, setStyle] = useState("professional");
+
+  const styleOptions =
+    documentType === "tailored_resume"
+      ? RESUME_STYLES
+      : documentType === "cover_letter"
+        ? COVER_LETTER_STYLES
+        : null;
 
   async function saveContent(nextContent: string) {
     if (!nextContent.trim() || nextContent.includes("[Error:")) return false;
@@ -605,6 +630,7 @@ function DocumentPanel({
         body: JSON.stringify({
           application_id: applicationId,
           document_type: documentType,
+          style,
         }),
       });
 
@@ -756,6 +782,24 @@ function DocumentPanel({
 
   return (
     <div className="flex flex-col gap-4">
+      {styleOptions && (
+        <div className="flex items-center gap-2">
+          <label className="label-caps text-muted-foreground shrink-0">
+            {t("styleSelectorLabel")}
+          </label>
+          <select
+            value={style}
+            onChange={(e) => setStyle(e.target.value)}
+            className="rounded-md border border-border bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-accent"
+          >
+            {styleOptions.map((s) => (
+              <option key={s.value} value={s.value}>
+                {t(s.labelKey)}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
       <div className="flex flex-wrap items-center justify-between gap-3">
         {!hasResume && (
           <p className="text-sm text-muted-foreground">
@@ -1001,93 +1045,6 @@ function AssessmentPanel({ applicationId }: { applicationId: string }) {
 // InterviewPrepPanel
 // ---------------------------------------------------------------------------
 
-function categoryLabel(t: ReturnType<typeof useTranslations>, category: string): string {
-  if (category === "behavioral") return t("categoryBehavioral");
-  if (category === "technical") return t("categoryTechnical");
-  if (category === "role_specific") return t("categoryRoleSpecific");
-  if (category === "company") return t("categoryCompany");
-  return category;
-}
-
-function parseInterviewPrepContent(content?: string | null): InterviewPrep | null {
-  if (!content) return null;
-  try {
-    const parsed = JSON.parse(content) as Partial<InterviewPrep>;
-    if (!Array.isArray(parsed.likely_questions)) return null;
-    return {
-      likely_questions: parsed.likely_questions.filter(
-        (q): q is InterviewPrep["likely_questions"][number] =>
-          !!q && typeof q === "object" && typeof q.question === "string",
-      ),
-      preparation_checklist: Array.isArray(parsed.preparation_checklist)
-        ? parsed.preparation_checklist.filter((item): item is string => typeof item === "string")
-        : [],
-      talking_points: Array.isArray(parsed.talking_points)
-        ? parsed.talking_points.filter((item): item is string => typeof item === "string")
-        : [],
-    };
-  } catch {
-    return null;
-  }
-}
-
-function serializeInterviewPrep(result: InterviewPrep): string {
-  return JSON.stringify(result, null, 2);
-}
-
-function QuestionCard({
-  q,
-  isOpen,
-  onToggle,
-}: {
-  q: InterviewPrep["likely_questions"][number];
-  isOpen: boolean;
-  onToggle: () => void;
-}) {
-  const t = useTranslations("Workspace");
-
-  return (
-    <div className="rounded-md border border-border shadow-sm">
-      <button
-        onClick={onToggle}
-        className="flex w-full items-start justify-between gap-4 px-4 py-3 text-left"
-      >
-        <div className="min-w-0">
-          <p className="text-sm font-medium leading-snug">{q.question}</p>
-          <p className="mt-0.5 text-xs text-muted-foreground">
-            {categoryLabel(t, q.category)}
-          </p>
-        </div>
-        <span className="mt-0.5 shrink-0 text-muted-foreground text-xs">
-          {isOpen ? "▲" : "▼"}
-        </span>
-      </button>
-
-      {isOpen && (
-        <div className="border-t border-border px-4 py-3 bg-muted/30">
-          {q.star_answer ? (
-            <>
-              <p className="label-caps mb-2">{t("suggestedAnswer")}</p>
-              <p className="whitespace-pre-wrap text-sm leading-relaxed">
-                {q.star_answer}
-              </p>
-            </>
-          ) : (
-            <p className="text-sm text-muted-foreground italic">
-              {t("noSuggestedAnswer")}
-            </p>
-          )}
-          {q.rationale && (
-            <p className="mt-3 text-xs text-muted-foreground">
-              {t("whyAsked")} {q.rationale}
-            </p>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
-
 function InterviewPrepPanel({
   applicationId,
   hasResume,
@@ -1098,26 +1055,21 @@ function InterviewPrepPanel({
   existingDoc: ApplicationDocument | null;
 }) {
   const t = useTranslations("Workspace");
-  const [result, setResult] = useState<InterviewPrep | null>(
-    () => parseInterviewPrepContent(existingDoc?.text_content),
-  );
+  const [content, setContent] = useState(existingDoc?.text_content ?? "");
   const [docId, setDocId] = useState(existingDoc?.id ?? "");
   const [error, setError] = useState("");
   const [saveStatus, setSaveStatus] = useState<"idle" | "saved" | "error">("idle");
   const [autoSaving, setAutoSaving] = useState(false);
-  const [expandedIdx, setExpandedIdx] = useState<number | null>(null);
   const [generating, startGenerate] = useTransition();
 
-  async function saveInterviewPrep(nextResult: InterviewPrep) {
+  async function saveContent(markdown: string) {
     setSaveStatus("idle");
     setAutoSaving(true);
-
     const fd = new FormData();
     fd.set("application_id", applicationId);
     fd.set("document_type", "interview_prep");
-    fd.set("content", serializeInterviewPrep(nextResult));
+    fd.set("content", markdown);
     if (docId) fd.set("document_id", docId);
-
     try {
       const res = await saveDocumentAction(undefined, fd);
       if (res && "ok" in res && res.ok) {
@@ -1130,7 +1082,6 @@ function InterviewPrepPanel({
     } finally {
       setAutoSaving(false);
     }
-
     setSaveStatus("error");
   }
 
@@ -1143,10 +1094,9 @@ function InterviewPrepPanel({
       const res = await generateInterviewPrepAction(undefined, fd);
       if (res && "error" in res && res.error) {
         setError(res.error);
-      } else if (res && "result" in res && res.result) {
-        setResult(res.result);
-        setExpandedIdx(null);
-        await saveInterviewPrep(res.result);
+      } else if (res && "content" in res && res.content) {
+        setContent(res.content);
+        await saveContent(res.content);
       }
     });
   }
@@ -1184,52 +1134,15 @@ function InterviewPrepPanel({
       {saveStatus === "saved" && <p className="text-xs text-success">{t("saved")}</p>}
       {saveStatus === "error" && <p className="text-xs text-danger">{t("saveFailed")}</p>}
 
-      {result && (
-        <div className="space-y-6">
-          <div>
-            <p className="label-caps mb-3">{t("likelyQuestions")}</p>
-            <div className="space-y-2">
-              {result.likely_questions.map((q, i) => (
-                <QuestionCard
-                  key={i}
-                  q={q}
-                  isOpen={expandedIdx === i}
-                  onToggle={() =>
-                    setExpandedIdx(expandedIdx === i ? null : i)
-                  }
-                />
-              ))}
-            </div>
+      {generating && !content && (
+        <div className="flex min-h-[28rem] items-center justify-center rounded-md border border-border bg-white shadow-sm">
+          <div className="flex flex-col items-center gap-3">
+            <div className="h-8 w-8 animate-spin rounded-full border-2 border-border border-t-accent" />
+            <p className="text-sm text-muted-foreground">{t("generatingDocument")}</p>
           </div>
-
-          {result.preparation_checklist?.length ? (
-            <div>
-              <p className="label-caps mb-2">{t("prepChecklist")}</p>
-              <ul className="space-y-1.5">
-                {result.preparation_checklist.map((item, i) => (
-                  <li key={i} className="flex items-start gap-2.5 text-sm">
-                    <span className="mt-0.5 shrink-0 text-muted-foreground">◻</span>
-                    <span>{item}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ) : null}
-
-          {result.talking_points?.length ? (
-            <div>
-              <p className="label-caps mb-2">{t("talkingPoints")}</p>
-              <ul className="space-y-1">
-                {result.talking_points.map((tp, i) => (
-                  <li key={i} className="text-sm text-muted-foreground">
-                    — {tp}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ) : null}
         </div>
       )}
+      {(!generating || content) && <MarkdownViewer content={content} />}
     </div>
   );
 }

@@ -24,6 +24,24 @@ function auditNote(promptType: PromptType) {
 }
 
 // ---------------------------------------------------------------------------
+// Style instructions
+// ---------------------------------------------------------------------------
+
+const RESUME_STYLE_INSTRUCTIONS: Record<string, string> = {
+  professional: "Write in a formal, achievement-focused tone. Lead every bullet with a strong action verb. Quantify achievements with metrics wherever possible.",
+  concise: "Be extremely concise. Every bullet must be under 15 words. Aim for a 1-page result. Cut any sentence that doesn't directly demonstrate value.",
+  creative: "Use a slightly warmer, more personal tone. Show personality while staying professional. Good for startups and creative industries. The summary section should feel human and memorable.",
+  academic: "Prioritize Education and Publications/Research sections. Use formal academic tone. List technical skills comprehensively. Publications and projects before work experience if available.",
+};
+
+const COVER_LETTER_STYLE_INSTRUCTIONS: Record<string, string> = {
+  professional: "Write a formal business letter. Start with a direct statement of interest and qualifications.",
+  story: "Open with a compelling anecdote or hook that connects the candidate's experience to the role. Use narrative structure throughout.",
+  concise: "Write exactly 3 short paragraphs: (1) who I am and the role, (2) my top 2 relevant achievements, (3) next steps. Total under 200 words.",
+  enthusiastic: "Write with genuine enthusiasm and energy. Show passion for the company's mission. Warmer, more conversational tone while staying professional.",
+};
+
+// ---------------------------------------------------------------------------
 // System prompts
 // ---------------------------------------------------------------------------
 
@@ -125,6 +143,7 @@ async function buildPrompt(
   resume: ParsedResume,
   job: ParsedJob,
   rawJobText?: string | null,
+  style?: string,
 ): Promise<{ system: string; userMessage: string; maxTokens: number } | null> {
   const resumeJson = JSON.stringify(resume, null, 2);
   const jobJson = JSON.stringify(job, null, 2);
@@ -133,8 +152,10 @@ async function buildPrompt(
   ).join('\n\n');
 
   if (documentType === "tailored_resume") {
+    const styleKey = style && style in RESUME_STYLE_INSTRUCTIONS ? style : 'professional';
+    const styleInstruction = RESUME_STYLE_INSTRUCTIONS[styleKey];
     return {
-      system: RESUME_SYSTEM,
+      system: `${RESUME_SYSTEM}\n\nStyle instruction: ${styleInstruction}`,
       maxTokens: 4096,
       userMessage: [
         `Candidate parsed resume (JSON):\n${resumeJson}`,
@@ -146,8 +167,10 @@ async function buildPrompt(
   }
 
   if (documentType === "cover_letter") {
+    const styleKey = style && style in COVER_LETTER_STYLE_INSTRUCTIONS ? style : 'professional';
+    const styleInstruction = COVER_LETTER_STYLE_INSTRUCTIONS[styleKey];
     return {
-      system: COVER_LETTER_SYSTEM,
+      system: `${COVER_LETTER_SYSTEM}\n\nStyle instruction: ${styleInstruction}`,
       maxTokens: 1024,
       userMessage: [
         `Candidate parsed resume (JSON):\n${resumeJson}`,
@@ -185,7 +208,7 @@ export async function POST(req: NextRequest) {
     return Response.json({ error: "Request body is too large." }, { status: 413 });
   }
 
-  let body: { application_id?: string; document_type?: string };
+  let body: { application_id?: string; document_type?: string; style?: string };
   try {
     const rawBody = await req.text();
     if (rawBody.length > MAX_REQUEST_BODY_LENGTH) {
@@ -198,6 +221,7 @@ export async function POST(req: NextRequest) {
 
   const applicationId = String(body.application_id || "");
   const documentTypeResult = documentTypeSchema.safeParse(body.document_type);
+  const style = typeof body.style === 'string' ? body.style : 'professional';
 
   if (!uuidSchema.safeParse(applicationId).success || !documentTypeResult.success) {
     return Response.json({ error: "Missing application_id or document_type." }, { status: 400 });
@@ -251,7 +275,7 @@ export async function POST(req: NextRequest) {
   }
 
   const parsedResume = (resumeRow?.parsed_resume_json as ParsedResume | null) ?? {};
-  const prompt = await buildPrompt(documentType, parsedResume, job, app.raw_job_text);
+  const prompt = await buildPrompt(documentType, parsedResume, job, app.raw_job_text, style);
   if (!prompt) {
     return Response.json({ error: `Unsupported document type: ${documentType}` }, { status: 400 });
   }

@@ -457,6 +457,13 @@
     "resumeScoringLabel": "简历评分",
     "resumeScoringDesc": "将你的基础简历与该岗位描述进行对比。",
     "generationFailed": "生成失败。",
-    "streamingUnsupported": "当前浏览器不支持流式生成。"
+    "streamingUnsupported": "当前浏览器不支持流式生成。",
+    "styleSelectorLabel": "风格",
+    "styleProfessional": "正式",
+    "styleConcise": "精简",
+    "styleCreative": "创意",
+    "styleAcademic": "学术",
+    "styleStory": "故事性",
+    "styleEnthusiastic": "热情"
   }
 }

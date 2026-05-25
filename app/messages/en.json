@@ -457,6 +457,13 @@
     "resumeScoringLabel": "Resume scoring",
     "resumeScoringDesc": "Compare your base resume against this job description.",
     "generationFailed": "Generation failed.",
-    "streamingUnsupported": "Streaming is not supported by this browser."
+    "streamingUnsupported": "Streaming is not supported by this browser.",
+    "styleSelectorLabel": "Style",
+    "styleProfessional": "Professional",
+    "styleConcise": "Concise",
+    "styleCreative": "Creative",
+    "styleAcademic": "Academic",
+    "styleStory": "Story-driven",
+    "styleEnthusiastic": "Enthusiastic"
   }
 }

@@ -27,7 +27,6 @@ import { checkRateLimit } from "@/lib/security/rate-limit";
 import type {
   AssessmentAnalysis,
   DocumentType,
-  InterviewPrep,
   ParsedJob,
   ParsedResume,
   ResumeScore,
@@ -354,8 +353,8 @@ export async function analyzeAssessmentAction(
 // ---------------------------------------------------------------------------
 
 export type GenerateInterviewPrepState =
-  | { result: InterviewPrep; error?: never }
-  | { error: string; result?: never }
+  | { content: string; error?: never }
+  | { error: string; content?: never }
   | undefined;
 
 export async function generateInterviewPrepAction(
@@ -394,9 +393,9 @@ export async function generateInterviewPrepAction(
 
   const parsedResume = (resume?.parsed_resume_json as ParsedResume | null) ?? {};
 
-  let result: InterviewPrep;
+  let content: string;
   try {
-    result = await generateInterviewPrep({ resume: parsedResume, job });
+    content = await generateInterviewPrep({ resume: parsedResume, job });
   } catch (e) {
     console.error("[generateInterviewPrepAction] AI error:", e);
     return { error: "Generation failed. Please try again." };
@@ -409,7 +408,7 @@ export async function generateInterviewPrepAction(
     note: auditNote('interview-prep'),
   });
 
-  return { result };
+  return { content };
 }
 
 // ---------------------------------------------------------------------------

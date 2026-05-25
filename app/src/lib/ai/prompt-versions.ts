@@ -6,7 +6,7 @@ export const PROMPT_VERSIONS = {
   'cover-letter':   '2.0',
   'resume-tailor':  '2.0',
   'email-draft':    '2.1',
-  'interview-prep': '1.0',
+  'interview-prep': '2.0',
   'resume-score':   '1.0',
   'embedding':      '1.0',
 } as const;
