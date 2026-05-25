@@ -24,7 +24,6 @@ export default async function AppLayout({
   const navItems = [
     { href: "/dashboard", label: t("dashboard") },
     { href: "/applications", label: t("applications") },
-    { href: "/tracker", label: t("tracker") },
     { href: "/resumes", label: t("resumes") },
     { href: "/insights", label: t("insights") },
     { href: "/settings", label: t("settings") },

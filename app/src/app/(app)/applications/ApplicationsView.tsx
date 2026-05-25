@@ -1,0 +1,361 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import Link from "next/link";
+import { useTranslations } from "next-intl";
+import type { JobApplication, ApplicationStatus } from "@/lib/db/types";
+import { StatusSelect } from "@/components/StatusSelect";
+import { DeleteApplicationButton } from "@/components/DeleteApplicationButton";
+
+const STATUS_LABEL_KEYS: Record<ApplicationStatus, string> = {
+  saved: "statusSaved",
+  ready_to_apply: "statusReadyToApply",
+  applied: "statusApplied",
+  assessment: "statusAssessment",
+  interview: "statusInterview",
+  rejected: "statusRejected",
+  offer: "statusOffer",
+  withdrawn: "statusWithdrawn",
+};
+
+const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+
+function isStale(app: JobApplication): boolean {
+  return (
+    app.current_status === "saved" &&
+    Date.now() - new Date(app.created_at).getTime() > ONE_DAY_MS
+  );
+}
+
+const PIPELINE_STATS: ApplicationStatus[] = [
+  "applied",
+  "assessment",
+  "interview",
+  "offer",
+];
+
+function statusRowColor(s: ApplicationStatus): string {
+  if (s === "offer") return "text-success";
+  if (s === "rejected" || s === "withdrawn") return "opacity-50";
+  return "";
+}
+
+type View = "cards" | "table";
+
+export function ApplicationsView({
+  applications,
+  hasResume,
+}: {
+  applications: JobApplication[];
+  hasResume: boolean;
+}) {
+  const t = useTranslations("Applications");
+  const [view, setView] = useState<View>("cards");
+
+  useEffect(() => {
+    const stored = localStorage.getItem("applications-view");
+    if (stored === "cards" || stored === "table") {
+      setView(stored);
+    }
+  }, []);
+
+  function switchView(v: View) {
+    setView(v);
+    localStorage.setItem("applications-view", v);
+  }
+
+  const counts = PIPELINE_STATS.reduce<Record<string, number>>((acc, s) => {
+    acc[s] = applications.filter((a) => a.current_status === s).length;
+    return acc;
+  }, {});
+
+  const active = applications.filter(
+    (a) => !["rejected", "withdrawn"].includes(a.current_status),
+  ).length;
+
+  return (
+    <>
+      {!hasResume && (
+        <div className="mt-6 flex items-center gap-3 rounded-md border border-border bg-muted/50 px-4 py-3 text-sm text-muted-foreground">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 20 20"
+            fill="currentColor"
+            className="h-4 w-4 shrink-0 text-accent"
+          >
+            <path
+              fillRule="evenodd"
+              d="M18 10a8 8 0 1 1-16 0 8 8 0 0 1 16 0Zm-7-4a1 1 0 1 1-2 0 1 1 0 0 1 2 0ZM9 9a.75.75 0 0 0 0 1.5h.253a.25.25 0 0 1 .244.304l-.459 2.066A1.75 1.75 0 0 0 10.747 15H11a.75.75 0 0 0 0-1.5h-.253a.25.25 0 0 1-.244-.304l.459-2.066A1.75 1.75 0 0 0 9.253 9H9Z"
+              clipRule="evenodd"
+            />
+          </svg>
+          <span>
+            {t("noResumeBanner")}{" "}
+            <Link
+              href="/resumes"
+              className="font-medium text-accent underline underline-offset-2 hover:opacity-80"
+            >
+              {t("uploadNow")}
+            </Link>
+          </span>
+        </div>
+      )}
+
+      <div className="mt-6 flex items-center justify-end gap-2">
+        <span className="label-caps text-muted-foreground">
+          {t("viewToggleLabel")}
+        </span>
+        <div className="flex items-center gap-0.5 rounded-md border border-border p-0.5">
+          <button
+            type="button"
+            onClick={() => switchView("cards")}
+            aria-label={t("viewCards")}
+            title={t("viewCards")}
+            className={[
+              "flex h-7 w-7 items-center justify-center rounded transition",
+              view === "cards"
+                ? "bg-accent text-accent-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground",
+            ].join(" ")}
+          >
+            <GridIcon />
+          </button>
+          <button
+            type="button"
+            onClick={() => switchView("table")}
+            aria-label={t("viewTable")}
+            title={t("viewTable")}
+            className={[
+              "flex h-7 w-7 items-center justify-center rounded transition",
+              view === "table"
+                ? "bg-accent text-accent-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground",
+            ].join(" ")}
+          >
+            <ListIcon />
+          </button>
+        </div>
+      </div>
+
+      <div className="mt-4">
+        {applications.length === 0 ? (
+          <div className="rounded-md border border-dashed border-border p-12 text-center">
+            <p className="font-display text-2xl text-muted-foreground">
+              {t("noAppsHeading")}
+            </p>
+            <p className="mt-2 text-sm text-muted-foreground">
+              {t("noAppsSub")}
+            </p>
+            <Link
+              href="/applications/new"
+              className="mt-6 inline-flex h-10 items-center justify-center rounded-md bg-accent px-5 text-sm font-medium text-accent-foreground hover:opacity-90 shadow-sm"
+            >
+              {t("addApplication")}
+            </Link>
+          </div>
+        ) : view === "cards" ? (
+          <ul className="flex flex-col gap-3">
+            {applications.map((app) => (
+              <li key={app.id} className="relative">
+                <Link
+                  href={`/applications/${app.id}`}
+                  className="block rounded-md border border-border bg-white p-5 transition-colors hover:border-accent/50 shadow-sm"
+                >
+                  <div className="flex items-baseline justify-between gap-4">
+                    <div>
+                      <h3 className="font-display text-xl">
+                        {app.role_title ?? t("untitledRole")}
+                      </h3>
+                      <p className="mt-0.5 text-sm text-muted-foreground">
+                        {app.company_name ?? t("unknownCompany")}
+                        {app.location ? ` · ${app.location}` : ""}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      {isStale(app) && (
+                        <span
+                          className="inline-flex items-center gap-1 rounded-full bg-yellow-100 px-2 py-0.5 text-[10px] font-medium text-yellow-700"
+                          title={t("staleTooltip")}
+                        >
+                          <span className="h-1.5 w-1.5 rounded-full bg-yellow-400" />
+                          {t("staleUpdateStatus")}
+                        </span>
+                      )}
+                      <span className="label-caps whitespace-nowrap rounded-md border border-border px-1.5 py-0.5">
+                        {t(
+                          STATUS_LABEL_KEYS[
+                            app.current_status
+                          ] as Parameters<typeof t>[0],
+                        )}
+                      </span>
+                      <DeleteApplicationButton
+                        applicationId={app.id}
+                        variant="icon"
+                      />
+                    </div>
+                  </div>
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    {t("updatedPrefix")}{" "}
+                    {new Date(app.updated_at).toLocaleDateString()}
+                  </p>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <>
+            <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-5">
+              <div className="rounded-md border border-border bg-white p-4 shadow-sm">
+                <p className="label-caps text-muted-foreground">
+                  {t("active")}
+                </p>
+                <p className="mt-1 font-display text-3xl">{active}</p>
+              </div>
+              {PIPELINE_STATS.map((s) => (
+                <div
+                  key={s}
+                  className="rounded-md border border-border bg-white p-4 shadow-sm"
+                >
+                  <p className="label-caps text-muted-foreground">
+                    {t(STATUS_LABEL_KEYS[s] as Parameters<typeof t>[0])}
+                  </p>
+                  <p className="mt-1 font-display text-3xl">
+                    {counts[s] ?? 0}
+                  </p>
+                </div>
+              ))}
+            </div>
+
+            <div className="overflow-x-auto rounded-md border border-border shadow-sm">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border bg-muted/40">
+                    <th className="label-caps px-5 py-3 text-left font-normal text-muted-foreground">
+                      {t("colCompany")}
+                    </th>
+                    <th className="label-caps px-5 py-3 text-left font-normal text-muted-foreground">
+                      {t("colPosition")}
+                    </th>
+                    <th className="label-caps hidden px-5 py-3 text-left font-normal text-muted-foreground sm:table-cell">
+                      {t("colAdded")}
+                    </th>
+                    <th className="label-caps px-5 py-3 text-left font-normal text-muted-foreground">
+                      {t("colStatus")}
+                    </th>
+                    <th className="label-caps px-5 py-3 text-left font-normal text-muted-foreground">
+                      {t("colActions")}
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {applications.map((app) => (
+                    <tr
+                      key={app.id}
+                      className={`border-b border-border last:border-0 bg-white ${statusRowColor(app.current_status)}`}
+                    >
+                      <td className="px-5 py-4">
+                        <div className="flex items-center gap-2">
+                          <Link
+                            href={`/applications/${app.id}`}
+                            className="font-medium hover:underline underline-offset-2"
+                          >
+                            {app.company_name ?? "—"}
+                          </Link>
+                          {isStale(app) && (
+                            <span
+                              className="inline-flex items-center gap-1 rounded-full bg-yellow-100 px-2 py-0.5 text-[10px] font-medium text-yellow-700"
+                              title={t("staleTooltip")}
+                            >
+                              <span className="h-1.5 w-1.5 rounded-full bg-yellow-400" />
+                              {t("staleUpdateStatus")}
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-5 py-4 text-muted-foreground">
+                        <Link
+                          href={`/applications/${app.id}`}
+                          className="hover:text-foreground"
+                        >
+                          {app.role_title ?? "—"}
+                        </Link>
+                      </td>
+                      <td className="hidden px-5 py-4 text-muted-foreground sm:table-cell">
+                        {new Date(app.created_at).toLocaleDateString()}
+                      </td>
+                      <td className="px-5 py-4">
+                        <StatusSelect
+                          applicationId={app.id}
+                          current={app.current_status}
+                          className="h-8 text-xs"
+                        />
+                      </td>
+                      <td className="px-5 py-4">
+                        <div className="flex items-center gap-2">
+                          <Link
+                            href={`/applications/${app.id}`}
+                            className="inline-flex h-8 items-center rounded-md border border-border px-2.5 text-xs font-medium hover:bg-muted"
+                          >
+                            →
+                          </Link>
+                          <DeleteApplicationButton
+                            applicationId={app.id}
+                            variant="icon"
+                          />
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
+      </div>
+    </>
+  );
+}
+
+function GridIcon() {
+  return (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <rect x="3" y="3" width="7" height="7" />
+      <rect x="14" y="3" width="7" height="7" />
+      <rect x="3" y="14" width="7" height="7" />
+      <rect x="14" y="14" width="7" height="7" />
+    </svg>
+  );
+}
+
+function ListIcon() {
+  return (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <line x1="8" y1="6" x2="21" y2="6" />
+      <line x1="8" y1="12" x2="21" y2="12" />
+      <line x1="8" y1="18" x2="21" y2="18" />
+      <line x1="3" y1="6" x2="3.01" y2="6" />
+      <line x1="3" y1="12" x2="3.01" y2="12" />
+      <line x1="3" y1="18" x2="3.01" y2="18" />
+    </svg>
+  );
+}

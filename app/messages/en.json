@@ -254,7 +254,16 @@
     "fitModerate": "Moderate fit",
     "fitLow": "Low fit",
     "fitReview": "Review fit",
-    "fitResumeNeeded": "Resume needed"
+    "fitResumeNeeded": "Resume needed",
+    "active": "Active",
+    "colCompany": "Company",
+    "colPosition": "Position",
+    "colAdded": "Date Added",
+    "colStatus": "Status",
+    "colActions": "Actions",
+    "viewCards": "Cards",
+    "viewTable": "Table",
+    "viewToggleLabel": "View"
   },
   "Insights": {
     "analyticsLabel": "Analytics",

@@ -254,7 +254,16 @@
     "fitModerate": "Adéquation moyenne",
     "fitLow": "Faible adéquation",
     "fitReview": "À vérifier",
-    "fitResumeNeeded": "CV requis"
+    "fitResumeNeeded": "CV requis",
+    "active": "En cours",
+    "colCompany": "Entreprise",
+    "colPosition": "Poste",
+    "colAdded": "Ajouté",
+    "colStatus": "Statut",
+    "colActions": "Actions",
+    "viewCards": "Cartes",
+    "viewTable": "Tableau",
+    "viewToggleLabel": "Vue"
   },
   "Insights": {
     "analyticsLabel": "Statistiques",

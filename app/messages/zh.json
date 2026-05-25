@@ -254,7 +254,16 @@
     "fitModerate": "基本匹配",
     "fitLow": "匹配度低",
     "fitReview": "需核对",
-    "fitResumeNeeded": "需要简历"
+    "fitResumeNeeded": "需要简历",
+    "active": "进行中",
+    "colCompany": "公司",
+    "colPosition": "职位",
+    "colAdded": "添加日期",
+    "colStatus": "状态",
+    "colActions": "操作",
+    "viewCards": "卡片",
+    "viewTable": "表格",
+    "viewToggleLabel": "视图"
   },
   "Insights": {
     "analyticsLabel": "数据分析",
