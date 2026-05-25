@@ -1,6 +1,6 @@
 /**
  * Embedding utilities
- * Provider: Google Gemini text-embedding-004 (v1 endpoint, free tier)
+ * Provider: Google Gemini text-embedding-005 (v1beta endpoint, AI Studio keys)
  * DeepSeek is used for chat/generation only — it has no embedding API.
  */
 
@@ -9,7 +9,7 @@ async function embedTextWithModel(text: string, model: string): Promise<number[]
   if (!apiKey) throw new Error('GEMINI_API_KEY not set');
 
   const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1/models/${model}:embedContent?key=${apiKey}`,
+    `https://generativelanguage.googleapis.com/v1beta/models/${model}:embedContent?key=${apiKey}`,
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -30,10 +30,10 @@ async function embedTextWithModel(text: string, model: string): Promise<number[]
 
 export async function embedText(text: string): Promise<number[]> {
   try {
-    return await embedTextWithModel(text, 'text-embedding-004');
+    return await embedTextWithModel(text, 'text-embedding-005');
   } catch (e) {
-    console.warn('[embedText] text-embedding-004 failed, trying embedding-001:', e);
-    return await embedTextWithModel(text, 'embedding-001');
+    console.warn('[embedText] text-embedding-005 failed, trying text-multilingual-embedding-002:', e);
+    return await embedTextWithModel(text, 'text-multilingual-embedding-002');
   }
 }
 
