@@ -5,7 +5,6 @@ import { useTranslations } from "next-intl";
 import {
   saveDocumentAction,
   analyzeAssessmentAction,
-  generateInterviewPrepAction,
   scoreResumeAction,
   getDocumentVersionsAction,
   type DocumentVersion,
@@ -1060,7 +1059,7 @@ function InterviewPrepPanel({
   const [error, setError] = useState("");
   const [saveStatus, setSaveStatus] = useState<"idle" | "saved" | "error">("idle");
   const [autoSaving, setAutoSaving] = useState(false);
-  const [generating, startGenerate] = useTransition();
+  const [generating, setGenerating] = useState(false);
 
   async function saveContent(markdown: string) {
     setSaveStatus("idle");
@@ -1085,20 +1084,57 @@ function InterviewPrepPanel({
     setSaveStatus("error");
   }
 
-  function handleGenerate() {
+  async function handleGenerate() {
     setError("");
     setSaveStatus("idle");
-    const fd = new FormData();
-    fd.set("application_id", applicationId);
-    startGenerate(async () => {
-      const res = await generateInterviewPrepAction(undefined, fd);
-      if (res && "error" in res && res.error) {
-        setError(res.error);
-      } else if (res && "content" in res && res.content) {
-        setContent(res.content);
-        await saveContent(res.content);
+    setGenerating(true);
+    try {
+      const res = await fetch("/api/generate-document", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          application_id: applicationId,
+          document_type: "interview_prep",
+        }),
+      });
+
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({})) as { error?: string };
+        setError(json.error ?? t("generationFailed"));
+        return;
       }
-    });
+
+      const reader = res.body?.getReader();
+      if (!reader) {
+        setError(t("streamingUnsupported"));
+        return;
+      }
+
+      const decoder = new TextDecoder();
+      let accumulated = "";
+      let rafId: ReturnType<typeof requestAnimationFrame> | null = null;
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        accumulated += decoder.decode(value, { stream: true });
+
+        if (rafId) cancelAnimationFrame(rafId);
+        const snapshot = accumulated;
+        rafId = requestAnimationFrame(() => setContent(snapshot));
+      }
+      if (rafId) cancelAnimationFrame(rafId);
+      setContent(accumulated);
+      if (accumulated.includes("[Error:")) {
+        setError(t("generationFailed"));
+        return;
+      }
+      await saveContent(accumulated);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t("generationFailed"));
+    } finally {
+      setGenerating(false);
+    }
   }
 
   return (
@@ -1120,7 +1156,12 @@ function InterviewPrepPanel({
           disabled={generating || !hasResume}
           className="ml-auto"
         >
-          {generating ? t("generating") : t("generateInterviewPrep")}
+          {generating ? (
+            <span className="flex items-center gap-1.5">
+              <span className="h-3.5 w-3.5 animate-spin rounded-full border border-current border-t-transparent" />
+              {t("generating")}
+            </span>
+          ) : t("generateInterviewPrep")}
         </Button>
       </div>
 
@@ -1142,7 +1183,7 @@ function InterviewPrepPanel({
           </div>
         </div>
       )}
-      {(!generating || content) && <MarkdownViewer content={content} />}
+      {(!generating || content) && <MarkdownViewer content={content} isStreaming={generating} />}
     </div>
   );
 }

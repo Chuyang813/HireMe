@@ -3,6 +3,7 @@ import { getOptionalUser } from "@/lib/auth/current-user";
 import { aiText, AI_PROVIDER, DEFAULT_MODEL } from "@/lib/ai/provider";
 import { PROMPT_VERSIONS, type PromptType } from "@/lib/ai/prompt-versions";
 import { selectResumeEvidenceSemantic, resumeToText, jobToText } from "@/lib/ai/evidence";
+import { INTERVIEW_PREP_SYSTEM } from "@/lib/ai/interview-prep";
 import { logTimelineEvent } from "@/lib/db/timeline";
 import { logAiEvent } from "@/lib/db/ai-events";
 import { documentTypeSchema, MAX_REQUEST_BODY_LENGTH, uuidSchema } from "@/lib/security/limits";
@@ -16,6 +17,7 @@ function docTypeToPromptType(dt: DocumentType): PromptType {
   if (dt === 'tailored_resume') return 'resume-tailor';
   if (dt === 'cover_letter') return 'cover-letter';
   if (dt === 'email_draft') return 'email-draft';
+  if (dt === 'interview_prep') return 'interview-prep';
   return 'resume-tailor';
 }
 
@@ -192,6 +194,19 @@ async function buildPrompt(
         rawJobText ? `Raw job posting text:\n${rawJobText}` : "",
         "Write the application email. Tailor the attachments list to what THIS posting actually asks for.",
       ].filter(Boolean).join("\n\n"),
+    };
+  }
+
+  if (documentType === "interview_prep") {
+    return {
+      system: INTERVIEW_PREP_SYSTEM,
+      maxTokens: 4000,
+      userMessage: [
+        `Candidate parsed resume (JSON):\n${resumeJson}`,
+        `Parsed job posting (JSON):\n${jobJson}`,
+        `Most relevant candidate evidence selected for this job:\n${matchedEvidence}`,
+        "Write the comprehensive interview preparation guide in Markdown.",
+      ].join("\n\n"),
     };
   }
 

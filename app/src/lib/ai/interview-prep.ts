@@ -2,7 +2,7 @@ import { aiText } from "./provider";
 import { selectResumeEvidenceSemantic, resumeToText, jobToText } from "./evidence";
 import type { ParsedJob, ParsedResume } from "@/lib/db/types";
 
-const SYSTEM = `You are a senior career coach and interview preparation specialist.
+export const INTERVIEW_PREP_SYSTEM = `You are a senior career coach and interview preparation specialist.
 
 Given a candidate's parsed resume and a parsed job description, produce a comprehensive interview preparation guide in Markdown format.
 
@@ -68,7 +68,7 @@ export async function generateInterviewPrep({
   ).join('\n\n');
 
   return aiText({
-    system: SYSTEM,
+    system: INTERVIEW_PREP_SYSTEM,
     messages: [
       {
         role: "user",
