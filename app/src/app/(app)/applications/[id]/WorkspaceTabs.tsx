@@ -540,6 +540,10 @@ function HistoryDropdown({
               className="flex w-full flex-col gap-0.5 px-4 py-3 text-left hover:bg-muted border-b border-border last:border-0"
             >
               <span className="text-xs text-muted-foreground">
+                {v.style && (
+                  <span className="capitalize font-medium">{v.style}</span>
+                )}
+                {v.style && " · "}
                 {new Date(v.created_at).toLocaleString()}
               </span>
               <span className="truncate text-sm">{v.content.slice(0, 80)}…</span>
@@ -554,6 +558,13 @@ function HistoryDropdown({
 // ---------------------------------------------------------------------------
 // DocumentPanel — rendered view + generate/save/export
 // ---------------------------------------------------------------------------
+
+function docTypeToTabId(dt: DocumentType): string {
+  if (dt === "tailored_resume") return "resume";
+  if (dt === "cover_letter") return "cover_letter";
+  if (dt === "email_draft") return "email";
+  return dt;
+}
 
 function DocumentPanel({
   applicationId,
@@ -580,7 +591,6 @@ function DocumentPanel({
   const [autoSaving, setAutoSaving] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [groundingWarnings, setGroundingWarnings] = useState<GroundingWarning[]>([]);
-  const [style, setStyle] = useState("professional");
 
   const styleOptions =
     documentType === "tailored_resume"
@@ -589,7 +599,20 @@ function DocumentPanel({
         ? COVER_LETTER_STYLES
         : null;
 
-  async function saveContent(nextContent: string) {
+  const storageKey = `hireme-style-${applicationId}-${docTypeToTabId(documentType)}`;
+
+  const [style, setStyle] = useState(() => {
+    if (typeof window === "undefined" || !styleOptions) return "professional";
+    const saved = localStorage.getItem(storageKey);
+    return saved && styleOptions.some((s) => s.value === saved) ? saved : "professional";
+  });
+
+  function handleStyleChange(newStyle: string) {
+    setStyle(newStyle);
+    if (typeof window !== "undefined") localStorage.setItem(storageKey, newStyle);
+  }
+
+  async function saveContent(nextContent: string, styleToSave?: string) {
     if (!nextContent.trim() || nextContent.includes("[Error:")) return false;
     setSaveStatus("idle");
     setAutoSaving(true);
@@ -599,6 +622,7 @@ function DocumentPanel({
     fd.set("document_type", documentType);
     fd.set("content", nextContent);
     if (docId) fd.set("document_id", docId);
+    if (styleToSave && styleOptions) fd.set("style", styleToSave);
 
     try {
       const result = await saveDocumentAction(undefined, fd);
@@ -622,6 +646,9 @@ function DocumentPanel({
     setGenerateError("");
     setSaveStatus("idle");
     setGenerating(true);
+    if (typeof window !== "undefined" && styleOptions) {
+      localStorage.setItem(storageKey, style);
+    }
     try {
       const res = await fetch("/api/generate-document", {
         method: "POST",
@@ -666,7 +693,7 @@ function DocumentPanel({
         setGenerateError(t("generationFailed"));
         return;
       }
-      await saveContent(accumulated);
+      await saveContent(accumulated, style);
     } catch (e) {
       setGenerateError(e instanceof Error ? e.message : t("generationFailed"));
     } finally {
@@ -747,25 +774,32 @@ function DocumentPanel({
         )}
         <GroundingWarnings warnings={groundingWarnings} />
 
-        {generating && !content ? (
-          <div className="flex min-h-[18rem] items-center justify-center rounded-md border border-border bg-white shadow-sm">
-            <div className="flex flex-col items-center gap-3">
-              <div className="h-8 w-8 animate-spin rounded-full border-2 border-border border-t-accent" />
-              <p className="text-sm text-muted-foreground">{t("draftingEmail")}</p>
+        <div className="relative">
+          {content ? (
+            <EmailDraftView content={content} />
+          ) : (
+            <div className="flex min-h-[18rem] items-center justify-center rounded-md border border-dashed border-border bg-muted/30 px-8 py-12 text-center">
+              <div className="max-w-sm">
+                <p className="label-caps mb-2">{t("emailEmptyLabel")}</p>
+                <p className="text-sm text-muted-foreground">
+                  {t("emailEmptyBody")}
+                </p>
+              </div>
             </div>
-          </div>
-        ) : content ? (
-          <EmailDraftView content={content} />
-        ) : (
-          <div className="flex min-h-[18rem] items-center justify-center rounded-md border border-dashed border-border bg-muted/30 px-8 py-12 text-center">
-            <div className="max-w-sm">
-              <p className="label-caps mb-2">{t("emailEmptyLabel")}</p>
-              <p className="text-sm text-muted-foreground">
-                {t("emailEmptyBody")}
-              </p>
+          )}
+          {generating && (
+            <div className="absolute inset-0 flex items-center justify-center rounded-md bg-white/80">
+              <div className="flex flex-col items-center gap-3">
+                <div className="flex items-center gap-1.5">
+                  <span className="h-2.5 w-2.5 animate-bounce rounded-full bg-muted-foreground [animation-delay:-0.3s]" />
+                  <span className="h-2.5 w-2.5 animate-bounce rounded-full bg-muted-foreground [animation-delay:-0.15s]" />
+                  <span className="h-2.5 w-2.5 animate-bounce rounded-full bg-muted-foreground" />
+                </div>
+                <p className="text-sm text-muted-foreground">{t("generating")}</p>
+              </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
 
         {docId && content && !generating && (
           <div className="flex justify-end">
@@ -788,7 +822,7 @@ function DocumentPanel({
           </label>
           <select
             value={style}
-            onChange={(e) => setStyle(e.target.value)}
+            onChange={(e) => handleStyleChange(e.target.value)}
             className="select-input w-auto"
           >
             {styleOptions.map((s) => (
@@ -866,15 +900,21 @@ function DocumentPanel({
       )}
       <GroundingWarnings warnings={groundingWarnings} />
 
-      {generating && !content && (
-        <div className="flex min-h-[28rem] items-center justify-center rounded-md border border-border bg-white shadow-sm">
-          <div className="flex flex-col items-center gap-3">
-            <div className="h-8 w-8 animate-spin rounded-full border-2 border-border border-t-accent" />
-            <p className="text-sm text-muted-foreground">{t("generatingDocument")}</p>
+      <div className="relative">
+        <MarkdownViewer content={content} isStreaming={generating} />
+        {generating && (
+          <div className="absolute inset-0 flex items-center justify-center rounded-md bg-white/80">
+            <div className="flex flex-col items-center gap-3">
+              <div className="flex items-center gap-1.5">
+                <span className="h-2.5 w-2.5 animate-bounce rounded-full bg-muted-foreground [animation-delay:-0.3s]" />
+                <span className="h-2.5 w-2.5 animate-bounce rounded-full bg-muted-foreground [animation-delay:-0.15s]" />
+                <span className="h-2.5 w-2.5 animate-bounce rounded-full bg-muted-foreground" />
+              </div>
+              <p className="text-sm text-muted-foreground">{t("generating")}</p>
+            </div>
           </div>
-        </div>
-      )}
-      {(!generating || content) && <MarkdownViewer content={content} isStreaming={generating} />}
+        )}
+      </div>
 
       {docId && content && !generating && (
         <div className="flex justify-end">
@@ -1175,15 +1215,21 @@ function InterviewPrepPanel({
       {saveStatus === "saved" && <p className="text-xs text-success">{t("saved")}</p>}
       {saveStatus === "error" && <p className="text-xs text-danger">{t("saveFailed")}</p>}
 
-      {generating && !content && (
-        <div className="flex min-h-[28rem] items-center justify-center rounded-md border border-border bg-white shadow-sm">
-          <div className="flex flex-col items-center gap-3">
-            <div className="h-8 w-8 animate-spin rounded-full border-2 border-border border-t-accent" />
-            <p className="text-sm text-muted-foreground">{t("generatingDocument")}</p>
+      <div className="relative">
+        <MarkdownViewer content={content} isStreaming={generating} />
+        {generating && (
+          <div className="absolute inset-0 flex items-center justify-center rounded-md bg-white/80">
+            <div className="flex flex-col items-center gap-3">
+              <div className="flex items-center gap-1.5">
+                <span className="h-2.5 w-2.5 animate-bounce rounded-full bg-muted-foreground [animation-delay:-0.3s]" />
+                <span className="h-2.5 w-2.5 animate-bounce rounded-full bg-muted-foreground [animation-delay:-0.15s]" />
+                <span className="h-2.5 w-2.5 animate-bounce rounded-full bg-muted-foreground" />
+              </div>
+              <p className="text-sm text-muted-foreground">{t("generating")}</p>
+            </div>
           </div>
-        </div>
-      )}
-      {(!generating || content) && <MarkdownViewer content={content} isStreaming={generating} />}
+        )}
+      </div>
     </div>
   );
 }

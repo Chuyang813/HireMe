@@ -282,7 +282,7 @@ export function ApplicationsView({
                         <StatusSelect
                           applicationId={app.id}
                           current={app.current_status}
-                          className="h-8 text-xs"
+                          className="h-8 w-40 text-xs"
                         />
                       </td>
                       <td className="px-5 py-4">

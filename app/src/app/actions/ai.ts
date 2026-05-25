@@ -184,6 +184,7 @@ export async function saveDocumentAction(
   const documentTypeResult = documentTypeSchema.safeParse(formData.get("document_type"));
   const content = cleanText(formData.get("content"), MAX_GENERATED_DOCUMENT_LENGTH);
   const existingId = String(formData.get("document_id") || "");
+  const style = String(formData.get("style") || "") || null;
 
   if (!uuidSchema.safeParse(applicationId).success || !documentTypeResult.success) {
     return { error: "Missing required fields." };
@@ -222,20 +223,23 @@ export async function saveDocumentAction(
   const metadata = {
     grounding_warnings: groundingWarnings,
     grounding_checked_at: new Date().toISOString(),
+    ...(style ? { style } : {}),
   };
 
   if (existingId) {
     // Archive the current content before overwriting.
     const { data: existing } = await supabase
       .from("application_documents")
-      .select("text_content")
+      .select("text_content, metadata_json")
       .eq("id", existingId)
       .eq("user_id", user.id)
       .single();
     if (existing?.text_content) {
+      const existingMeta = existing.metadata_json as Record<string, unknown> | null;
+      const existingStyle = typeof existingMeta?.style === "string" ? existingMeta.style : null;
       await supabase
         .from("document_versions")
-        .insert({ document_id: existingId, content: existing.text_content });
+        .insert({ document_id: existingId, content: existing.text_content, style: existingStyle });
     }
 
     const { error } = await supabase
@@ -503,6 +507,7 @@ export interface DocumentVersion {
   id: string;
   content: string;
   created_at: string;
+  style?: string | null;
 }
 
 export type GetDocumentVersionsState =
@@ -518,7 +523,7 @@ export async function getDocumentVersionsAction(
   }
   const { data, error } = await supabase
     .from("document_versions")
-    .select("id, content, created_at")
+    .select("id, content, created_at, style")
     .eq("document_id", documentId)
     .order("created_at", { ascending: false })
     .limit(20);

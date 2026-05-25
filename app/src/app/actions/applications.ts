@@ -283,10 +283,12 @@ export async function createApplicationAction(
       .join('\n');
     if (jdText && shouldUseSemanticEvidence()) {
       const jdEmbedding = await embedText(jdText);
-      await supabase
-        .from("job_applications")
-        .update({ jd_embedding: JSON.stringify(jdEmbedding) })
-        .eq("id", data.id);
+      if (jdEmbedding) {
+        await supabase
+          .from("job_applications")
+          .update({ jd_embedding: JSON.stringify(jdEmbedding) })
+          .eq("id", data.id);
+      }
     }
   } catch (e) {
     console.warn("[createApplicationAction] JD embedding failed:", e);

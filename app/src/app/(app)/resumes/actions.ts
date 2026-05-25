@@ -107,10 +107,12 @@ export async function uploadResumeAction(
   try {
     if (shouldUseSemanticEvidence()) {
       const embedding = await embedText(rawText);
-      await supabase
-        .from("base_resumes")
-        .update({ embedding: JSON.stringify(embedding) })
-        .eq("id", insertedResume.id);
+      if (embedding) {
+        await supabase
+          .from("base_resumes")
+          .update({ embedding: JSON.stringify(embedding) })
+          .eq("id", insertedResume.id);
+      }
     }
   } catch (e) {
     console.warn("[uploadResumeAction] Embedding failed, continuing without:", e);

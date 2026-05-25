@@ -185,19 +185,23 @@ export async function selectResumeEvidenceSemantic(
 
   try {
     const jdEmbedding = await embedText(jobDescription.slice(0, 4000));
+    if (!jdEmbedding) return selectTextEvidenceByOverlap(resumeText, jobDescription, topK);
 
     const sections = splitIntoSections(resumeText);
     if (sections.length === 0) return [resumeText.slice(0, 2000)];
 
-    const sectionEmbeddings: number[][] = [];
+    const sectionEmbeddings: (number[] | null)[] = [];
     for (const section of sections) {
       sectionEmbeddings.push(await embedText(section));
     }
 
-    const scored = sections.map((section, i) => ({
-      section,
-      score: cosineSimilarity(jdEmbedding, sectionEmbeddings[i]),
-    }));
+    const scored = sections
+      .map((section, i) => ({ section, emb: sectionEmbeddings[i] }))
+      .filter((x): x is { section: string; emb: number[] } => x.emb !== null)
+      .map(({ section, emb }) => ({
+        section,
+        score: cosineSimilarity(jdEmbedding, emb),
+      }));
 
     return scored
       .sort((a, b) => b.score - a.score)

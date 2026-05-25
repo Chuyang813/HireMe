@@ -28,12 +28,16 @@ async function embedTextWithModel(text: string, model: string): Promise<number[]
   return data.embedding.values as number[];
 }
 
-export async function embedText(text: string): Promise<number[]> {
+export async function embedText(text: string): Promise<number[] | null> {
+  if (!shouldUseSemanticEvidence()) return null;
   try {
     return await embedTextWithModel(text, 'text-embedding-005');
   } catch (e) {
-    console.warn('[embedText] text-embedding-005 failed, trying text-multilingual-embedding-002:', e);
-    return await embedTextWithModel(text, 'text-multilingual-embedding-002');
+    try {
+      return await embedTextWithModel(text, 'text-multilingual-embedding-002');
+    } catch {
+      return null;
+    }
   }
 }
 

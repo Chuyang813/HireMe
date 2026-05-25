@@ -149,7 +149,7 @@ async function main() {
     "embedText.deepseekEndpoint",
     async () => {
       const embedding = await embedText("DeepSeek embedding direct smoke");
-      return { dimensions: embedding.length };
+      return { dimensions: embedding?.length ?? 0 };
     },
     (value) => value.dimensions === 1536,
   );

@@ -8,16 +8,32 @@ export type GroundingWarning = {
 };
 
 const COMMON_ENTITY_TERMS = new Set([
-  "AI",
-  "API",
-  "APIs",
-  "Best",
-  "Cover Letter",
-  "Dear Hiring Manager",
-  "Email",
-  "Hiring Manager",
-  "Resume",
-  "Subject",
+  // Email/letter structure
+  "AI", "API", "APIs", "Best", "Cover Letter", "Dear Hiring Manager",
+  "Email", "Hiring Manager", "Resume", "Subject",
+  "Best Regards", "Kind Regards", "Warm Regards", "Many Thanks",
+  "Thank You", "Yours Sincerely", "Hiring Committee", "Recruitment Team",
+  "Dear", "Sincerely", "Regards",
+  // Generic professional adjectives / phrases (should never be "hallucinations")
+  "Professional", "Technical", "Strategic", "Analytical", "Creative",
+  "Experienced", "Skilled", "Excellent", "Outstanding", "Proven",
+  "Strong", "Dynamic", "Innovative", "Collaborative", "Dedicated",
+  "Passionate", "Motivated", "Proactive", "Versatile", "Adaptable",
+  "Results", "Performance", "Growth", "Impact", "Success",
+  "Development", "Management", "Leadership", "Communication",
+  "Team", "Teams", "Work", "Working", "Business", "Industry",
+  "Experience", "Knowledge", "Skills", "Ability", "Background",
+  "Track Record", "Cross-Functional", "Cross Functional",
+  // Education terms
+  "Bachelor", "Master", "Doctor", "PhD", "MBA", "Degree",
+  "Bachelor of Science", "Master of Science", "Bachelor of Arts",
+  "University", "College", "Institute", "School", "Academy",
+  // Common role words (verifiable only when combined with org name in source)
+  "Engineer", "Developer", "Manager", "Director", "Analyst",
+  "Coordinator", "Specialist", "Consultant", "Associate", "Lead",
+  "Senior", "Junior", "Staff", "Principal", "Head",
+  // Document meta
+  "Attachments", "References", "Portfolio", "LinkedIn",
 ]);
 
 const DOCUMENT_TYPES_TO_CHECK = new Set<DocumentType>([
@@ -178,6 +194,10 @@ function collectSourceTerms(resume: ParsedResume, job: ParsedJob | null) {
 
   add(resume.name);
   add(resume.summary);
+  add((resume.contact as Record<string, unknown> | undefined)?.email as string | undefined);
+  add((resume.contact as Record<string, unknown> | undefined)?.phone as string | undefined);
+  add((resume.contact as Record<string, unknown> | undefined)?.location as string | undefined);
+  add((resume.contact as Record<string, unknown> | undefined)?.address as string | undefined);
   resume.contact?.links?.forEach(add);
   resume.education?.forEach((item) => {
     add(item.school);
@@ -223,8 +243,16 @@ function extractPossibleEntities(content: string) {
   return candidates.filter((candidate) => {
     const trimmed = candidate.trim();
     if (COMMON_ENTITY_TERMS.has(trimmed)) return false;
-    if (/^(Dear|Best|Subject|Attachments|Sincerely)\b/.test(trimmed)) return false;
+    // Letter openers/closers
+    if (/^(Dear|Best|Subject|Attachments|Sincerely|Regards|Thank|Warm|Kind|Many)\b/.test(trimmed)) return false;
+    // All short words (abbreviations like "CA" etc.)
     if (trimmed.split(/\s+/).every((word) => word.length <= 2)) return false;
+    // Address patterns: street suffixes, suite/floor/unit, postal codes
+    if (/\b(Street|St\.|Avenue|Ave\.?|Boulevard|Blvd\.?|Road|Rd\.?|Drive|Dr\.?|Lane|Ln\.?|Suite|Ste\.?|Floor|Fl\.?|Building|Unit|Apt|Apartment|Highway|Hwy)\b/i.test(trimmed)) return false;
+    // Generic vague openers common in career summaries
+    if (/^(Strong|Proven|Excellent|Experienced|Skilled|Dynamic|Innovative|Passionate|Dedicated|Results-Driven|Detail-Oriented|Highly|Seeking|Looking|Committed|Ability|Proficient|Extensive|Comprehensive)\b/i.test(trimmed)) return false;
+    // Single-word contextual captures that are just common nouns/adjectives
+    if (!trimmed.includes(" ") && /^(Remote|Hybrid|Global|Local|Internal|External|New|Full|Part|On-site|Onsite|Online)\b/i.test(trimmed)) return false;
     return true;
   });
 }
