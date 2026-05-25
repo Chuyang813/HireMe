@@ -32,17 +32,17 @@ export default async function AppLayout({
 
   return (
     <div className="flex flex-1 flex-col">
-      <header className="border-b border-border bg-background/95">
-        <div className="mx-auto flex h-20 w-full max-w-7xl items-center justify-between px-6">
+      <header className="border-b border-border bg-background">
+        <div className="mx-auto flex h-14 w-full max-w-7xl items-center justify-between px-6">
           <Link
             href={hasRequiredResume ? "/dashboard" : "/onboarding"}
-            className="font-display text-2xl leading-none"
+            className="font-display text-xl leading-none"
           >
             HireMe
           </Link>
 
           {hasRequiredResume ? (
-            <nav className="hidden h-full items-center gap-8 md:flex">
+            <nav className="hidden h-full items-center gap-6 md:flex">
               {navItems.map((n) => (
                 <AppNavLink key={n.href} href={n.href} label={n.label} />
               ))}
@@ -51,16 +51,16 @@ export default async function AppLayout({
             <div className="hidden md:block" />
           )}
 
-          <div className="flex items-center gap-4 text-sm">
+          <div className="flex items-center gap-3 text-sm">
             <LanguageSwitcher />
-            <div className="hidden h-8 w-px bg-border sm:block" />
-            <span className="hidden max-w-56 truncate text-xs font-semibold uppercase tracking-wider text-muted-foreground sm:inline">
+            <div className="hidden h-5 w-px bg-border sm:block" />
+            <span className="hidden max-w-48 truncate text-xs text-muted-foreground sm:inline">
               {user.email}
             </span>
             <form action={signoutAction}>
               <button
                 type="submit"
-                className="rounded-md border border-border px-3 py-2 text-sm font-medium hover:bg-muted"
+                className="btn btn-secondary btn-sm"
               >
                 {t("signOut")}
               </button>

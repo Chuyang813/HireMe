@@ -19,14 +19,14 @@ const STATUS_LABEL_KEYS: Record<ApplicationStatus, string> = {
 };
 
 const STATUS_TONES: Record<ApplicationStatus, string> = {
-  saved: "border-slate-200 bg-slate-50 text-slate-700",
-  ready_to_apply: "border-blue-200 bg-blue-50 text-blue-700",
-  applied: "border-indigo-200 bg-indigo-50 text-indigo-700",
-  assessment: "border-amber-200 bg-amber-50 text-amber-800",
-  interview: "border-violet-200 bg-violet-50 text-violet-700",
-  rejected: "border-red-200 bg-red-50 text-red-700",
-  offer: "border-green-200 bg-green-50 text-green-700",
-  withdrawn: "border-zinc-200 bg-zinc-50 text-zinc-600",
+  saved: "border-border bg-muted text-muted-foreground",
+  ready_to_apply: "border-[var(--warning)] bg-[var(--warning-light)] text-[var(--warning)]",
+  applied: "border-[var(--accent)] bg-[var(--accent-light)] text-[var(--accent)]",
+  assessment: "border-[#7c3aed] bg-[#f3e8ff] text-[#7c3aed]",
+  interview: "border-[var(--warning)] bg-[var(--warning-light)] text-[var(--warning)]",
+  rejected: "border-[var(--danger)] bg-[var(--danger-light)] text-[var(--danger)]",
+  offer: "border-[var(--success)] bg-[var(--success-light)] text-[var(--success)]",
+  withdrawn: "border-border bg-muted text-muted-foreground",
 };
 
 export function StatusSelect({
@@ -65,8 +65,8 @@ export function StatusSelect({
         disabled={pending}
         aria-label={t(STATUS_LABEL_KEYS[selected])}
         className={[
-          "h-9 min-w-32 cursor-pointer appearance-none rounded-md border px-3 pr-8 text-sm font-medium shadow-sm outline-none transition-colors",
-          "hover:border-foreground/30 focus:border-foreground focus:ring-2 focus:ring-foreground/10",
+          "h-9 min-w-32 cursor-pointer appearance-none rounded-md border px-3 pr-8 text-[13px] font-medium outline-none transition-colors",
+          "hover:border-[var(--border-strong)] focus:border-[var(--border-strong)] focus:ring-2 focus:ring-[var(--accent)]/10",
           STATUS_TONES[selected],
           className,
         ].join(" ")}

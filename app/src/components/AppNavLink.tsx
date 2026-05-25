@@ -11,13 +11,15 @@ export function AppNavLink({ href, label }: { href: string; label: string }) {
     <Link
       href={href}
       className={[
-        "relative flex h-16 items-center px-2 text-sm font-medium transition-colors",
-        active ? "text-foreground" : "text-muted-foreground hover:text-foreground",
+        "relative flex h-14 items-center px-2 text-sm transition-colors",
+        active
+          ? "font-medium text-[var(--accent)]"
+          : "font-normal text-muted-foreground hover:text-foreground",
       ].join(" ")}
     >
       {label}
       {active && (
-        <span className="absolute inset-x-1 bottom-0 h-px bg-foreground" />
+        <span className="absolute inset-x-1 bottom-0 h-px bg-[var(--accent)]" />
       )}
     </Link>
   );

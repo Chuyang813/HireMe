@@ -16,7 +16,7 @@ interface Props {
 }
 
 function inputClass(extra?: string) {
-  return `rounded-sm border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-accent ${extra ?? ""}`;
+  return `rounded-md border border-border bg-background px-3 h-9 text-sm focus:outline-none focus:border-[var(--border-strong)] focus:ring-2 focus:ring-[var(--accent)]/10 ${extra ?? ""}`;
 }
 
 function labelClass() {
@@ -50,7 +50,7 @@ export function SettingsClient({ user, profile }: Props) {
   return (
     <div className="mt-10 flex flex-col gap-8">
       {/* ── Profile ─────────────────────────────────────────── */}
-      <section className="rounded-sm border border-border p-6">
+      <section className="rounded-md border border-border p-6">
         <h2 className="label-caps mb-5">{t("profileHeading")}</h2>
         <div className="mb-6 flex items-center gap-4">
           <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full border border-border bg-muted font-display text-xl">
@@ -82,7 +82,7 @@ export function SettingsClient({ user, profile }: Props) {
               type="email"
               value={user.email}
               readOnly
-              className="w-full rounded-sm border border-border bg-muted px-3 py-2 text-sm text-muted-foreground"
+              className="w-full rounded-md border border-border bg-muted px-3 h-9 text-sm text-muted-foreground"
             />
           </div>
           {profileState?.error && (
@@ -95,7 +95,7 @@ export function SettingsClient({ user, profile }: Props) {
             <button
               type="submit"
               disabled={profilePending}
-              className="rounded-sm bg-accent px-4 py-1.5 text-sm font-medium text-accent-foreground hover:opacity-90 disabled:opacity-50"
+              className="btn btn-primary"
             >
               {profilePending ? t("saving") : t("saveProfile")}
             </button>
@@ -104,7 +104,7 @@ export function SettingsClient({ user, profile }: Props) {
       </section>
 
       {/* ── Language ─────────────────────────────────────────── */}
-      <section className="rounded-sm border border-border p-6">
+      <section className="rounded-md border border-border p-6">
         <h2 className="label-caps mb-4">{t("languageHeading")}</h2>
         <div className="flex items-center gap-3">
           <span className="text-sm text-muted-foreground">{t("languageSub")}</span>
@@ -113,7 +113,7 @@ export function SettingsClient({ user, profile }: Props) {
       </section>
 
       {/* ── Change Password ──────────────────────────────────── */}
-      <section className="rounded-sm border border-border p-6">
+      <section className="rounded-md border border-border p-6">
         <h2 className="label-caps mb-5">{t("passwordHeading")}</h2>
         <form action={passwordAction} className="flex flex-col gap-4">
           <div className="flex flex-col gap-1.5">
@@ -165,7 +165,7 @@ export function SettingsClient({ user, profile }: Props) {
             <button
               type="submit"
               disabled={passwordPending}
-              className="rounded-sm bg-accent px-4 py-1.5 text-sm font-medium text-accent-foreground hover:opacity-90 disabled:opacity-50"
+              className="btn btn-primary"
             >
               {passwordPending ? t("saving") : t("savePassword")}
             </button>
@@ -174,7 +174,7 @@ export function SettingsClient({ user, profile }: Props) {
       </section>
 
       {/* ── Danger Zone ──────────────────────────────────────── */}
-      <section className="rounded-sm border border-danger/30 p-6">
+      <section className="rounded-md border border-[var(--danger)]/30 p-6">
         <h2 className="label-caps mb-3 text-danger">{t("dangerHeading")}</h2>
         <p className="mb-5 text-sm text-muted-foreground">{t("deleteWarning")}</p>
         <form action={deleteAction} className="flex flex-col gap-4">
@@ -188,7 +188,7 @@ export function SettingsClient({ user, profile }: Props) {
               type="text"
               placeholder="DELETE"
               required
-              className="w-full rounded-sm border border-danger/40 bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-danger"
+              className="w-full rounded-md border border-[var(--danger)] bg-background px-3 h-9 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--danger)]/20"
             />
           </div>
           {deleteState?.error && (
@@ -198,7 +198,7 @@ export function SettingsClient({ user, profile }: Props) {
             <button
               type="submit"
               disabled={deletePending}
-              className="rounded-sm border border-danger bg-danger px-4 py-1.5 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
+              className="btn btn-danger"
             >
               {deletePending ? t("deleting") : t("deleteAccount")}
             </button>

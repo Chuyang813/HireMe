@@ -64,20 +64,20 @@ function getFitLabel({
   if (ratio >= 0.65) {
     return {
       labelKey: "fitGood",
-      className: "border-green-200 bg-green-50 text-green-800",
+      className: "border-[var(--success)] bg-[var(--success-light)] text-[var(--success)]",
     };
   }
 
   if (ratio >= 0.3) {
     return {
       labelKey: "fitModerate",
-      className: "border-yellow-200 bg-yellow-50 text-yellow-800",
+      className: "border-[var(--warning)] bg-[var(--warning-light)] text-[var(--warning)]",
     };
   }
 
   return {
     labelKey: "fitLow",
-    className: "border-red-200 bg-red-50 text-red-700",
+    className: "border-[var(--danger)] bg-[var(--danger-light)] text-[var(--danger)]",
   };
 }
 
@@ -94,7 +94,7 @@ export async function JobAnalysisCard({
   const fit = getFitLabel({ keySkills, resume });
 
   return (
-    <div className="flex items-start gap-5 rounded-md border border-border bg-muted/40 p-5 shadow-sm">
+    <div className="flex items-start gap-5 rounded-md border border-border bg-[var(--muted)] p-5">
       <div className="shrink-0">
         <div
           className={`flex min-h-16 w-24 items-center justify-center rounded-md border px-3 text-center text-sm font-semibold leading-tight ${fit.className}`}
@@ -109,7 +109,7 @@ export async function JobAnalysisCard({
             {keySkills.map((s) => (
               <span
                 key={s}
-                className="rounded-full border border-green-200 bg-green-50 px-2.5 py-0.5 text-xs font-medium text-green-800"
+                className="rounded-md border border-border bg-background px-2 py-0.5 text-xs text-foreground"
               >
                 {s}
               </span>

@@ -32,7 +32,7 @@ export default async function ApplicationsPage() {
         <h1 className="font-display text-4xl leading-tight">{t("heading")}</h1>
         <Link
           href="/applications/new"
-          className="rounded-md bg-accent px-4 py-1.5 text-sm font-medium text-accent-foreground hover:opacity-90 shadow-sm"
+          className="inline-flex h-9 items-center rounded-md bg-accent px-4 text-[13px] font-medium text-accent-foreground hover:bg-[var(--accent-hover)]"
         >
           {t("newApplication")}
         </Link>

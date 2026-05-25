@@ -33,17 +33,6 @@ const STATUS_LABEL_KEY: Record<ApplicationStatus, string> = {
   withdrawn: "statusWithdrawn",
 };
 
-const STATUS_BADGE_CLASS: Record<ApplicationStatus, string> = {
-  saved: "bg-slate-100 text-slate-600",
-  ready_to_apply: "bg-orange-50 text-orange-600",
-  applied: "bg-green-50 text-green-700",
-  assessment: "bg-amber-50 text-amber-700",
-  interview: "bg-blue-50 text-blue-700",
-  rejected: "bg-red-50 text-red-700",
-  offer: "bg-emerald-50 text-emerald-700",
-  withdrawn: "bg-zinc-100 text-zinc-600",
-};
-
 type TimelineEventWithApp = ApplicationTimelineEvent & {
   job_applications: { role_title: string | null; company_name: string | null } | null;
 };
@@ -70,15 +59,15 @@ function StatCard({
   icon: React.ReactNode;
 }) {
   return (
-    <div className="min-h-36 rounded-lg border border-border bg-background p-5 shadow-sm">
+    <div className="rounded-md border border-border bg-background p-5">
       <div className="flex items-start justify-between gap-4">
         <p className="font-display text-4xl leading-none">{value}</p>
-        <span className="flex h-9 w-9 items-center justify-center rounded-full bg-muted text-muted-foreground">
+        <span className="flex h-8 w-8 items-center justify-center rounded-md bg-muted text-muted-foreground">
           {icon}
         </span>
       </div>
-      <p className="label-caps mt-5 text-foreground">{label}</p>
-      <p className="mt-1 text-sm text-muted-foreground">{sub}</p>
+      <p className="label-caps mt-4 text-foreground">{label}</p>
+      <p className="mt-0.5 text-xs text-muted-foreground">{sub}</p>
     </div>
   );
 }
@@ -90,11 +79,9 @@ function EventBadge({
   status: ApplicationStatus | null;
   label: string;
 }) {
-  const className = status ? STATUS_BADGE_CLASS[status] : STATUS_BADGE_CLASS.saved;
+  const statusClass = status ? `badge-${status}` : "badge-saved";
   return (
-    <span className={`rounded-full px-4 py-1 text-xs font-medium ${className}`}>
-      {label}
-    </span>
+    <span className={`badge ${statusClass}`}>{label}</span>
   );
 }
 
@@ -293,7 +280,7 @@ export default async function DashboardPage() {
 
         <Link
           href="/applications/new"
-          className="mt-16 hidden h-12 items-center gap-2 rounded-md bg-foreground px-5 text-sm font-semibold text-background shadow-sm transition-opacity hover:opacity-90 sm:inline-flex"
+          className="mt-10 hidden items-center gap-2 rounded-md bg-accent px-4 py-2 text-[13px] font-medium text-accent-foreground hover:bg-[var(--accent-hover)] sm:inline-flex"
         >
           <span className="text-lg leading-none">+</span>
           {t("newApplication")}
@@ -312,7 +299,7 @@ export default async function DashboardPage() {
       <section className="mt-14 grid grid-cols-1 gap-6 lg:grid-cols-[0.95fr_1.05fr]">
         <div>
           <p className="label-caps mb-4">{t("nextActionLabel")}</p>
-          <div className="flex min-h-80 flex-col justify-between rounded-lg border border-border bg-background p-7 shadow-sm">
+          <div className="flex min-h-72 flex-col justify-between rounded-md border border-border bg-background p-6">
             <div className="flex items-start gap-6">
               <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
                 <SmallIcon kind="briefcase" />
@@ -333,7 +320,7 @@ export default async function DashboardPage() {
             <div className="mt-10 flex justify-end">
               <Link
                 href={nextActionApp ? `/applications/${nextActionApp.id}` : "/applications/new"}
-                className="inline-flex h-12 min-w-40 items-center justify-center gap-3 rounded-md border border-border px-5 text-sm font-medium shadow-sm transition-colors hover:bg-muted"
+                className="inline-flex h-9 min-w-36 items-center justify-center gap-2 rounded-md border border-border px-4 text-[13px] font-medium transition-colors hover:bg-[var(--bg-hover)]"
               >
                 {nextActionApp ? t("prepareNow") : t("addApplication")}
                 <span aria-hidden="true">-&gt;</span>
@@ -349,7 +336,7 @@ export default async function DashboardPage() {
               {t("viewAll")}
             </Link>
           </div>
-          <div className="rounded-lg border border-border bg-background px-5 py-3 shadow-sm">
+          <div className="rounded-md border border-border bg-background px-5 py-3">
             {events.length === 0 ? (
               <p className="py-8 text-sm text-muted-foreground">{t("noActivity")}</p>
             ) : (

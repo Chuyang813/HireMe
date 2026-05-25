@@ -43,7 +43,7 @@ export default async function ResumesPage({
           </div>
         )}
 
-        <div className="rounded-md border border-border bg-white p-10 shadow-sm text-center">
+        <div className="rounded-md border border-border bg-white p-10 text-center">
           <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-muted">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-muted-foreground">
               <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
@@ -119,7 +119,7 @@ export default async function ResumesPage({
                         <input type="hidden" name="id" value={r.id} />
                         <button
                           type="submit"
-                          className="rounded-sm border border-border px-3 py-1.5 text-xs hover:bg-muted"
+                          className="btn btn-secondary btn-sm"
                         >
                           {t("setDefault")}
                         </button>
@@ -129,7 +129,7 @@ export default async function ResumesPage({
                       <input type="hidden" name="id" value={r.id} />
                       <button
                         type="submit"
-                        className="rounded-sm border border-border px-3 py-1.5 text-xs text-danger hover:bg-muted"
+                        className="btn btn-danger btn-sm"
                       >
                         {t("delete")}
                       </button>

@@ -43,7 +43,7 @@ function StatCard({
   sub?: string;
 }) {
   return (
-    <div className="rounded-sm border border-border bg-background p-5">
+    <div className="rounded-md border border-border bg-background p-5">
       <p className="label-caps text-muted-foreground">{label}</p>
       <p className="mt-1 font-display text-4xl">{value}</p>
       {sub && <p className="mt-0.5 text-xs text-muted-foreground">{sub}</p>}
@@ -313,21 +313,21 @@ export default async function InsightsPage() {
       <div className="mt-10 grid gap-8 lg:grid-cols-2">
         <section>
           <h2 className="label-caps mb-4">{t("funnelHeading")}</h2>
-          <div className="rounded-sm border border-border bg-background p-5">
+          <div className="rounded-md border border-border bg-background p-5">
             <FunnelChart counts={statusCounts} />
           </div>
         </section>
 
         <section>
           <h2 className="label-caps mb-4">{t("statusBreakdownHeading")}</h2>
-          <div className="rounded-sm border border-border bg-background p-5">
+          <div className="rounded-md border border-border bg-background p-5">
             <StatusBreakdown counts={statusCounts} total={total} noDataLabel={t("noData")} />
           </div>
         </section>
 
         <section className="lg:col-span-2">
           <h2 className="label-caps mb-4">{t("overTimeHeading")}</h2>
-          <div className="rounded-sm border border-border bg-background p-5">
+          <div className="rounded-md border border-border bg-background p-5">
             {weeklyData.length === 0 ? (
               <p className="text-sm text-muted-foreground">{t("noApps")}</p>
             ) : (
@@ -338,7 +338,7 @@ export default async function InsightsPage() {
 
         <section>
           <h2 className="label-caps mb-4">{t("topCompaniesHeading")}</h2>
-          <div className="rounded-sm border border-border bg-background p-5">
+          <div className="rounded-md border border-border bg-background p-5">
             {topCompanies.length === 0 ? (
               <p className="text-sm text-muted-foreground">{t("noData")}</p>
             ) : (

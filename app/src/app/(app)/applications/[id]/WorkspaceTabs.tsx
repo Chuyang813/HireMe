@@ -311,7 +311,7 @@ function MarkdownViewer({ content, isStreaming }: { content: string; isStreaming
   flushList();
 
   return (
-    <div className={`rounded-md border border-border bg-white p-6 min-h-[28rem] shadow-sm${isStreaming ? ' streaming' : ''}`}>
+    <div className={`rounded-md border border-border bg-white p-6 min-h-[28rem]${isStreaming ? ' streaming' : ''}`}>
       {nodes}
     </div>
   );
@@ -789,7 +789,7 @@ function DocumentPanel({
           <select
             value={style}
             onChange={(e) => setStyle(e.target.value)}
-            className="rounded-md border border-border bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-accent"
+            className="select-input w-auto"
           >
             {styleOptions.map((s) => (
               <option key={s.value} value={s.value}>
@@ -1366,7 +1366,7 @@ export function WorkspaceTabs({
   const activeLabel = t(TABS.find((tab) => tab.id === activeTab)?.labelKey ?? "tabResume");
 
   return (
-    <div className="overflow-hidden rounded-lg border border-border bg-background shadow-sm">
+    <div className="overflow-hidden rounded-md border border-border bg-background">
       <div className="flex flex-wrap items-center justify-between gap-4 border-b border-border px-6 py-5">
         <div className="min-w-0">
           <p className="font-display text-2xl leading-tight">
@@ -1377,15 +1377,13 @@ export function WorkspaceTabs({
           </p>
         </div>
         {statusLabel ? (
-          <span className="rounded-full bg-slate-100 px-4 py-1.5 text-sm font-medium text-slate-700">
-            {statusLabel}
-          </span>
+          <span className="badge badge-saved">{statusLabel}</span>
         ) : null}
       </div>
 
       <div className="grid min-h-[40rem] grid-cols-1 lg:grid-cols-[15.5rem_1fr]">
-        <nav className="border-b border-border bg-muted/25 p-4 lg:border-b-0 lg:border-r">
-          <div className="flex gap-2 overflow-x-auto lg:flex-col lg:overflow-visible">
+        <nav className="border-b border-border bg-[var(--muted)] p-3 lg:border-b-0 lg:border-r">
+          <div className="flex gap-1 overflow-x-auto lg:flex-col lg:overflow-visible">
             {TABS.map((tab) => {
               const isActive = activeTab === tab.id;
               const isDone = tab.docType ? documentStatus[tab.docType] : false;
@@ -1395,10 +1393,10 @@ export function WorkspaceTabs({
                   type="button"
                   onClick={() => setActiveTab(tab.id)}
                   className={[
-                    "group flex min-w-fit items-center gap-3 rounded-md px-4 py-3 text-left text-sm transition-colors",
+                    "group flex min-w-fit items-center gap-3 rounded-md px-3 py-2.5 text-left text-sm transition-colors",
                     isActive
-                      ? "bg-background text-foreground shadow-sm ring-1 ring-border"
-                      : "text-muted-foreground hover:bg-background/70 hover:text-foreground",
+                      ? "bg-background text-foreground font-medium"
+                      : "text-muted-foreground hover:bg-[var(--bg-hover)] hover:text-foreground",
                   ].join(" ")}
                   aria-current={isActive ? "page" : undefined}
                 >

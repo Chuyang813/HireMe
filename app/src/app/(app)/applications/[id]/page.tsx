@@ -224,11 +224,11 @@ export default async function ApplicationPage({
       </div>
 
       {isStaleSaved && (
-        <div className="mb-6 flex items-start gap-3 rounded-md border border-yellow-300 bg-yellow-50 px-4 py-3">
-          <span className="mt-0.5 shrink-0 text-yellow-500">⚠</span>
-          <p className="text-sm text-yellow-800">
+        <div className="mb-6 flex items-start gap-3 rounded-md border border-[var(--warning)] bg-[var(--warning-light)] px-4 py-3">
+          <span className="mt-0.5 shrink-0 text-[var(--warning)]">⚠</span>
+          <p className="text-sm text-amber-900">
             <strong>{t("detailStaleReminder")}</strong> {t("detailStaleBody")}{" "}
-            <span className="text-yellow-700 opacity-75">
+            <span className="opacity-75">
               {t("detailStaleHint")}
             </span>
           </p>

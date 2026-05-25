@@ -148,7 +148,7 @@ export function ApplicationsView({
             </p>
             <Link
               href="/applications/new"
-              className="mt-6 inline-flex h-10 items-center justify-center rounded-md bg-accent px-5 text-sm font-medium text-accent-foreground hover:opacity-90 shadow-sm"
+              className="mt-6 inline-flex h-9 items-center justify-center rounded-md bg-accent px-5 text-[13px] font-medium text-accent-foreground hover:bg-[var(--accent-hover)]"
             >
               {t("addApplication")}
             </Link>
@@ -159,7 +159,7 @@ export function ApplicationsView({
               <li key={app.id} className="relative">
                 <Link
                   href={`/applications/${app.id}`}
-                  className="block rounded-md border border-border bg-white p-5 transition-colors hover:border-accent/50 shadow-sm"
+                  className="block rounded-md border border-border bg-white p-5 transition-colors hover:border-[var(--border-strong)] hover:bg-[var(--muted)]"
                 >
                   <div className="flex items-baseline justify-between gap-4">
                     <div>
@@ -174,14 +174,14 @@ export function ApplicationsView({
                     <div className="flex items-center gap-2 shrink-0">
                       {isStale(app) && (
                         <span
-                          className="inline-flex items-center gap-1 rounded-full bg-yellow-100 px-2 py-0.5 text-[10px] font-medium text-yellow-700"
+                          className="inline-flex items-center gap-1 rounded-full bg-[var(--warning-light)] px-2 py-0.5 text-[10px] font-medium text-[var(--warning)]"
                           title={t("staleTooltip")}
                         >
-                          <span className="h-1.5 w-1.5 rounded-full bg-yellow-400" />
+                          <span className="h-1.5 w-1.5 rounded-full bg-[var(--warning)]" />
                           {t("staleUpdateStatus")}
                         </span>
                       )}
-                      <span className="label-caps whitespace-nowrap rounded-md border border-border px-1.5 py-0.5">
+                      <span className={`badge badge-${app.current_status}`}>
                         {t(
                           STATUS_LABEL_KEYS[
                             app.current_status
@@ -205,7 +205,7 @@ export function ApplicationsView({
         ) : (
           <>
             <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-5">
-              <div className="rounded-md border border-border bg-white p-4 shadow-sm">
+              <div className="rounded-md border border-border bg-white p-4">
                 <p className="label-caps text-muted-foreground">
                   {t("active")}
                 </p>
@@ -214,7 +214,7 @@ export function ApplicationsView({
               {PIPELINE_STATS.map((s) => (
                 <div
                   key={s}
-                  className="rounded-md border border-border bg-white p-4 shadow-sm"
+                  className="rounded-md border border-border bg-white p-4"
                 >
                   <p className="label-caps text-muted-foreground">
                     {t(STATUS_LABEL_KEYS[s] as Parameters<typeof t>[0])}
@@ -226,7 +226,7 @@ export function ApplicationsView({
               ))}
             </div>
 
-            <div className="overflow-x-auto rounded-md border border-border shadow-sm">
+            <div className="overflow-x-auto rounded-md border border-border">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-border bg-muted/40">
@@ -263,10 +263,10 @@ export function ApplicationsView({
                           </Link>
                           {isStale(app) && (
                             <span
-                              className="inline-flex items-center gap-1 rounded-full bg-yellow-100 px-2 py-0.5 text-[10px] font-medium text-yellow-700"
+                              className="inline-flex items-center gap-1 rounded-full bg-[var(--warning-light)] px-2 py-0.5 text-[10px] font-medium text-[var(--warning)]"
                               title={t("staleTooltip")}
                             >
-                              <span className="h-1.5 w-1.5 rounded-full bg-yellow-400" />
+                              <span className="h-1.5 w-1.5 rounded-full bg-[var(--warning)]" />
                               {t("staleUpdateStatus")}
                             </span>
                           )}
@@ -294,7 +294,7 @@ export function ApplicationsView({
                         <div className="flex items-center gap-2">
                           <Link
                             href={`/applications/${app.id}`}
-                            className="inline-flex h-8 items-center rounded-md border border-border px-2.5 text-xs font-medium hover:bg-muted"
+                            className="inline-flex h-8 items-center rounded-md border border-border px-2.5 text-xs font-medium hover:bg-[var(--bg-hover)]"
                           >
                             →
                           </Link>
