@@ -635,11 +635,13 @@ export async function aiText({
   messages,
   model = DEFAULT_MODEL,
   maxTokens = 4096,
+  thinkingMode,
 }: {
   system: string;
   messages: AiTextMessage[];
   model?: string;
   maxTokens?: number;
+  thinkingMode?: "enabled" | "disabled";
 }): Promise<string> {
   let lastError: Error | null = null;
 
@@ -652,7 +654,7 @@ export async function aiText({
           model: candidate.model,
           maxTokens,
           responseMimeType: "text/plain",
-          thinkingMode: getDeepSeekTextThinkingMode(),
+          thinkingMode: thinkingMode ?? getDeepSeekTextThinkingMode(),
         });
       }
 

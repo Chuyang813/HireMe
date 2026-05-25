@@ -12,6 +12,7 @@ import { getClientIpFromHeaders } from "@/lib/security/request";
 import type { DocumentType, ParsedJob, ParsedResume } from "@/lib/db/types";
 
 const AI_TIMEOUT_MS = 115_000;
+const DEEPSEEK_CHAT_MODEL = "deepseek-chat";
 
 function docTypeToPromptType(dt: DocumentType): PromptType {
   if (dt === 'tailored_resume') return 'resume-tailor';
@@ -21,8 +22,22 @@ function docTypeToPromptType(dt: DocumentType): PromptType {
   return 'resume-tailor';
 }
 
-function auditNote(promptType: PromptType) {
-  return `provider=${AI_PROVIDER} model=${DEFAULT_MODEL} prompt_type=${promptType} prompt_version=${PROMPT_VERSIONS[promptType]}`;
+function auditNote(promptType: PromptType, model: string = DEFAULT_MODEL) {
+  return `provider=${AI_PROVIDER} model=${model} prompt_type=${promptType} prompt_version=${PROMPT_VERSIONS[promptType]}`;
+}
+
+function getDocTypeAiOptions(dt: DocumentType): {
+  model?: string;
+  thinkingMode?: "enabled" | "disabled";
+} {
+  if (dt === "cover_letter" || dt === "email_draft") {
+    return { model: DEEPSEEK_CHAT_MODEL, thinkingMode: "disabled" };
+  }
+  if (dt === "interview_prep") {
+    return { thinkingMode: "disabled" };
+  }
+  // tailored_resume: use default model, thinking follows env
+  return {};
 }
 
 // ---------------------------------------------------------------------------
@@ -188,7 +203,7 @@ async function buildPrompt(
   if (documentType === "email_draft") {
     return {
       system: `${EMAIL_SYSTEM}\n\nToday's date is ${today}. Use this date if the email requires a date.`,
-      maxTokens: 900,
+      maxTokens: 512,
       userMessage: [
         `Candidate parsed resume (JSON):\n${resumeJson}`,
         `Parsed job posting (JSON):\n${jobJson}`,
@@ -307,13 +322,18 @@ export async function POST(req: NextRequest) {
         controller.close();
       }, AI_TIMEOUT_MS);
 
+      const aiOptions = getDocTypeAiOptions(documentType);
+      const usedModel = aiOptions.model ?? DEFAULT_MODEL;
+
       try {
-        console.log(`[generate-document] Starting ${AI_PROVIDER} generation for ${documentType}`);
+        console.log(`[generate-document] Starting ${AI_PROVIDER}:${usedModel} generation for ${documentType} (thinking=${aiOptions.thinkingMode ?? "env-default"})`);
         const aiStartedAt = Date.now();
         const content = await aiText({
           system: prompt.system,
           messages: [{ role: "user", content: prompt.userMessage }],
           maxTokens: prompt.maxTokens,
+          model: aiOptions.model,
+          thinkingMode: aiOptions.thinkingMode,
         });
 
         controller.enqueue(encoder.encode(content));
@@ -326,7 +346,7 @@ export async function POST(req: NextRequest) {
           application_id: applicationId,
           event_type: "document_generation_stream",
           provider: AI_PROVIDER,
-          model: DEFAULT_MODEL,
+          model: usedModel,
           prompt_type: pt,
           prompt_version: PROMPT_VERSIONS[pt],
           document_type: documentType,
@@ -339,7 +359,7 @@ export async function POST(req: NextRequest) {
           user_id: user.id,
           event_type: "document_generated",
           new_value: documentType,
-          note: auditNote(pt),
+          note: auditNote(pt, usedModel),
         });
       } catch (e) {
         clearTimeout(timer);
@@ -351,7 +371,7 @@ export async function POST(req: NextRequest) {
           application_id: applicationId,
           event_type: "document_generation_stream",
           provider: AI_PROVIDER,
-          model: DEFAULT_MODEL,
+          model: usedModel,
           prompt_type: pt,
           prompt_version: PROMPT_VERSIONS[pt],
           document_type: documentType,
