@@ -147,6 +147,7 @@ async function buildPrompt(
   rawJobText?: string | null,
   style?: string,
 ): Promise<{ system: string; userMessage: string; maxTokens: number } | null> {
+  const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
   const resumeJson = JSON.stringify(resume, null, 2);
   const jobJson = JSON.stringify(job, null, 2);
   const matchedEvidence = (
@@ -157,7 +158,7 @@ async function buildPrompt(
     const styleKey = style && style in RESUME_STYLE_INSTRUCTIONS ? style : 'professional';
     const styleInstruction = RESUME_STYLE_INSTRUCTIONS[styleKey];
     return {
-      system: `${RESUME_SYSTEM}\n\nStyle instruction: ${styleInstruction}`,
+      system: `${RESUME_SYSTEM}\n\nToday's date is ${today}. Use this date if the document requires a date.\n\nStyle instruction: ${styleInstruction}`,
       maxTokens: 4096,
       userMessage: [
         `Candidate parsed resume (JSON):\n${resumeJson}`,
@@ -171,8 +172,9 @@ async function buildPrompt(
   if (documentType === "cover_letter") {
     const styleKey = style && style in COVER_LETTER_STYLE_INSTRUCTIONS ? style : 'professional';
     const styleInstruction = COVER_LETTER_STYLE_INSTRUCTIONS[styleKey];
+    const coverLetterSystem = COVER_LETTER_SYSTEM.replace('[Today\'s date]', today);
     return {
-      system: `${COVER_LETTER_SYSTEM}\n\nStyle instruction: ${styleInstruction}`,
+      system: `${coverLetterSystem}\n\nToday's date is ${today}. Always use this exact date in the document header.\n\nStyle instruction: ${styleInstruction}`,
       maxTokens: 1024,
       userMessage: [
         `Candidate parsed resume (JSON):\n${resumeJson}`,
@@ -185,7 +187,7 @@ async function buildPrompt(
 
   if (documentType === "email_draft") {
     return {
-      system: EMAIL_SYSTEM,
+      system: `${EMAIL_SYSTEM}\n\nToday's date is ${today}. Use this date if the email requires a date.`,
       maxTokens: 900,
       userMessage: [
         `Candidate parsed resume (JSON):\n${resumeJson}`,
@@ -199,7 +201,7 @@ async function buildPrompt(
 
   if (documentType === "interview_prep") {
     return {
-      system: INTERVIEW_PREP_SYSTEM,
+      system: `${INTERVIEW_PREP_SYSTEM}\n\nToday's date is ${today}.`,
       maxTokens: 1800,
       userMessage: [
         `Candidate parsed resume (JSON):\n${resumeJson}`,
