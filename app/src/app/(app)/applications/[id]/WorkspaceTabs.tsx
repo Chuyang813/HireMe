@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useEffect } from "react";
 import { useTranslations } from "next-intl";
 import {
   saveDocumentAction,
@@ -1348,7 +1348,19 @@ export function WorkspaceTabs({
   statusLabel?: string;
 }) {
   const t = useTranslations("Workspace");
-  const [activeTab, setActiveTab] = useState<TabId>("resume");
+  const [activeTab, setActiveTabState] = useState<TabId>("resume");
+
+  useEffect(() => {
+    const saved = sessionStorage.getItem(`workspace-tab-${applicationId}`);
+    if (saved && TABS.some((t) => t.id === saved)) {
+      setActiveTabState(saved as TabId);
+    }
+  }, [applicationId]);
+
+  function setActiveTab(tab: TabId) {
+    sessionStorage.setItem(`workspace-tab-${applicationId}`, tab);
+    setActiveTabState(tab);
+  }
 
   const firstName = sanitizeName(userFirstName ?? "Resume");
   const company = sanitizeName(companyName ?? "Company");
