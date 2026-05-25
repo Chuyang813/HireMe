@@ -1,5 +1,4 @@
 import mammoth from "mammoth";
-import { aiExtractPdfText } from "@/lib/ai/provider";
 
 export type ExtractedResume = {
   rawText: string;
@@ -30,27 +29,7 @@ export async function extractTextFromUpload(
 
   if (isPdf) {
     console.log(`[resume-text] PDF size: ${buffer.length} bytes`);
-    const hasGeminiKey = Boolean(process.env.GEMINI_API_KEY);
-
-    // Primary: Gemini PDF understanding
-    if (hasGeminiKey) {
-      try {
-        const text = (await aiExtractPdfText(buffer)).trim();
-        if (text.length > 50) {
-          return { rawText: text, sourceType: "pdf" };
-        }
-        console.warn("[resume-text] Gemini returned short text, falling back to unpdf");
-      } catch (err) {
-        console.error(
-          "[resume-text] Gemini PDF extraction failed, falling back to unpdf:",
-          err,
-        );
-      }
-    } else {
-      console.warn("[resume-text] GEMINI_API_KEY not set; using unpdf fallback only.");
-    }
-
-    // Fallback: unpdf — serverless-friendly PDF text extraction (no native deps).
+    // Serverless-friendly PDF text extraction (no native deps). AI parsing happens after this step through DeepSeek.
     try {
       const { extractText, getDocumentProxy } = await import("unpdf");
       const uint8 = new Uint8Array(

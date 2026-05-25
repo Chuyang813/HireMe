@@ -1,9 +1,11 @@
 const DEEPSEEK_EMBEDDING_MODEL =
   process.env.DEEPSEEK_EMBEDDING_MODEL || "deepseek-embedding";
-const GEMINI_EMBEDDING_MODEL = "text-embedding-004";
+const DEEPSEEK_CHAT_EMBEDDING_FALLBACK_MODEL =
+  process.env.DEEPSEEK_CHAT_EMBEDDING_FALLBACK_MODEL || "deepseek-v4-flash";
 const DEEPSEEK_EMBEDDING_DIMENSIONS = 1536;
 const DEEPSEEK_EMBEDDINGS_URL =
   process.env.DEEPSEEK_EMBEDDINGS_URL || "https://api.deepseek.com/embeddings";
+const DEEPSEEK_API_BASE = process.env.DEEPSEEK_API_BASE || "https://api.deepseek.com";
 const DEEPSEEK_EMBEDDING_COOLDOWN_MS = 10 * 60 * 1000;
 
 let deepSeekEmbeddingDisabledUntil = 0;
@@ -11,7 +13,7 @@ let deepSeekEmbeddingDisabledUntil = 0;
 export function shouldUseSemanticEvidence(): boolean {
   return (
     process.env.ENABLE_SEMANTIC_EVIDENCE !== "false" &&
-    Boolean(process.env.DEEPSEEK_API_KEY || process.env.GEMINI_API_KEY)
+    Boolean(process.env.DEEPSEEK_API_KEY)
   );
 }
 
@@ -25,7 +27,11 @@ function getDeepSeekApiKey(): string {
   return apiKey;
 }
 
-async function embedTextWithDeepSeek(text: string): Promise<number[]> {
+export async function embedText(text: string): Promise<number[]> {
+  if (Date.now() < deepSeekEmbeddingDisabledUntil) {
+    return embedTextWithDeepSeekSemanticHash(text);
+  }
+
   const res = await fetch(DEEPSEEK_EMBEDDINGS_URL, {
     method: 'POST',
     headers: {
@@ -40,7 +46,12 @@ async function embedTextWithDeepSeek(text: string): Promise<number[]> {
   });
   if (!res.ok) {
     const err = await res.text();
-    throw new Error(`DeepSeek Embedding error ${res.status}: ${err}`);
+    deepSeekEmbeddingDisabledUntil =
+      Date.now() + DEEPSEEK_EMBEDDING_COOLDOWN_MS;
+    console.warn(
+      `[embedText] DeepSeek embedding endpoint failed (${res.status}); using DeepSeek chat-derived vector fallback.`,
+    );
+    return embedTextWithDeepSeekSemanticHash(text, err);
   }
   const data = await res.json();
   const embedding = data.data?.[0]?.embedding;
@@ -56,66 +67,84 @@ async function embedTextWithDeepSeek(text: string): Promise<number[]> {
   return embedding as number[];
 }
 
-async function embedTextWithGemini(text: string): Promise<number[]> {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) {
-    throw new Error("GEMINI_API_KEY is not set.");
-  }
-
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_EMBEDDING_MODEL}:embedContent?key=${apiKey}`;
-  const res = await fetch(url, {
+async function embedTextWithDeepSeekSemanticHash(
+  text: string,
+  previousError?: string,
+): Promise<number[]> {
+  const res = await fetch(`${DEEPSEEK_API_BASE}/chat/completions`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${getDeepSeekApiKey()}`,
+    },
     body: JSON.stringify({
-      model: `models/${GEMINI_EMBEDDING_MODEL}`,
-      content: { parts: [{ text: text.slice(0, 8000) }] },
+      model: DEEPSEEK_CHAT_EMBEDDING_FALLBACK_MODEL,
+      messages: [
+        {
+          role: "system",
+          content:
+            "Extract compact semantic search terms from the text. Return only JSON with keys: topics, skills, actions, entities. Each value is an array of short lowercase strings.",
+        },
+        {
+          role: "user",
+          content: text.slice(0, 8000),
+        },
+      ],
+      max_tokens: 700,
+      thinking: { type: "disabled" },
+      response_format: { type: "json_object" },
     }),
   });
 
+  const bodyText = await res.text();
   if (!res.ok) {
-    const err = await res.text();
-    throw new Error(`Gemini Embedding error ${res.status}: ${err}`);
+    throw new Error(
+      `DeepSeek semantic vector fallback error ${res.status}: ${bodyText || previousError || ""}`,
+    );
   }
 
-  const data = await res.json();
-  const embedding = data.embedding?.values;
-  if (!Array.isArray(embedding)) {
-    throw new Error("Gemini Embedding returned no vector.");
+  let signatureText = text;
+  try {
+    const data = JSON.parse(bodyText);
+    const content = data.choices?.[0]?.message?.content ?? "{}";
+    const signature = JSON.parse(content) as Record<string, unknown>;
+    signatureText = Object.values(signature)
+      .flatMap((value) => (Array.isArray(value) ? value : [value]))
+      .filter((value): value is string => typeof value === "string")
+      .join(" ");
+  } catch {
+    signatureText = bodyText || text;
   }
 
-  return padEmbedding(embedding as number[]);
+  return textToNormalizedVector(signatureText || text);
 }
 
-function padEmbedding(embedding: number[]): number[] {
-  if (embedding.length === DEEPSEEK_EMBEDDING_DIMENSIONS) return embedding;
-  if (embedding.length > DEEPSEEK_EMBEDDING_DIMENSIONS) {
-    return embedding.slice(0, DEEPSEEK_EMBEDDING_DIMENSIONS);
+function textToNormalizedVector(text: string): number[] {
+  const vector = Array(DEEPSEEK_EMBEDDING_DIMENSIONS).fill(0) as number[];
+  const tokens = text
+    .toLowerCase()
+    .replace(/[^a-z0-9+.#-]+/g, " ")
+    .split(/\s+/)
+    .filter((token) => token.length > 1);
+
+  for (const token of tokens) {
+    const hash = hashString(token);
+    const index = Math.abs(hash) % DEEPSEEK_EMBEDDING_DIMENSIONS;
+    vector[index] += hash < 0 ? -1 : 1;
   }
-  return [
-    ...embedding,
-    ...Array(DEEPSEEK_EMBEDDING_DIMENSIONS - embedding.length).fill(0),
-  ];
+
+  const norm = Math.sqrt(vector.reduce((sum, value) => sum + value * value, 0));
+  if (norm === 0) return vector;
+  return vector.map((value) => value / norm);
 }
 
-export async function embedText(text: string): Promise<number[]> {
-  if (
-    process.env.DEEPSEEK_API_KEY &&
-    Date.now() >= deepSeekEmbeddingDisabledUntil
-  ) {
-    try {
-      return await embedTextWithDeepSeek(text);
-    } catch (error) {
-      if (!process.env.GEMINI_API_KEY) throw error;
-      deepSeekEmbeddingDisabledUntil =
-        Date.now() + DEEPSEEK_EMBEDDING_COOLDOWN_MS;
-      console.warn(
-        "[embedText] DeepSeek embedding failed, using Gemini embedding padded to 1536 dimensions:",
-        error,
-      );
-    }
+function hashString(value: string): number {
+  let hash = 0x811c9dc5;
+  for (let i = 0; i < value.length; i++) {
+    hash ^= value.charCodeAt(i);
+    hash = Math.imul(hash, 0x01000193);
   }
-
-  return embedTextWithGemini(text);
+  return hash | 0;
 }
 
 export function cosineSimilarity(a: number[], b: number[]): number {

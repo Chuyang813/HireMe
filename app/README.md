@@ -24,8 +24,8 @@ The project is built as a full-stack TypeScript application with Next.js, Supaba
 | File storage | Supabase Storage |
 | AI providers | DeepSeek primary path, optional Gemini/GLM fallback, Anthropic backup helpers |
 | AI validation | Zod schemas, prompt versioning, model/provider audit notes |
-| Document parsing | Gemini PDF extraction, `unpdf` fallback, `mammoth` for DOCX |
-| Embeddings | DeepSeek `deepseek-embedding` primary path, Gemini padded fallback, 1536-dimensional pgvector columns |
+| Document parsing | `unpdf` for PDF text extraction, `mammoth` for DOCX, DeepSeek for parsed resume JSON |
+| Embeddings | DeepSeek `deepseek-embedding` primary path, DeepSeek chat-derived vector fallback, DeepSeek reranker fallback, 1536-dimensional pgvector columns |
 | Export | `docx`, `jspdf` |
 | Quality | ESLint, Playwright E2E |
 
@@ -41,11 +41,11 @@ The project is built as a full-stack TypeScript application with Next.js, Supaba
 ## AI Engineering Highlights
 
 - Provider abstraction: `src/lib/ai/provider.ts` centralizes DeepSeek, Gemini, and GLM generation paths with timeout handling, retryable failure handling, fallback chains, and response extraction.
-- Quality-first defaults: DeepSeek runs on `deepseek-v4-pro`, uses thinking for structured reasoning tasks, disables thinking for long-form document drafting so output budget goes to the actual document, then falls back to `deepseek-v4-flash` as the lower-cost backup path.
+- Quality-first defaults: DeepSeek runs on `deepseek-v4-pro`, disables thinking for JSON and long-form outputs so output budget goes to the response body, then falls back to `deepseek-v4-flash` as the lower-cost backup path.
 - Prompt traceability: generation events record `provider`, `model`, and `prompt_version` so output quality can be debugged later.
 - Structured output handling: parsing and scoring flows use Zod schemas to reduce runtime failures from malformed model JSON.
-- Upload resilience: PDF parsing first uses Gemini document understanding when configured, then falls back to `unpdf` for text-based PDFs.
-- Context engineering: document prompts include 1536-dimensional semantic evidence selection that matches resume experience, projects, skills, and certifications against job requirements. DeepSeek embeddings are attempted first; if that endpoint is unavailable, Gemini embeddings are padded to 1536 dimensions; lexical matching is the final fallback.
+- Upload resilience: PDF/DOCX/TXT text extraction is deterministic, then DeepSeek parses extracted text into structured resume JSON.
+- Context engineering: document prompts include 1536-dimensional semantic evidence selection that matches resume experience, projects, skills, and certifications against job requirements. DeepSeek embeddings are attempted first; if that endpoint is unavailable, a DeepSeek chat-derived vector is used; DeepSeek reranking and lexical matching remain fallbacks.
 - Safety-oriented prompts: resume and cover-letter prompts explicitly prohibit fabricated employers, schools, dates, titles, degrees, certifications, metrics, and accomplishments.
 - Post-generation grounding checks: saved generated documents are scanned for unsupported emails, links, metrics, dates, and named entities, with warnings persisted to document metadata and shown in the workspace.
 - AI observability: generation requests can be recorded in `ai_events` with provider, model, prompt version, document type, latency, success state, and redacted error summaries.
@@ -97,9 +97,11 @@ DEEPSEEK_API_KEY=
 AI_PROVIDER=deepseek
 DEEPSEEK_MODEL=deepseek-v4-pro
 DEEPSEEK_THINKING=enabled
+DEEPSEEK_JSON_THINKING=disabled
 DEEPSEEK_TEXT_THINKING=disabled
 DEEPSEEK_FALLBACK_MODELS=deepseek-v4-flash
 DEEPSEEK_EMBEDDING_MODEL=deepseek-embedding
+DEEPSEEK_CHAT_EMBEDDING_FALLBACK_MODEL=deepseek-v4-flash
 ENABLE_SEMANTIC_EVIDENCE=true
 NEXT_PUBLIC_APP_URL=http://localhost:3000
 ```

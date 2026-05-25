@@ -314,6 +314,10 @@ function getDeepSeekTextThinkingMode(): "enabled" | "disabled" {
   return process.env.DEEPSEEK_TEXT_THINKING === "enabled" ? "enabled" : "disabled";
 }
 
+function getDeepSeekJsonThinkingMode(): "enabled" | "disabled" {
+  return process.env.DEEPSEEK_JSON_THINKING === "enabled" ? "enabled" : "disabled";
+}
+
 async function generateDeepSeek({
   system,
   messages,
@@ -588,6 +592,7 @@ export async function aiJson<T>({
               model: candidate.model,
               maxTokens,
               responseMimeType: "application/json",
+              thinkingMode: getDeepSeekJsonThinkingMode(),
             })
           : candidate.provider === "glm"
           ? await generateGlm({

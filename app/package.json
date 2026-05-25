@@ -10,6 +10,7 @@
     "eval:ai": "node scripts/run-ai-evals.mjs",
     "eval:job-parser": "node scripts/run-ai-evals.mjs",
     "eval": "node scripts/run-ai-evals.mjs",
+    "smoke:deepseek": "npx tsx scripts/live-deepseek-smoke.ts",
     "test:unit": "vitest run",
     "test:e2e": "playwright test"
   },

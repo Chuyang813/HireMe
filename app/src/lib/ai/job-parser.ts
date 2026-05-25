@@ -44,10 +44,26 @@ export async function parseJobPosting(rawText: string): Promise<ParsedJob> {
     ],
     maxTokens: 2048,
   });
-  const validated = parsedJobSchema.safeParse(raw);
+  const validated = parsedJobSchema.safeParse(stripNulls(raw));
   if (!validated.success) {
     console.error("[parseJobPosting] Schema validation failed:", validated.error);
     return raw; // best-effort: return raw if schema doesn't match
   }
   return validated.data;
+}
+
+function stripNulls<T>(value: T): T {
+  if (Array.isArray(value)) {
+    return value.map(stripNulls) as T;
+  }
+
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value)
+        .filter(([, entry]) => entry !== null)
+        .map(([key, entry]) => [key, stripNulls(entry)]),
+    ) as T;
+  }
+
+  return value;
 }

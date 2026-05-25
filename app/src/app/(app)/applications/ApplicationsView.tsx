@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import type { JobApplication, ApplicationStatus } from "@/lib/db/types";
@@ -51,14 +51,11 @@ export function ApplicationsView({
   hasResume: boolean;
 }) {
   const t = useTranslations("Applications");
-  const [view, setView] = useState<View>("cards");
-
-  useEffect(() => {
+  const [view, setView] = useState<View>(() => {
+    if (typeof window === "undefined") return "cards";
     const stored = localStorage.getItem("applications-view");
-    if (stored === "cards" || stored === "table") {
-      setView(stored);
-    }
-  }, []);
+    return stored === "cards" || stored === "table" ? stored : "cards";
+  });
 
   function switchView(v: View) {
     setView(v);
