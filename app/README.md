@@ -40,11 +40,11 @@ The project is built as a full-stack TypeScript application with Next.js, Supaba
 ## AI Engineering Highlights
 
 - Provider abstraction: `src/lib/ai/provider.ts` centralizes DeepSeek, Gemini, and GLM generation paths with timeout handling, retryable failure handling, fallback chains, and response extraction.
-- Cost-aware defaults: DeepSeek runs on `deepseek-v4-flash` with thinking disabled unless explicitly overridden, keeping routine parsing and document drafting on the lower-cost path.
+- Quality-first defaults: DeepSeek runs on `deepseek-v4-pro` with thinking enabled, then falls back to `deepseek-v4-flash` as the lower-cost backup path.
 - Prompt traceability: generation events record `provider`, `model`, and `prompt_version` so output quality can be debugged later.
 - Structured output handling: parsing and scoring flows use Zod schemas to reduce runtime failures from malformed model JSON.
 - Upload resilience: PDF parsing first uses Gemini document understanding when configured, then falls back to `unpdf` for text-based PDFs.
-- Context engineering: document prompts include a deterministic evidence-selection step that matches resume experience, projects, skills, and certifications against job requirements.
+- Context engineering: document prompts include a semantic evidence-selection step that matches resume experience, projects, skills, and certifications against job requirements, with a lexical fallback when embeddings are unavailable.
 - Safety-oriented prompts: resume and cover-letter prompts explicitly prohibit fabricated employers, schools, dates, titles, degrees, certifications, metrics, and accomplishments.
 - Post-generation grounding checks: saved generated documents are scanned for unsupported emails, links, metrics, dates, and named entities, with warnings persisted to document metadata and shown in the workspace.
 - AI observability: generation requests can be recorded in `ai_events` with provider, model, prompt version, document type, latency, success state, and redacted error summaries.
@@ -94,8 +94,10 @@ GEMINI_API_KEY=
 GEMINI_MODEL=gemini-3.1-flash-lite
 DEEPSEEK_API_KEY=
 AI_PROVIDER=deepseek
-DEEPSEEK_MODEL=deepseek-v4-flash
-DEEPSEEK_THINKING=disabled
+DEEPSEEK_MODEL=deepseek-v4-pro
+DEEPSEEK_THINKING=enabled
+DEEPSEEK_FALLBACK_MODELS=deepseek-v4-flash
+ENABLE_SEMANTIC_EVIDENCE=true
 NEXT_PUBLIC_APP_URL=http://localhost:3000
 ```
 

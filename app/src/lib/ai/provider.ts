@@ -7,11 +7,8 @@ const AI_TIMEOUT_MS = 60_000;
 const RETRYABLE_STATUS = new Set([429, 500, 502, 503, 504]);
 
 const DEFAULT_DEEPSEEK_MODEL =
-  process.env.DEEPSEEK_MODEL || "deepseek-v4-flash";
-const DEFAULT_DEEPSEEK_FALLBACK_MODELS =
-  process.env.ENABLE_DEEPSEEK_PRO_FALLBACK === "true"
-    ? ["deepseek-v4-pro"]
-    : [];
+  process.env.DEEPSEEK_MODEL || "deepseek-v4-pro";
+const DEFAULT_DEEPSEEK_FALLBACK_MODELS = ["deepseek-v4-flash"];
 const DEFAULT_GLM_MODEL = process.env.GLM_MODEL || "glm-4.5-flash";
 const DEFAULT_GLM_FALLBACK_MODELS = ["glm-4.7-flash"];
 const DEFAULT_GEMINI_MODEL =
@@ -310,7 +307,7 @@ function extractDeepSeekText(response: DeepSeekResponse): string {
 }
 
 function getDeepSeekThinkingMode(): "enabled" | "disabled" {
-  return process.env.DEEPSEEK_THINKING === "enabled" ? "enabled" : "disabled";
+  return process.env.DEEPSEEK_THINKING === "disabled" ? "disabled" : "enabled";
 }
 
 async function generateDeepSeek({

@@ -2,7 +2,7 @@ const EMBEDDING_MODEL = 'text-embedding-004';
 
 export function shouldUseSemanticEvidence(): boolean {
   return (
-    process.env.ENABLE_SEMANTIC_EVIDENCE === "true" &&
+    process.env.ENABLE_SEMANTIC_EVIDENCE !== "false" &&
     Boolean(process.env.GEMINI_API_KEY)
   );
 }
