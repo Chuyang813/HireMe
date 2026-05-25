@@ -645,6 +645,7 @@ function DocumentPanel({
   async function handleGenerate() {
     setGenerateError("");
     setSaveStatus("idle");
+    setContent("");
     setGenerating(true);
     if (typeof window !== "undefined" && styleOptions) {
       localStorage.setItem(storageKey, style);
@@ -791,11 +792,11 @@ function DocumentPanel({
             <div className="absolute inset-0 flex items-center justify-center rounded-md bg-white/80">
               <div className="flex flex-col items-center gap-3">
                 <div className="flex items-center gap-1.5">
-                  <span className="h-2.5 w-2.5 animate-bounce rounded-full bg-muted-foreground [animation-delay:-0.3s]" />
-                  <span className="h-2.5 w-2.5 animate-bounce rounded-full bg-muted-foreground [animation-delay:-0.15s]" />
-                  <span className="h-2.5 w-2.5 animate-bounce rounded-full bg-muted-foreground" />
+                  <span className="h-2.5 w-2.5 animate-bounce rounded-full bg-[#2563eb] [animation-delay:-0.3s]" />
+                  <span className="h-2.5 w-2.5 animate-bounce rounded-full bg-[#2563eb] [animation-delay:-0.15s]" />
+                  <span className="h-2.5 w-2.5 animate-bounce rounded-full bg-[#2563eb]" />
                 </div>
-                <p className="text-sm text-muted-foreground">{t("generating")}</p>
+                <p className="text-sm font-medium text-[#2563eb]">{t("generating")}</p>
               </div>
             </div>
           )}
@@ -906,11 +907,11 @@ function DocumentPanel({
           <div className="absolute inset-0 flex items-center justify-center rounded-md bg-white/80">
             <div className="flex flex-col items-center gap-3">
               <div className="flex items-center gap-1.5">
-                <span className="h-2.5 w-2.5 animate-bounce rounded-full bg-muted-foreground [animation-delay:-0.3s]" />
-                <span className="h-2.5 w-2.5 animate-bounce rounded-full bg-muted-foreground [animation-delay:-0.15s]" />
-                <span className="h-2.5 w-2.5 animate-bounce rounded-full bg-muted-foreground" />
+                <span className="h-2.5 w-2.5 animate-bounce rounded-full bg-[#2563eb] [animation-delay:-0.3s]" />
+                <span className="h-2.5 w-2.5 animate-bounce rounded-full bg-[#2563eb] [animation-delay:-0.15s]" />
+                <span className="h-2.5 w-2.5 animate-bounce rounded-full bg-[#2563eb]" />
               </div>
-              <p className="text-sm text-muted-foreground">{t("generating")}</p>
+              <p className="text-sm font-medium text-[#2563eb]">{t("generating")}</p>
             </div>
           </div>
         )}
@@ -1127,6 +1128,7 @@ function InterviewPrepPanel({
   async function handleGenerate() {
     setError("");
     setSaveStatus("idle");
+    setContent("");
     setGenerating(true);
     try {
       const res = await fetch("/api/generate-document", {
@@ -1221,11 +1223,11 @@ function InterviewPrepPanel({
           <div className="absolute inset-0 flex items-center justify-center rounded-md bg-white/80">
             <div className="flex flex-col items-center gap-3">
               <div className="flex items-center gap-1.5">
-                <span className="h-2.5 w-2.5 animate-bounce rounded-full bg-muted-foreground [animation-delay:-0.3s]" />
-                <span className="h-2.5 w-2.5 animate-bounce rounded-full bg-muted-foreground [animation-delay:-0.15s]" />
-                <span className="h-2.5 w-2.5 animate-bounce rounded-full bg-muted-foreground" />
+                <span className="h-2.5 w-2.5 animate-bounce rounded-full bg-[#2563eb] [animation-delay:-0.3s]" />
+                <span className="h-2.5 w-2.5 animate-bounce rounded-full bg-[#2563eb] [animation-delay:-0.15s]" />
+                <span className="h-2.5 w-2.5 animate-bounce rounded-full bg-[#2563eb]" />
               </div>
-              <p className="text-sm text-muted-foreground">{t("generating")}</p>
+              <p className="text-sm font-medium text-[#2563eb]">{t("generating")}</p>
             </div>
           </div>
         )}

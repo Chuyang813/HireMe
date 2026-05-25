@@ -1,7 +1,6 @@
 import type { ParsedJob, ParsedResume } from "@/lib/db/types";
 import {
-  embedText,
-  cosineSimilarity,
+  bm25Score,
   splitIntoSections,
   shouldUseSemanticEvidence,
 } from "./embeddings";
@@ -179,38 +178,14 @@ export async function selectResumeEvidenceSemantic(
   jobDescription: string,
   topK = 8,
 ): Promise<string[]> {
-  if (!shouldUseSemanticEvidence()) {
-    return selectTextEvidenceByOverlap(resumeText, jobDescription, topK);
-  }
+  const sections = splitIntoSections(resumeText);
+  if (sections.length === 0) return [resumeText.slice(0, 2000)];
 
-  try {
-    const jdEmbedding = await embedText(jobDescription.slice(0, 4000));
-    if (!jdEmbedding) return selectTextEvidenceByOverlap(resumeText, jobDescription, topK);
-
-    const sections = splitIntoSections(resumeText);
-    if (sections.length === 0) return [resumeText.slice(0, 2000)];
-
-    const sectionEmbeddings: (number[] | null)[] = [];
-    for (const section of sections) {
-      sectionEmbeddings.push(await embedText(section));
-    }
-
-    const scored = sections
-      .map((section, i) => ({ section, emb: sectionEmbeddings[i] }))
-      .filter((x): x is { section: string; emb: number[] } => x.emb !== null)
-      .map(({ section, emb }) => ({
-        section,
-        score: cosineSimilarity(jdEmbedding, emb),
-      }));
-
-    return scored
-      .sort((a, b) => b.score - a.score)
-      .slice(0, topK)
-      .map(s => s.section);
-  } catch (error) {
-    console.info('[selectResumeEvidenceSemantic] Using lexical evidence selection (semantic embeddings not available)');
-    return selectTextEvidenceByOverlap(resumeText, jobDescription, topK);
-  }
+  return sections
+    .map((section) => ({ section, score: bm25Score(jobDescription, section) }))
+    .sort((a, b) => b.score - a.score)
+    .slice(0, topK)
+    .map((s) => s.section);
 }
 
 function selectTextEvidenceByOverlap(
