@@ -204,7 +204,7 @@ export async function selectResumeEvidenceSemantic(
       .slice(0, topK)
       .map(s => s.section);
   } catch (error) {
-    console.warn('[selectResumeEvidenceSemantic] Semantic selection failed, falling back to lexical overlap:', error);
+    console.info('[selectResumeEvidenceSemantic] Using lexical evidence selection (semantic embeddings not available)');
     return selectTextEvidenceByOverlap(resumeText, jobDescription, topK);
   }
 }
