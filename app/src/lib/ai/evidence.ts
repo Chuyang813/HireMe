@@ -183,25 +183,33 @@ export async function selectResumeEvidenceSemantic(
     return selectTextEvidenceByOverlap(resumeText, jobDescription, topK);
   }
 
-  const jdEmbedding = await embedText(jobDescription.slice(0, 4000));
+  try {
+    const jdEmbedding = await embedText(jobDescription.slice(0, 4000));
 
-  const sections = splitIntoSections(resumeText);
-  if (sections.length === 0) return [resumeText.slice(0, 2000)];
+    const sections = splitIntoSections(resumeText);
+    if (sections.length === 0) return [resumeText.slice(0, 2000)];
 
-  const sectionEmbeddings: number[][] = [];
-  for (const section of sections) {
-    sectionEmbeddings.push(await embedText(section));
+    const sectionEmbeddings: number[][] = [];
+    for (const section of sections) {
+      sectionEmbeddings.push(await embedText(section));
+    }
+
+    const scored = sections.map((section, i) => ({
+      section,
+      score: cosineSimilarity(jdEmbedding, sectionEmbeddings[i]),
+    }));
+
+    return scored
+      .sort((a, b) => b.score - a.score)
+      .slice(0, topK)
+      .map(s => s.section);
+  } catch (error) {
+    console.warn(
+      "[selectResumeEvidenceSemantic] Embedding selection failed, falling back to lexical overlap:",
+      error,
+    );
+    return selectTextEvidenceByOverlap(resumeText, jobDescription, topK);
   }
-
-  const scored = sections.map((section, i) => ({
-    section,
-    score: cosineSimilarity(jdEmbedding, sectionEmbeddings[i]),
-  }));
-
-  return scored
-    .sort((a, b) => b.score - a.score)
-    .slice(0, topK)
-    .map(s => s.section);
 }
 
 function selectTextEvidenceByOverlap(
