@@ -1,28 +1,55 @@
-const EMBEDDING_MODEL = 'text-embedding-004';
+const DEEPSEEK_EMBEDDING_MODEL =
+  process.env.DEEPSEEK_EMBEDDING_MODEL || "deepseek-embedding";
+const DEEPSEEK_EMBEDDING_DIMENSIONS = 1536;
+const DEEPSEEK_EMBEDDINGS_URL =
+  process.env.DEEPSEEK_EMBEDDINGS_URL || "https://api.deepseek.com/embeddings";
 
 export function shouldUseSemanticEvidence(): boolean {
   return (
     process.env.ENABLE_SEMANTIC_EVIDENCE !== "false" &&
-    Boolean(process.env.GEMINI_API_KEY)
+    Boolean(process.env.DEEPSEEK_API_KEY)
   );
 }
 
+function getDeepSeekApiKey(): string {
+  const apiKey = process.env.DEEPSEEK_API_KEY;
+  if (!apiKey) {
+    throw new Error(
+      "DEEPSEEK_API_KEY is not set. Add it to your .env.local to enable semantic evidence embeddings.",
+    );
+  }
+  return apiKey;
+}
+
 export async function embedText(text: string): Promise<number[]> {
-  const url = `https://generativelanguage.googleapis.com/v1/models/${EMBEDDING_MODEL}:embedContent?key=${process.env.GEMINI_API_KEY}`;
-  const res = await fetch(url, {
+  const res = await fetch(DEEPSEEK_EMBEDDINGS_URL, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${getDeepSeekApiKey()}`,
+    },
     body: JSON.stringify({
-      model: `models/${EMBEDDING_MODEL}`,
-      content: { parts: [{ text: text.slice(0, 8000) }] },
+      model: DEEPSEEK_EMBEDDING_MODEL,
+      input: text.slice(0, 8000),
+      encoding_format: 'float',
     }),
   });
   if (!res.ok) {
     const err = await res.text();
-    throw new Error(`Embedding API error ${res.status}: ${err}`);
+    throw new Error(`DeepSeek Embedding error ${res.status}: ${err}`);
   }
   const data = await res.json();
-  return data.embedding.values as number[];
+  const embedding = data.data?.[0]?.embedding;
+  if (
+    !Array.isArray(embedding) ||
+    embedding.length !== DEEPSEEK_EMBEDDING_DIMENSIONS
+  ) {
+    throw new Error(
+      `DeepSeek Embedding returned ${Array.isArray(embedding) ? embedding.length : "no"} dimensions; expected ${DEEPSEEK_EMBEDDING_DIMENSIONS}.`,
+    );
+  }
+
+  return embedding as number[];
 }
 
 export function cosineSimilarity(a: number[], b: number[]): number {

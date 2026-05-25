@@ -25,6 +25,7 @@ The project is built as a full-stack TypeScript application with Next.js, Supaba
 | AI providers | DeepSeek primary path, optional Gemini/GLM fallback, Anthropic backup helpers |
 | AI validation | Zod schemas, prompt versioning, model/provider audit notes |
 | Document parsing | Gemini PDF extraction, `unpdf` fallback, `mammoth` for DOCX |
+| Embeddings | DeepSeek `deepseek-embedding`, 1536-dimensional pgvector columns |
 | Export | `docx`, `jspdf` |
 | Quality | ESLint, Playwright E2E |
 
@@ -44,7 +45,7 @@ The project is built as a full-stack TypeScript application with Next.js, Supaba
 - Prompt traceability: generation events record `provider`, `model`, and `prompt_version` so output quality can be debugged later.
 - Structured output handling: parsing and scoring flows use Zod schemas to reduce runtime failures from malformed model JSON.
 - Upload resilience: PDF parsing first uses Gemini document understanding when configured, then falls back to `unpdf` for text-based PDFs.
-- Context engineering: document prompts include a semantic evidence-selection step that matches resume experience, projects, skills, and certifications against job requirements, with a lexical fallback when embeddings are unavailable.
+- Context engineering: document prompts include DeepSeek 1536-dimensional semantic evidence selection that matches resume experience, projects, skills, and certifications against job requirements, with a lexical fallback when embeddings are unavailable.
 - Safety-oriented prompts: resume and cover-letter prompts explicitly prohibit fabricated employers, schools, dates, titles, degrees, certifications, metrics, and accomplishments.
 - Post-generation grounding checks: saved generated documents are scanned for unsupported emails, links, metrics, dates, and named entities, with warnings persisted to document metadata and shown in the workspace.
 - AI observability: generation requests can be recorded in `ai_events` with provider, model, prompt version, document type, latency, success state, and redacted error summaries.
@@ -97,6 +98,7 @@ AI_PROVIDER=deepseek
 DEEPSEEK_MODEL=deepseek-v4-pro
 DEEPSEEK_THINKING=enabled
 DEEPSEEK_FALLBACK_MODELS=deepseek-v4-flash
+DEEPSEEK_EMBEDDING_MODEL=deepseek-embedding
 ENABLE_SEMANTIC_EVIDENCE=true
 NEXT_PUBLIC_APP_URL=http://localhost:3000
 ```
