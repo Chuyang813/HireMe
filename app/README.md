@@ -22,7 +22,7 @@ The project is built as a full-stack TypeScript application with Next.js, Supaba
 | Backend | Server Actions, Route Handlers, Server Components |
 | Auth and database | Supabase Auth, PostgreSQL, Row Level Security |
 | File storage | Supabase Storage |
-| AI providers | Gemini primary path, optional GLM fallback, Anthropic backup helpers |
+| AI providers | DeepSeek primary path, optional Gemini/GLM fallback, Anthropic backup helpers |
 | AI validation | Zod schemas, prompt versioning, model/provider audit notes |
 | Document parsing | Gemini PDF extraction, `unpdf` fallback, `mammoth` for DOCX |
 | Export | `docx`, `jspdf` |
@@ -39,7 +39,8 @@ The project is built as a full-stack TypeScript application with Next.js, Supaba
 
 ## AI Engineering Highlights
 
-- Provider abstraction: `src/lib/ai/provider.ts` centralizes Gemini and GLM generation paths with timeout handling, retryable failure handling, fallback chains, and response extraction.
+- Provider abstraction: `src/lib/ai/provider.ts` centralizes DeepSeek, Gemini, and GLM generation paths with timeout handling, retryable failure handling, fallback chains, and response extraction.
+- Cost-aware defaults: DeepSeek runs on `deepseek-v4-flash` with thinking disabled unless explicitly overridden, keeping routine parsing and document drafting on the lower-cost path.
 - Prompt traceability: generation events record `provider`, `model`, and `prompt_version` so output quality can be debugged later.
 - Structured output handling: parsing and scoring flows use Zod schemas to reduce runtime failures from malformed model JSON.
 - Upload resilience: PDF parsing first uses Gemini document understanding when configured, then falls back to `unpdf` for text-based PDFs.
@@ -63,7 +64,7 @@ Completed portfolio-grade AI engineering work:
 
 Remaining future upgrades:
 
-- Add live model eval mode for Gemini/GLM quality comparisons.
+- Add live model eval mode for DeepSeek/Gemini/GLM quality comparisons.
 - Add richer source citations and lower-false-positive grounding review.
 - Add an admin/dashboard view for `ai_events`, fallback usage, and validation failures.
 - Add idempotency keys for generation endpoints.
@@ -91,6 +92,10 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=
 SUPABASE_SERVICE_ROLE_KEY=
 GEMINI_API_KEY=
 GEMINI_MODEL=gemini-3.1-flash-lite
+DEEPSEEK_API_KEY=
+AI_PROVIDER=deepseek
+DEEPSEEK_MODEL=deepseek-v4-flash
+DEEPSEEK_THINKING=disabled
 NEXT_PUBLIC_APP_URL=http://localhost:3000
 ```
 

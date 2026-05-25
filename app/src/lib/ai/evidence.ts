@@ -1,5 +1,10 @@
 import type { ParsedJob, ParsedResume } from "@/lib/db/types";
-import { embedText, cosineSimilarity, splitIntoSections } from "./embeddings";
+import {
+  embedText,
+  cosineSimilarity,
+  splitIntoSections,
+  shouldUseSemanticEvidence,
+} from "./embeddings";
 
 export type ResumeEvidence = {
   source: "experience" | "project" | "education" | "skill" | "certification";
@@ -174,6 +179,10 @@ export async function selectResumeEvidenceSemantic(
   jobDescription: string,
   topK = 8,
 ): Promise<string[]> {
+  if (!shouldUseSemanticEvidence()) {
+    return selectTextEvidenceByOverlap(resumeText, jobDescription, topK);
+  }
+
   const jdEmbedding = await embedText(jobDescription.slice(0, 4000));
 
   const sections = splitIntoSections(resumeText);
@@ -193,6 +202,26 @@ export async function selectResumeEvidenceSemantic(
     .sort((a, b) => b.score - a.score)
     .slice(0, topK)
     .map(s => s.section);
+}
+
+function selectTextEvidenceByOverlap(
+  resumeText: string,
+  jobDescription: string,
+  topK: number,
+) {
+  const sections = splitIntoSections(resumeText);
+  if (sections.length === 0) return [resumeText.slice(0, 2000)];
+  const jobTerms = tokenize(jobDescription);
+
+  return sections
+    .map((section) => {
+      const sectionTerms = tokenize(section);
+      const score = [...jobTerms].filter((term) => sectionTerms.has(term)).length;
+      return { section, score };
+    })
+    .sort((a, b) => b.score - a.score)
+    .slice(0, topK)
+    .map((item) => item.section);
 }
 
 function tokenize(text: string) {

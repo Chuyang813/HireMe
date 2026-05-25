@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/auth/current-user";
 import { extractTextFromUpload } from "@/lib/parsers/resume-text";
 import { parseResume } from "@/lib/ai/resume-parser";
-import { embedText } from "@/lib/ai/embeddings";
+import { embedText, shouldUseSemanticEvidence } from "@/lib/ai/embeddings";
 import { cleanSingleLine, MAX_TITLE_LENGTH, uuidSchema } from "@/lib/security/limits";
 import { sanitizePreviewHtml } from "@/lib/security/html";
 import { checkRateLimit } from "@/lib/security/rate-limit";
@@ -105,11 +105,13 @@ export async function uploadResumeAction(
   }
 
   try {
-    const embedding = await embedText(rawText);
-    await supabase
-      .from("base_resumes")
-      .update({ embedding: JSON.stringify(embedding) })
-      .eq("id", insertedResume.id);
+    if (shouldUseSemanticEvidence()) {
+      const embedding = await embedText(rawText);
+      await supabase
+        .from("base_resumes")
+        .update({ embedding: JSON.stringify(embedding) })
+        .eq("id", insertedResume.id);
+    }
   } catch (e) {
     console.warn("[uploadResumeAction] Embedding failed, continuing without:", e);
   }

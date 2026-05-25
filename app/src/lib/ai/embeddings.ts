@@ -1,5 +1,12 @@
 const EMBEDDING_MODEL = 'text-embedding-004';
 
+export function shouldUseSemanticEvidence(): boolean {
+  return (
+    process.env.ENABLE_SEMANTIC_EVIDENCE === "true" &&
+    Boolean(process.env.GEMINI_API_KEY)
+  );
+}
+
 export async function embedText(text: string): Promise<number[]> {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${EMBEDDING_MODEL}:embedContent?key=${process.env.GEMINI_API_KEY}`;
   const res = await fetch(url, {

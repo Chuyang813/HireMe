@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/auth/current-user";
 import { parseJobPosting } from "@/lib/ai/job-parser";
-import { embedText } from "@/lib/ai/embeddings";
+import { embedText, shouldUseSemanticEvidence } from "@/lib/ai/embeddings";
 import { logTimelineEvent } from "@/lib/db/timeline";
 import {
   applicationStatusSchema,
@@ -177,7 +177,7 @@ export async function analyzeJobAction(
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     console.error("[analyzeJobAction] parseJobPosting failed:", msg, e);
-    if (msg.includes("GEMINI_API_KEY")) {
+    if (msg.includes("GEMINI_API_KEY") || msg.includes("DEEPSEEK_API_KEY")) {
       return { error: "AI service is not configured. Please contact support." };
     }
     if (msg.includes("429") || msg.toLowerCase().includes("quota exceeded")) {
@@ -281,7 +281,7 @@ export async function createApplicationAction(
     ]
       .filter(Boolean)
       .join('\n');
-    if (jdText) {
+    if (jdText && shouldUseSemanticEvidence()) {
       const jdEmbedding = await embedText(jdText);
       await supabase
         .from("job_applications")

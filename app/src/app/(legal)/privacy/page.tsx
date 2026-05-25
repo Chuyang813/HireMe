@@ -3,7 +3,9 @@ import { getTranslations } from "next-intl/server";
 import { AI_PROVIDER } from "@/lib/ai/provider";
 
 const PROVIDER_DISPLAY: Record<string, string> = {
+  deepseek: "DeepSeek",
   gemini: "Google Gemini",
+  glm: "GLM",
   anthropic: "Anthropic Claude",
   openai: "OpenAI",
 };

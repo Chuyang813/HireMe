@@ -1,10 +1,17 @@
 export const PROMPT_VERSION = "2.1";
 
+const DEEPSEEK_API_BASE = process.env.DEEPSEEK_API_BASE || "https://api.deepseek.com";
 const GLM_API_BASE = "https://api.z.ai/api/paas/v4";
 const GEMINI_API_BASE = "https://generativelanguage.googleapis.com/v1beta";
 const AI_TIMEOUT_MS = 60_000;
-const RETRYABLE_STATUS = new Set([503]);
+const RETRYABLE_STATUS = new Set([429, 500, 502, 503, 504]);
 
+const DEFAULT_DEEPSEEK_MODEL =
+  process.env.DEEPSEEK_MODEL || "deepseek-v4-flash";
+const DEFAULT_DEEPSEEK_FALLBACK_MODELS =
+  process.env.ENABLE_DEEPSEEK_PRO_FALLBACK === "true"
+    ? ["deepseek-v4-pro"]
+    : [];
 const DEFAULT_GLM_MODEL = process.env.GLM_MODEL || "glm-4.5-flash";
 const DEFAULT_GLM_FALLBACK_MODELS = ["glm-4.7-flash"];
 const DEFAULT_GEMINI_MODEL =
@@ -17,9 +24,18 @@ const DEFAULT_GEMINI_FALLBACK_MODELS = [
 ];
 
 function getRequestedProvider(): ProviderName {
-  return process.env.AI_PROVIDER === "glm" && getGlmApiKeyOptional()
-    ? "glm"
-    : "gemini";
+  if (process.env.AI_PROVIDER === "gemini" && process.env.GEMINI_API_KEY) {
+    return "gemini";
+  }
+  if (process.env.AI_PROVIDER === "glm" && getGlmApiKeyOptional()) {
+    return "glm";
+  }
+  if (process.env.AI_PROVIDER === "deepseek" && getDeepSeekApiKeyOptional()) {
+    return "deepseek";
+  }
+  if (getDeepSeekApiKeyOptional()) return "deepseek";
+  if (getGlmApiKeyOptional()) return "glm";
+  return "gemini";
 }
 
 function shouldUseGlmFallback(): boolean {
@@ -28,14 +44,18 @@ function shouldUseGlmFallback(): boolean {
 
 export const AI_PROVIDER = getRequestedProvider();
 export const DEFAULT_MODEL =
-  AI_PROVIDER === "glm" ? DEFAULT_GLM_MODEL : DEFAULT_GEMINI_MODEL;
+  AI_PROVIDER === "deepseek"
+    ? DEFAULT_DEEPSEEK_MODEL
+    : AI_PROVIDER === "glm"
+      ? DEFAULT_GLM_MODEL
+      : DEFAULT_GEMINI_MODEL;
 
 export type AiTextMessage = {
   role: "user" | "assistant";
   content: string;
 };
 
-type ProviderName = "glm" | "gemini";
+type ProviderName = "deepseek" | "glm" | "gemini";
 
 type ProviderModel = {
   provider: ProviderName;
@@ -74,6 +94,34 @@ type GlmResponse = {
     message?: string;
   };
 };
+
+type DeepSeekResponse = {
+  choices?: Array<{
+    message?: {
+      content?: string;
+      reasoning_content?: string;
+    };
+    finish_reason?: string;
+  }>;
+  error?: {
+    code?: string | number;
+    message?: string;
+  };
+};
+
+function getDeepSeekApiKeyOptional(): string | undefined {
+  return process.env.DEEPSEEK_API_KEY;
+}
+
+function getDeepSeekApiKey(): string {
+  const apiKey = getDeepSeekApiKeyOptional();
+  if (!apiKey) {
+    throw new Error(
+      "DEEPSEEK_API_KEY is not set. Add it to your .env.local to enable DeepSeek features.",
+    );
+  }
+  return apiKey;
+}
 
 function getGlmApiKeyOptional(): string | undefined {
   return process.env.GLM_API_KEY || process.env.ZAI_API_KEY;
@@ -127,6 +175,10 @@ function uniqueModels(models: ProviderModel[]): ProviderModel[] {
 }
 
 function getProviderChain(primary: string, preferredProvider: ProviderName): ProviderModel[] {
+  const deepSeekFallbackModels = parseModelList(
+    process.env.DEEPSEEK_FALLBACK_MODELS,
+    DEFAULT_DEEPSEEK_FALLBACK_MODELS,
+  );
   const glmFallbackModels = parseModelList(
     process.env.GLM_FALLBACK_MODELS,
     DEFAULT_GLM_FALLBACK_MODELS,
@@ -136,30 +188,49 @@ function getProviderChain(primary: string, preferredProvider: ProviderName): Pro
       .map((model) => model.trim())
       .filter(Boolean) ?? DEFAULT_GEMINI_FALLBACK_MODELS;
 
-  const glmModels = [primary, ...glmFallbackModels].map((model) => ({
+  const deepSeekPrimary =
+    preferredProvider === "deepseek" ? primary : DEFAULT_DEEPSEEK_MODEL;
+  const deepSeekModels = [deepSeekPrimary, ...deepSeekFallbackModels].map((model) => ({
+    provider: "deepseek" as const,
+    model,
+  }));
+  const glmPrimary = preferredProvider === "glm" ? primary : DEFAULT_GLM_MODEL;
+  const glmModels = [glmPrimary, ...glmFallbackModels].map((model) => ({
     provider: "glm" as const,
     model,
   }));
-  const geminiModels = [DEFAULT_GEMINI_MODEL, ...geminiFallbackModels].map((model) => ({
+  const geminiPrimary =
+    preferredProvider === "gemini" ? primary : DEFAULT_GEMINI_MODEL;
+  const geminiModels = [geminiPrimary, ...geminiFallbackModels].map((model) => ({
     provider: "gemini" as const,
     model,
   }));
 
-  const ordered = preferredProvider === "glm"
-    ? [...glmModels, ...geminiModels]
-    : [
-        { provider: "gemini" as const, model: primary },
-        ...geminiFallbackModels.map((model) => ({ provider: "gemini" as const, model })),
-        ...(shouldUseGlmFallback()
-          ? [
-              { provider: "glm" as const, model: DEFAULT_GLM_MODEL },
-              ...glmFallbackModels.map((model) => ({ provider: "glm" as const, model })),
-            ]
-          : []),
-      ];
+  const ordered =
+    preferredProvider === "deepseek"
+      ? [
+          ...deepSeekModels,
+          ...(process.env.ENABLE_GEMINI_FALLBACK === "true" ? geminiModels : []),
+          ...(shouldUseGlmFallback() ? glmModels : []),
+        ]
+      : preferredProvider === "glm"
+        ? [
+            ...glmModels,
+            ...(getDeepSeekApiKeyOptional() ? deepSeekModels : []),
+            ...geminiModels,
+          ]
+        : [
+            ...geminiModels,
+            ...(getDeepSeekApiKeyOptional() ? deepSeekModels : []),
+            ...(shouldUseGlmFallback() ? glmModels : []),
+          ];
 
   return uniqueModels(ordered).filter((candidate) =>
-    candidate.provider === "glm" ? !!getGlmApiKeyOptional() : !!process.env.GEMINI_API_KEY,
+    candidate.provider === "deepseek"
+      ? !!getDeepSeekApiKeyOptional()
+      : candidate.provider === "glm"
+        ? !!getGlmApiKeyOptional()
+        : !!process.env.GEMINI_API_KEY,
   );
 }
 
@@ -218,6 +289,104 @@ function extractGlmText(response: GlmResponse): string {
   }
 
   return text;
+}
+
+function extractDeepSeekText(response: DeepSeekResponse): string {
+  if (response.error) {
+    throw new Error(response.error.message ?? "DeepSeek API request failed.");
+  }
+
+  const text = response.choices?.[0]?.message?.content?.trim() ?? "";
+  if (!text) {
+    const reason = response.choices?.[0]?.finish_reason;
+    throw new Error(
+      reason
+        ? `DeepSeek returned no text. Finish reason: ${reason}.`
+        : "DeepSeek returned no text.",
+    );
+  }
+
+  return text;
+}
+
+function getDeepSeekThinkingMode(): "enabled" | "disabled" {
+  return process.env.DEEPSEEK_THINKING === "enabled" ? "enabled" : "disabled";
+}
+
+async function generateDeepSeek({
+  system,
+  messages,
+  model = DEFAULT_DEEPSEEK_MODEL,
+  maxTokens = 4096,
+  responseMimeType = "text/plain",
+}: {
+  system?: string;
+  messages: AiTextMessage[];
+  model?: string;
+  maxTokens?: number;
+  responseMimeType?: "text/plain" | "application/json";
+}): Promise<string> {
+  let lastError: Error | null = null;
+
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), AI_TIMEOUT_MS);
+
+    try {
+      const res = await fetch(`${DEEPSEEK_API_BASE}/chat/completions`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${getDeepSeekApiKey()}`,
+        },
+        body: JSON.stringify({
+          model,
+          messages: [
+            ...(system ? [{ role: "system", content: system }] : []),
+            ...messages,
+          ],
+          max_tokens: maxTokens,
+          thinking: {
+            type: getDeepSeekThinkingMode(),
+          },
+          response_format:
+            responseMimeType === "application/json"
+              ? { type: "json_object" }
+              : undefined,
+        }),
+        signal: controller.signal,
+      });
+
+      const json = (await res.json().catch(() => ({}))) as DeepSeekResponse;
+      if (!res.ok) {
+        throw new Error(
+          json.error?.message ??
+            `DeepSeek API request failed with status ${res.status}.`,
+          { cause: res.status },
+        );
+      }
+
+      return extractDeepSeekText(json);
+    } catch (err) {
+      lastError =
+        err instanceof Error ? err : new Error("DeepSeek API request failed.");
+      if (lastError.name === "AbortError") {
+        lastError = new Error("AI request timed out after 60s.");
+      }
+
+      const status =
+        typeof lastError.cause === "number" ? lastError.cause : null;
+      if (!status || !RETRYABLE_STATUS.has(status) || attempt === 3) {
+        throw lastError;
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, attempt * 1500));
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  throw lastError ?? new Error("DeepSeek API request failed.");
 }
 
 async function generateGlm({
@@ -409,7 +578,15 @@ export async function aiJson<T>({
       const isGemma = isGemini && isGemmaModel(candidate.model);
       const jsonSystem = `${system}\n\nReturn only valid JSON. Do not use markdown or prose.`;
       const text =
-        candidate.provider === "glm"
+        candidate.provider === "deepseek"
+          ? await generateDeepSeek({
+              system: jsonSystem,
+              messages,
+              model: candidate.model,
+              maxTokens,
+              responseMimeType: "application/json",
+            })
+          : candidate.provider === "glm"
           ? await generateGlm({
               system: jsonSystem,
               messages,
@@ -460,6 +637,16 @@ export async function aiText({
 
   for (const candidate of getProviderChain(model, AI_PROVIDER as ProviderName)) {
     try {
+      if (candidate.provider === "deepseek") {
+        return await generateDeepSeek({
+          system,
+          messages,
+          model: candidate.model,
+          maxTokens,
+          responseMimeType: "text/plain",
+        });
+      }
+
       if (candidate.provider === "glm") {
         return await generateGlm({
           system,
