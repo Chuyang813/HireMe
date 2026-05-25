@@ -11,7 +11,7 @@ import { checkRateLimit } from "@/lib/security/rate-limit";
 import { getClientIpFromHeaders } from "@/lib/security/request";
 import type { DocumentType, ParsedJob, ParsedResume } from "@/lib/db/types";
 
-const AI_TIMEOUT_MS = 65_000;
+const AI_TIMEOUT_MS = 115_000;
 
 function docTypeToPromptType(dt: DocumentType): PromptType {
   if (dt === 'tailored_resume') return 'resume-tailor';
@@ -300,7 +300,7 @@ export async function POST(req: NextRequest) {
   const readable = new ReadableStream({
     async start(controller) {
       const timer = setTimeout(() => {
-        console.error("[generate-document] Timeout after 30s");
+        console.error(`[generate-document] Timeout after ${AI_TIMEOUT_MS}ms`);
         controller.enqueue(encoder.encode("\n\n[Error: Generation timed out. Please try again.]"));
         controller.close();
       }, AI_TIMEOUT_MS);

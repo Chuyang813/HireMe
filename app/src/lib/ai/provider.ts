@@ -310,18 +310,24 @@ function getDeepSeekThinkingMode(): "enabled" | "disabled" {
   return process.env.DEEPSEEK_THINKING === "disabled" ? "disabled" : "enabled";
 }
 
+function getDeepSeekTextThinkingMode(): "enabled" | "disabled" {
+  return process.env.DEEPSEEK_TEXT_THINKING === "enabled" ? "enabled" : "disabled";
+}
+
 async function generateDeepSeek({
   system,
   messages,
   model = DEFAULT_DEEPSEEK_MODEL,
   maxTokens = 4096,
   responseMimeType = "text/plain",
+  thinkingMode = getDeepSeekThinkingMode(),
 }: {
   system?: string;
   messages: AiTextMessage[];
   model?: string;
   maxTokens?: number;
   responseMimeType?: "text/plain" | "application/json";
+  thinkingMode?: "enabled" | "disabled";
 }): Promise<string> {
   let lastError: Error | null = null;
 
@@ -344,7 +350,7 @@ async function generateDeepSeek({
           ],
           max_tokens: maxTokens,
           thinking: {
-            type: getDeepSeekThinkingMode(),
+            type: thinkingMode,
           },
           response_format:
             responseMimeType === "application/json"
@@ -641,6 +647,7 @@ export async function aiText({
           model: candidate.model,
           maxTokens,
           responseMimeType: "text/plain",
+          thinkingMode: getDeepSeekTextThinkingMode(),
         });
       }
 
