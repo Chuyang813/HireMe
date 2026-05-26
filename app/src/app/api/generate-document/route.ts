@@ -1,3 +1,5 @@
+export const runtime = "edge";
+
 import { type NextRequest } from "next/server";
 import { getOptionalUser } from "@/lib/auth/current-user";
 import { aiText, AI_PROVIDER, DEFAULT_MODEL } from "@/lib/ai/provider";
@@ -34,7 +36,7 @@ function getDocTypeAiOptions(dt: DocumentType): {
     return { model: DEEPSEEK_CHAT_MODEL, thinkingMode: "disabled" };
   }
   if (dt === "interview_prep") {
-    return { thinkingMode: "disabled" };
+    return { model: DEEPSEEK_CHAT_MODEL, thinkingMode: "disabled" };
   }
   // tailored_resume: use default model, thinking follows env
   return {};
