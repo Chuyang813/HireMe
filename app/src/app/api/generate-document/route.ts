@@ -217,7 +217,7 @@ async function buildPrompt(
   if (documentType === "interview_prep") {
     return {
       system: `${INTERVIEW_PREP_SYSTEM}\n\nToday's date is ${today}.`,
-      maxTokens: 3500,
+      maxTokens: 6000,
       userMessage: [
         `Candidate parsed resume (JSON):\n${resumeJson}`,
         `Parsed job posting (JSON):\n${jobJson}`,
