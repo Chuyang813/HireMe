@@ -97,6 +97,6 @@ export async function generateInterviewPrep({
         ].join("\n\n"),
       },
     ],
-    maxTokens: 1800,
+    maxTokens: 4000,
   });
 }

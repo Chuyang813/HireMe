@@ -248,11 +248,11 @@ export function ApplicationsView({
                       key={app.id}
                       className={`border-b border-border last:border-0 bg-white ${statusRowColor(app.current_status)}`}
                     >
-                      <td className="px-5 py-4">
+                      <td className="max-w-[200px] px-5 py-4">
                         <div className="flex items-center gap-2">
                           <Link
                             href={`/applications/${app.id}`}
-                            className="font-medium hover:underline underline-offset-2"
+                            className="min-w-0 truncate font-medium hover:underline underline-offset-2"
                           >
                             {app.company_name ?? "—"}
                           </Link>
