@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import { useTranslations } from "next-intl";
+import Link from "next/link";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import {
   updateProfileAction,
@@ -171,6 +172,36 @@ export function SettingsClient({ user, profile }: Props) {
             </button>
           </div>
         </form>
+      </section>
+
+      {/* ── Developer ───────────────────────────────────────── */}
+      <section className="rounded-md border border-border p-6">
+        <h2 className="label-caps mb-4">Developer</h2>
+        <Link
+          href="/admin/ai-events"
+          className="flex items-center justify-between rounded-md border border-border bg-background px-4 py-3 text-sm transition-colors hover:bg-muted"
+        >
+          <div>
+            <p className="font-medium">AI Event Log</p>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              View generation history, latency, and model usage.
+            </p>
+          </div>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="shrink-0 text-muted-foreground"
+          >
+            <path d="M9 18l6-6-6-6" />
+          </svg>
+        </Link>
       </section>
 
       {/* ── Danger Zone ──────────────────────────────────────── */}
