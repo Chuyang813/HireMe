@@ -258,7 +258,7 @@ export function ApplicationsView({
                           </Link>
                           {isStale(app) && (
                             <span
-                              className="inline-flex items-center gap-1 rounded-full bg-[var(--warning-light)] px-2 py-0.5 text-[10px] font-medium text-[var(--warning)]"
+                              className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full bg-[var(--warning-light)] px-2 py-0.5 text-[10px] font-medium text-[var(--warning)]"
                               title={t("staleTooltip")}
                             >
                               <span className="h-1.5 w-1.5 rounded-full bg-[var(--warning)]" />
@@ -278,7 +278,7 @@ export function ApplicationsView({
                       <td className="hidden px-5 py-4 text-muted-foreground sm:table-cell">
                         {new Date(app.created_at).toLocaleDateString()}
                       </td>
-                      <td className="px-5 py-4">
+                      <td className="w-44 whitespace-nowrap px-5 py-4">
                         <StatusSelect
                           applicationId={app.id}
                           current={app.current_status}

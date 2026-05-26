@@ -1082,6 +1082,162 @@ function AssessmentPanel({ applicationId }: { applicationId: string }) {
 }
 
 // ---------------------------------------------------------------------------
+// InterviewPrepViewer — accordion for ### Q: blocks, regular markdown elsewhere
+// ---------------------------------------------------------------------------
+
+function InterviewPrepViewer({ content, isStreaming }: { content: string; isStreaming?: boolean }) {
+  const t = useTranslations("Workspace");
+
+  if (!content.trim()) {
+    return (
+      <p className="text-sm text-muted-foreground italic">{t("noContent")}</p>
+    );
+  }
+
+  // During streaming show plain markdown so in-progress content is visible
+  if (isStreaming) {
+    return <MarkdownViewer content={content} isStreaming />;
+  }
+
+  const lines = content.split("\n");
+  const nodes: React.ReactNode[] = [];
+  let nodeKey = 0;
+  const nk = () => nodeKey++;
+
+  let mainList: string[] = [];
+  let inQ = false;
+  let qText = "";
+  let qBody: React.ReactNode[] = [];
+  let qList: string[] = [];
+
+  function flushMainList() {
+    if (!mainList.length) return;
+    const items = [...mainList];
+    mainList = [];
+    nodes.push(
+      <ul key={nk()} className="my-1 space-y-0.5 pl-4">
+        {items.map((item, i) => (
+          <li key={i} className="flex items-start gap-2 text-sm leading-relaxed">
+            <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-muted-foreground" />
+            <span>{applyInline(item)}</span>
+          </li>
+        ))}
+      </ul>,
+    );
+  }
+
+  function flushQList() {
+    if (!qList.length) return;
+    const items = [...qList];
+    qList = [];
+    qBody.push(
+      <ul key={nk()} className="my-1 space-y-0.5 pl-4">
+        {items.map((item, i) => (
+          <li key={i} className="flex items-start gap-2 text-sm leading-relaxed">
+            <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-muted-foreground" />
+            <span>{applyInline(item)}</span>
+          </li>
+        ))}
+      </ul>,
+    );
+  }
+
+  function commitQ() {
+    if (!inQ) return;
+    flushQList();
+    const body = [...qBody];
+    const question = qText;
+    nodes.push(
+      <details key={nk()} className="group mb-2 overflow-hidden rounded-md border border-border">
+        <summary className="flex cursor-pointer select-none list-none items-start gap-2 px-4 py-3 text-sm font-medium hover:bg-muted/40">
+          <span className="mt-0.5 shrink-0 text-[10px] text-muted-foreground transition-transform duration-150 group-open:rotate-90">▶</span>
+          <span>{question}</span>
+        </summary>
+        <div className="border-t border-border px-4 py-3">{body}</div>
+      </details>,
+    );
+    inQ = false;
+    qText = "";
+    qBody = [];
+    qList = [];
+  }
+
+  for (const line of lines) {
+    if (line.startsWith("### Q:")) {
+      inQ ? commitQ() : flushMainList();
+      inQ = true;
+      qText = line.slice(6).trim();
+      continue;
+    }
+
+    if (inQ) {
+      if (line.startsWith("## ") || line.startsWith("# ")) {
+        commitQ();
+        // fall through to main rendering below
+      } else if (line.startsWith("- ") || line.startsWith("* ")) {
+        qList.push(line.slice(2));
+        continue;
+      } else if (line.trim() === "") {
+        flushQList();
+        qBody.push(<div key={nk()} className="h-1" />);
+        continue;
+      } else {
+        flushQList();
+        qBody.push(
+          <p key={nk()} className="text-sm leading-relaxed">
+            {applyInline(line)}
+          </p>,
+        );
+        continue;
+      }
+    }
+
+    if (line.startsWith("# ")) {
+      flushMainList();
+      nodes.push(
+        <h1 key={nk()} className="font-display text-2xl leading-tight mt-2 mb-1">
+          {line.slice(2)}
+        </h1>,
+      );
+    } else if (line.startsWith("## ")) {
+      flushMainList();
+      nodes.push(
+        <h2 key={nk()} className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mt-5 mb-1.5 border-b border-border pb-1">
+          {line.slice(3)}
+        </h2>,
+      );
+    } else if (line.startsWith("### ")) {
+      flushMainList();
+      nodes.push(
+        <h3 key={nk()} className="text-sm font-semibold mt-3 mb-1">
+          {line.slice(4)}
+        </h3>,
+      );
+    } else if (line.startsWith("- ") || line.startsWith("* ")) {
+      mainList.push(line.slice(2));
+    } else if (line.trim() === "") {
+      flushMainList();
+      nodes.push(<div key={nk()} className="h-1.5" />);
+    } else {
+      flushMainList();
+      nodes.push(
+        <p key={nk()} className="text-sm leading-relaxed">
+          {applyInline(line)}
+        </p>,
+      );
+    }
+  }
+
+  inQ ? commitQ() : flushMainList();
+
+  return (
+    <div className="rounded-md border border-border bg-white p-6 min-h-[28rem]">
+      {nodes}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // InterviewPrepPanel
 // ---------------------------------------------------------------------------
 
@@ -1218,7 +1374,7 @@ function InterviewPrepPanel({
       {saveStatus === "error" && <p className="text-xs text-danger">{t("saveFailed")}</p>}
 
       <div className="relative">
-        <MarkdownViewer content={content} isStreaming={generating} />
+        <InterviewPrepViewer content={content} isStreaming={generating} />
         {generating && (
           <div className="absolute inset-0 flex items-center justify-center rounded-md bg-white/80">
             <div className="flex flex-col items-center gap-3">
