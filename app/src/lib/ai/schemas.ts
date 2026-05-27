@@ -3,7 +3,6 @@ import type {
   AssessmentAnalysis,
   InterviewPrep,
   ParsedJob,
-  ResumeScore,
 } from "@/lib/db/types";
 
 export const parsedJobSchema = z.object({
@@ -46,10 +45,3 @@ export const interviewPrepSchema = z.object({
   preparation_checklist: z.array(z.string()),
   talking_points: z.array(z.string()),
 }) satisfies z.ZodType<InterviewPrep>;
-
-export const resumeScoreSchema = z.object({
-  score: z.number().int().min(0).max(100),
-  strengths: z.array(z.string()),
-  gaps: z.array(z.string()),
-  suggestions: z.array(z.string()),
-}) satisfies z.ZodType<ResumeScore>;

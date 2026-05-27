@@ -5,7 +5,6 @@ import { useTranslations } from "next-intl";
 import {
   saveDocumentAction,
   analyzeAssessmentAction,
-  scoreResumeAction,
   getDocumentVersionsAction,
   type DocumentVersion,
 } from "@/app/actions/ai";
@@ -16,7 +15,6 @@ import type {
   ApplicationDocument,
   AssessmentAnalysis,
   DocumentType,
-  ResumeScore,
 } from "@/lib/db/types";
 import type { GroundingWarning } from "@/lib/ai/grounding";
 
@@ -1554,139 +1552,6 @@ function InterviewPrepPanel({
 }
 
 // ---------------------------------------------------------------------------
-// ScoreCard — resume vs job match
-// ---------------------------------------------------------------------------
-
-function scoreColor(score: number) {
-  if (score >= 75) return "#16a34a";
-  if (score >= 50) return "#d97706";
-  return "#dc2626";
-}
-
-function ScoreCard({ result }: { result: ResumeScore }) {
-  const t = useTranslations("Workspace");
-  const color = scoreColor(result.score);
-  return (
-    <div className="mt-4 rounded-md border border-border bg-white p-5 shadow-sm space-y-5">
-      <div className="flex items-center gap-5">
-        <div
-          className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full border-2 text-xl font-semibold"
-          style={{ borderColor: color, color }}
-        >
-          {result.score}
-        </div>
-        <div>
-          <p className="label-caps text-muted-foreground mb-0.5">{t("matchScore")}</p>
-          <div className="h-2 w-48 rounded-full bg-muted overflow-hidden">
-            <div
-              className="h-full rounded-full transition-all duration-500"
-              style={{ width: `${result.score}%`, backgroundColor: color }}
-            />
-          </div>
-        </div>
-      </div>
-
-      {result.strengths?.length ? (
-        <div>
-          <p className="label-caps mb-2">{t("strengths")}</p>
-          <ul className="space-y-1">
-            {result.strengths.map((s, i) => (
-              <li key={i} className="flex items-start gap-2 text-sm">
-                <span className="mt-0.5 shrink-0 text-success">✓</span>
-                <span>{s}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      ) : null}
-
-      {result.gaps?.length ? (
-        <div>
-          <p className="label-caps mb-2">{t("gaps")}</p>
-          <ul className="space-y-1">
-            {result.gaps.map((g, i) => (
-              <li key={i} className="flex items-start gap-2 text-sm">
-                <span className="mt-0.5 shrink-0 text-danger">✗</span>
-                <span>{g}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      ) : null}
-
-      {result.suggestions?.length ? (
-        <div>
-          <p className="label-caps mb-2">{t("topSuggestions")}</p>
-          <ol className="space-y-1.5">
-            {result.suggestions.map((s, i) => (
-              <li key={i} className="flex items-start gap-2.5 text-sm">
-                <span className="shrink-0 label-caps text-muted-foreground">{i + 1}.</span>
-                <span>{s}</span>
-              </li>
-            ))}
-          </ol>
-        </div>
-      ) : null}
-    </div>
-  );
-}
-
-function ScorePanel({
-  applicationId,
-  hasResume,
-}: {
-  applicationId: string;
-  hasResume: boolean;
-}) {
-  const t = useTranslations("Workspace");
-  const [scoreResult, setScoreResult] = useState<ResumeScore | null>(null);
-  const [error, setError] = useState("");
-  const [scoring, startScore] = useTransition();
-
-  function runScore() {
-    setError("");
-    const fd = new FormData();
-    fd.set("application_id", applicationId);
-    startScore(async () => {
-      const res = await scoreResumeAction(undefined, fd);
-      if (res && "error" in res && res.error) {
-        setError(res.error);
-      } else if (res && "result" in res && res.result) {
-        setScoreResult(res.result);
-      }
-    });
-  }
-
-  return (
-    <div className="mt-2">
-      <div className="flex flex-wrap items-center gap-3">
-        <Button
-          variant="outline"
-          onClick={runScore}
-          disabled={scoring || !hasResume}
-        >
-          {scoring ? t("scoring") : scoreResult ? t("reScore") : t("scoreResume")}
-        </Button>
-        {!hasResume && (
-          <p className="text-sm text-muted-foreground">
-            {t("uploadForScoring")}
-          </p>
-        )}
-        {scoring && (
-          <p className="text-sm text-muted-foreground animate-pulse">{t("analyzingMatch")}</p>
-        )}
-      </div>
-      {error && (
-        <p className="mt-3 rounded-md border border-danger/30 bg-danger/5 px-4 py-3 text-sm text-danger">
-          {error}
-        </p>
-      )}
-      {scoreResult && <ScoreCard result={scoreResult} />}
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
 // WorkspaceTabs root
 // ---------------------------------------------------------------------------
 
@@ -1829,13 +1694,6 @@ export function WorkspaceTabs({
                 hasResume={hasResume}
                 exportFilename={resumeFilename}
               />
-              <div className="mt-6 border-t border-border pt-6">
-                <p className="label-caps mb-1">{t("resumeScoringLabel")}</p>
-                <p className="mb-3 text-xs text-muted-foreground">
-                  {t("resumeScoringDesc")}
-                </p>
-                <ScorePanel applicationId={applicationId} hasResume={hasResume} />
-              </div>
             </>
           )}
           {activeTab === "cover_letter" && (

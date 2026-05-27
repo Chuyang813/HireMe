@@ -138,13 +138,6 @@ export interface Profile {
   updated_at: string;
 }
 
-export interface ResumeScore {
-  score: number;
-  strengths: string[];
-  gaps: string[];
-  suggestions: string[];
-}
-
 export interface BaseResume {
   id: string;
   user_id: string;

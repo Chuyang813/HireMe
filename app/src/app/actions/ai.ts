@@ -16,7 +16,6 @@ import { logTimelineEvent } from "@/lib/db/timeline";
 import { logAiEvent } from "@/lib/db/ai-events";
 import { aiJson, AI_PROVIDER, DEFAULT_MODEL } from "@/lib/ai/provider";
 import { PROMPT_VERSIONS, type PromptType } from "@/lib/ai/prompt-versions";
-import { resumeScoreSchema } from "@/lib/ai/schemas";
 import {
   cleanText,
   documentTypeSchema,
@@ -29,7 +28,6 @@ import type {
   DocumentType,
   ParsedJob,
   ParsedResume,
-  ResumeScore,
 } from "@/lib/db/types";
 
 function auditNote(promptType: PromptType) {
@@ -413,90 +411,6 @@ export async function generateInterviewPrepAction(
   });
 
   return { content };
-}
-
-// ---------------------------------------------------------------------------
-// Score resume against job description
-// ---------------------------------------------------------------------------
-
-export type ScoreResumeState =
-  | { result: ResumeScore; error?: never }
-  | { error: string; result?: never }
-  | undefined;
-
-export async function scoreResumeAction(
-  _prev: ScoreResumeState,
-  formData: FormData,
-): Promise<ScoreResumeState> {
-  const { supabase, user } = await requireUser();
-
-  const applicationId = String(formData.get("application_id") || "");
-  if (!uuidSchema.safeParse(applicationId).success) return { error: "Missing application ID." };
-
-  const limit = checkRateLimit(`score-resume:${user.id}`, { max: 20, windowMs: 60 * 60_000 });
-  if (!limit.allowed) {
-    return { error: `Too many scoring requests. Try again in ${limit.retryAfterSec}s.` };
-  }
-
-  const [{ data: app }, { data: resume }] = await Promise.all([
-    supabase
-      .from("job_applications")
-      .select("parsed_job_json, raw_job_text")
-      .eq("id", applicationId)
-      .eq("user_id", user.id)
-      .single(),
-    supabase
-      .from("base_resumes")
-      .select("parsed_resume_json, raw_text")
-      .eq("user_id", user.id)
-      .eq("is_default", true)
-      .single(),
-  ]);
-
-  if (!app) return { error: "Application not found." };
-  if (!resume) return { error: "No default resume found. Upload one in Resumes." };
-
-  const job = app.parsed_job_json as ParsedJob | null;
-  if (!job) return { error: "Job not yet analyzed. Try re-creating the application." };
-
-  const parsedResume = (resume.parsed_resume_json as ParsedResume | null) ?? {};
-  const resumeText = resume.raw_text ?? JSON.stringify(parsedResume);
-  const jobText = app.raw_job_text ?? JSON.stringify(job);
-
-  const system = `You are an expert technical recruiter and ATS specialist.
-Score how well a candidate's resume matches a job description.
-Return ONLY valid JSON with this exact shape:
-{
-  "score": <integer 0-100>,
-  "strengths": [<up to 4 short strings: what matches well>],
-  "gaps": [<up to 4 short strings: missing keywords or skills>],
-  "suggestions": [<exactly 3 short actionable strings to improve the resume for this role>]
-}`;
-
-  let result: ResumeScore;
-  try {
-    const raw = await aiJson<ResumeScore>({
-      system,
-      messages: [
-        {
-          role: "user",
-          content: `JOB DESCRIPTION:\n${jobText}\n\n---\n\nRESUME:\n${resumeText}`,
-        },
-      ],
-      maxTokens: 1024,
-    });
-    const validated = resumeScoreSchema.safeParse(raw);
-    if (!validated.success) {
-      console.error("[scoreResumeAction] Schema validation failed:", validated.error);
-      return { error: "Something went wrong. Please try again." };
-    }
-    result = validated.data;
-  } catch (e) {
-    console.error("[scoreResumeAction] AI error:", e);
-    return { error: "Something went wrong. Please try again." };
-  }
-
-  return { result };
 }
 
 // ---------------------------------------------------------------------------
