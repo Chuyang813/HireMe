@@ -1599,7 +1599,26 @@ export function WorkspaceTabs({
 
       <div className="grid min-h-[40rem] grid-cols-1 lg:grid-cols-[15.5rem_1fr]">
         <nav className="border-b border-border bg-[var(--muted)] p-3 lg:border-b-0 lg:border-r">
-          <div className="flex gap-1 overflow-x-auto lg:flex-col lg:overflow-visible">
+          {/* Mobile: select dropdown */}
+          <div className="lg:hidden">
+            <select
+              value={activeTab}
+              onChange={(e) => setActiveTab(e.target.value as TabId)}
+              className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+            >
+              {TABS.map((tab) => {
+                const isDone = tab.docType ? !!documentStatus[tab.docType] : false;
+                return (
+                  <option key={tab.id} value={tab.id}>
+                    {isDone ? "✓ " : ""}{t(tab.shortLabelKey)}
+                  </option>
+                );
+              })}
+            </select>
+          </div>
+
+          {/* Desktop: sidebar buttons */}
+          <div className="hidden lg:flex lg:flex-col gap-1">
             {TABS.map((tab) => {
               const isActive = activeTab === tab.id;
               const isDone = tab.docType ? documentStatus[tab.docType] : false;

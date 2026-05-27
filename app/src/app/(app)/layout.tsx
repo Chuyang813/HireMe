@@ -4,6 +4,7 @@ import { requireUser } from "@/lib/auth/current-user";
 import { signoutAction } from "@/lib/auth/actions";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { AppNavLink } from "@/components/AppNavLink";
+import { MobileNav } from "@/components/MobileNav";
 
 export default async function AppLayout({
   children,
@@ -64,18 +65,9 @@ export default async function AppLayout({
                 {t("signOut")}
               </button>
             </form>
+            {hasRequiredResume && <MobileNav navItems={navItems} />}
           </div>
         </div>
-
-        {hasRequiredResume ? (
-          <nav className="border-t border-border md:hidden">
-            <div className="mx-auto flex w-full max-w-7xl items-center gap-3 overflow-x-auto px-3 text-xs sm:gap-5 sm:px-6 sm:text-sm">
-              {navItems.map((n) => (
-                <AppNavLink key={n.href} href={n.href} label={n.label} />
-              ))}
-            </div>
-          </nav>
-        ) : null}
       </header>
       <main className="flex-1">{children}</main>
     </div>
