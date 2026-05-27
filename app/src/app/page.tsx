@@ -48,7 +48,7 @@ export default async function Home() {
             HireMe
           </Link>
           <nav className="flex min-w-0 items-center gap-2 text-sm sm:gap-4">
-            <span className="hidden sm:block"><LanguageSwitcher /></span>
+            <LanguageSwitcher />
             <Link
               href="/login"
               className="whitespace-nowrap rounded-md px-2 py-2 font-medium text-muted-foreground hover:bg-muted hover:text-foreground sm:px-3"
