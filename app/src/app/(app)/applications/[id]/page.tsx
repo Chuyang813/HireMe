@@ -215,7 +215,7 @@ export default async function ApplicationPage({
     new Date(application.created_at) < staleCutoff;
 
   return (
-    <div className="mx-auto w-full max-w-[1500px] px-6 py-12 xl:px-10">
+    <div className="mx-auto w-full max-w-[1500px] px-3 py-6 sm:px-6 sm:py-12 xl:px-10">
       <div className="label-caps mb-2">
         <Link href="/applications" className="hover:underline">
           {t("heading")}
@@ -237,7 +237,7 @@ export default async function ApplicationPage({
 
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="font-display text-4xl leading-tight">
+          <h1 className="font-display text-xl leading-tight sm:text-4xl">
             {application.role_title ?? t("detailUntitledRole")}
           </h1>
           <p className="mt-1 text-muted-foreground">
@@ -268,7 +268,7 @@ export default async function ApplicationPage({
         </div>
       </div>
 
-      <div className="mt-10 grid grid-cols-1 items-start gap-8 lg:grid-cols-[minmax(0,1fr)_220px] xl:grid-cols-[minmax(0,1fr)_240px] xl:gap-10">
+      <div className="mt-6 grid grid-cols-1 items-start gap-6 sm:mt-10 sm:gap-8 lg:grid-cols-[minmax(0,1fr)_220px] xl:grid-cols-[minmax(0,1fr)_240px] xl:gap-10">
         <main className="min-w-0">
           {job && (
             <JobAnalysisCard

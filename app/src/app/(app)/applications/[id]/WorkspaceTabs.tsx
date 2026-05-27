@@ -311,7 +311,7 @@ function MarkdownViewer({ content, isStreaming }: { content: string; isStreaming
   flushList();
 
   return (
-    <div className={`rounded-md border border-border bg-white p-6 min-h-[28rem]${isStreaming ? ' streaming' : ''}`}>
+    <div className={`rounded-md border border-border bg-white p-3 min-h-[28rem] sm:p-6${isStreaming ? ' streaming' : ''}`}>
       {nodes}
     </div>
   );
@@ -419,10 +419,10 @@ function EmailDraftView({ content }: { content: string }) {
   if (!hasStructure) {
     return (
       <div className="rounded-md border border-border bg-white shadow-sm">
-        <div className="flex items-center justify-between border-b border-border px-6 py-3">
+        <div className="flex items-center justify-between border-b border-border px-3 py-3 sm:px-6">
           <span className="label-caps">{t("emailDraftHeader")}</span>
         </div>
-        <div className="whitespace-pre-wrap p-6 text-sm leading-relaxed text-foreground">
+        <div className="whitespace-pre-wrap p-3 text-sm leading-relaxed text-foreground sm:p-6">
           {content}
         </div>
       </div>
@@ -437,7 +437,7 @@ function EmailDraftView({ content }: { content: string }) {
       </div>
 
       {parsed.subject && (
-        <div className="grid grid-cols-[5rem_1fr] gap-4 border-b border-border px-6 py-4">
+        <div className="grid grid-cols-[5rem_1fr] gap-4 border-b border-border px-3 py-3 sm:px-6 sm:py-4">
           <span className="label-caps pt-0.5">{t("emailSubjectLabel")}</span>
           <p className="font-display text-base leading-snug text-foreground">
             {parsed.subject}
@@ -446,7 +446,7 @@ function EmailDraftView({ content }: { content: string }) {
       )}
 
       {parsed.body && (
-        <div className="px-6 py-5">
+        <div className="px-3 py-4 sm:px-6 sm:py-5">
           <p className="label-caps mb-3">{t("emailBodyLabel")}</p>
           <div className="whitespace-pre-wrap text-sm leading-relaxed text-foreground">
             {parsed.body}
@@ -455,7 +455,7 @@ function EmailDraftView({ content }: { content: string }) {
       )}
 
       {parsed.signature && (
-        <div className="border-t border-border px-6 py-4">
+        <div className="border-t border-border px-3 py-3 sm:px-6 sm:py-4">
           <p className="label-caps mb-2">{t("emailSignatureLabel")}</p>
           <div className="whitespace-pre-wrap text-sm leading-relaxed text-foreground">
             {parsed.signature}
@@ -464,7 +464,7 @@ function EmailDraftView({ content }: { content: string }) {
       )}
 
       {parsed.attachments.length > 0 && (
-        <div className="border-t border-border bg-muted/30 px-6 py-4">
+        <div className="border-t border-border bg-muted/30 px-3 py-3 sm:px-6 sm:py-4">
           <p className="label-caps mb-3">{t("emailAttachmentsLabel")}</p>
           <ul className="flex flex-col gap-2">
             {parsed.attachments.map((a, i) => (
@@ -1231,7 +1231,7 @@ function InterviewPrepViewer({ content, isStreaming }: { content: string; isStre
   inQ ? commitQ() : flushMainList();
 
   return (
-    <div className="rounded-md border border-border bg-white p-6 min-h-[28rem]">
+    <div className="rounded-md border border-border bg-white p-3 min-h-[28rem] sm:p-6">
       {nodes}
     </div>
   );
@@ -1583,9 +1583,9 @@ export function WorkspaceTabs({
 
   return (
     <div className="overflow-hidden rounded-md border border-border bg-background">
-      <div className="flex flex-wrap items-center justify-between gap-4 border-b border-border px-6 py-5">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-3 py-3 sm:px-6 sm:py-5">
         <div className="min-w-0">
-          <p className="font-display text-2xl leading-tight">
+          <p className="font-display text-lg leading-tight sm:text-2xl">
             {roleTitle || t("workspaceUntitledRole")}
           </p>
           <p className="mt-1 truncate text-sm text-muted-foreground">
@@ -1638,7 +1638,7 @@ export function WorkspaceTabs({
           </div>
         </nav>
 
-        <section className="min-w-0 p-5 sm:p-8">
+        <section className="min-w-0 p-3 sm:p-5 md:p-8">
           <p className="label-caps mb-5 text-muted-foreground">{activeLabel}</p>
           {activeTab === "resume" && (
             <>

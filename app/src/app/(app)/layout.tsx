@@ -32,7 +32,7 @@ export default async function AppLayout({
   return (
     <div className="flex flex-1 flex-col">
       <header className="border-b border-border bg-background">
-        <div className="mx-auto flex h-14 w-full max-w-7xl items-center justify-between px-6">
+        <div className="mx-auto flex h-14 w-full max-w-7xl items-center justify-between px-3 sm:px-6">
           <Link
             href={hasRequiredResume ? "/dashboard" : "/onboarding"}
             className="font-display text-xl leading-none"
@@ -69,7 +69,7 @@ export default async function AppLayout({
 
         {hasRequiredResume ? (
           <nav className="border-t border-border md:hidden">
-            <div className="mx-auto flex w-full max-w-7xl items-center gap-5 overflow-x-auto px-6 text-sm">
+            <div className="mx-auto flex w-full max-w-7xl items-center gap-3 overflow-x-auto px-3 text-xs sm:gap-5 sm:px-6 sm:text-sm">
               {navItems.map((n) => (
                 <AppNavLink key={n.href} href={n.href} label={n.label} />
               ))}

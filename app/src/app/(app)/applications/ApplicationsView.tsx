@@ -137,8 +137,8 @@ export function ApplicationsView({
 
       <div className="mt-4">
         {applications.length === 0 ? (
-          <div className="rounded-md border border-dashed border-border p-12 text-center">
-            <p className="font-display text-2xl text-muted-foreground">
+          <div className="rounded-md border border-dashed border-border p-6 text-center sm:p-12">
+            <p className="font-display text-lg text-muted-foreground sm:text-2xl">
               {t("noAppsHeading")}
             </p>
             <p className="mt-2 text-sm text-muted-foreground">
@@ -154,11 +154,11 @@ export function ApplicationsView({
               <li key={app.id} className="relative">
                 <Link
                   href={`/applications/${app.id}`}
-                  className="block rounded-md border border-border bg-white p-5 transition-colors hover:border-[var(--border-strong)] hover:bg-[var(--muted)]"
+                  className="block rounded-md border border-border bg-white p-3 transition-colors hover:border-[var(--border-strong)] hover:bg-[var(--muted)] sm:p-5"
                 >
                   <div className="flex items-baseline justify-between gap-4">
                     <div>
-                      <h3 className="font-display text-xl">
+                      <h3 className="font-display text-base sm:text-xl">
                         {app.role_title ?? t("untitledRole")}
                       </h3>
                       <p className="mt-0.5 text-sm text-muted-foreground">
@@ -200,21 +200,21 @@ export function ApplicationsView({
         ) : (
           <>
             <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-5">
-              <div className="rounded-md border border-border bg-white p-4">
+              <div className="rounded-md border border-border bg-white p-3 sm:p-4">
                 <p className="label-caps text-muted-foreground">
                   {t("active")}
                 </p>
-                <p className="mt-1 font-display text-3xl">{active}</p>
+                <p className="mt-1 font-display text-2xl sm:text-3xl">{active}</p>
               </div>
               {PIPELINE_STATS.map((s) => (
                 <div
                   key={s}
-                  className="rounded-md border border-border bg-white p-4"
+                  className="rounded-md border border-border bg-white p-3 sm:p-4"
                 >
                   <p className="label-caps text-muted-foreground">
                     {t(STATUS_LABEL_KEYS[s] as Parameters<typeof t>[0])}
                   </p>
-                  <p className="mt-1 font-display text-3xl">
+                  <p className="mt-1 font-display text-2xl sm:text-3xl">
                     {counts[s] ?? 0}
                   </p>
                 </div>
@@ -225,19 +225,19 @@ export function ApplicationsView({
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-border bg-muted/40">
-                    <th className="label-caps px-5 py-3 text-left font-normal text-muted-foreground">
+                    <th className="label-caps px-3 py-2 text-left font-normal text-muted-foreground sm:px-5 sm:py-3">
                       {t("colCompany")}
                     </th>
-                    <th className="label-caps px-5 py-3 text-left font-normal text-muted-foreground">
+                    <th className="label-caps px-3 py-2 text-left font-normal text-muted-foreground sm:px-5 sm:py-3">
                       {t("colPosition")}
                     </th>
-                    <th className="label-caps hidden px-5 py-3 text-left font-normal text-muted-foreground sm:table-cell">
+                    <th className="label-caps hidden px-3 py-2 text-left font-normal text-muted-foreground sm:table-cell sm:px-5 sm:py-3">
                       {t("colAdded")}
                     </th>
-                    <th className="label-caps px-5 py-3 text-left font-normal text-muted-foreground">
+                    <th className="label-caps px-3 py-2 text-left font-normal text-muted-foreground sm:px-5 sm:py-3">
                       {t("colStatus")}
                     </th>
-                    <th className="label-caps px-5 py-3 text-left font-normal text-muted-foreground">
+                    <th className="label-caps px-3 py-2 text-left font-normal text-muted-foreground sm:px-5 sm:py-3">
                       {t("colActions")}
                     </th>
                   </tr>
@@ -248,7 +248,7 @@ export function ApplicationsView({
                       key={app.id}
                       className={`border-b border-border last:border-0 bg-white ${statusRowColor(app.current_status)}`}
                     >
-                      <td className="max-w-[200px] px-5 py-4">
+                      <td className="max-w-[200px] px-3 py-2.5 sm:px-5 sm:py-4">
                         <div className="flex items-center gap-2">
                           <Link
                             href={`/applications/${app.id}`}
@@ -267,7 +267,7 @@ export function ApplicationsView({
                           )}
                         </div>
                       </td>
-                      <td className="px-5 py-4 text-muted-foreground">
+                      <td className="px-3 py-2.5 text-muted-foreground sm:px-5 sm:py-4">
                         <Link
                           href={`/applications/${app.id}`}
                           className="hover:text-foreground"
@@ -275,17 +275,17 @@ export function ApplicationsView({
                           {app.role_title ?? "—"}
                         </Link>
                       </td>
-                      <td className="hidden px-5 py-4 text-muted-foreground sm:table-cell">
+                      <td className="hidden px-3 py-2.5 text-muted-foreground sm:table-cell sm:px-5 sm:py-4">
                         {new Date(app.created_at).toLocaleDateString()}
                       </td>
-                      <td className="w-44 whitespace-nowrap px-5 py-4">
+                      <td className="w-44 whitespace-nowrap px-3 py-2.5 sm:px-5 sm:py-4">
                         <StatusSelect
                           applicationId={app.id}
                           current={app.current_status}
                           className="h-8 w-40 text-xs"
                         />
                       </td>
-                      <td className="px-5 py-4">
+                      <td className="px-3 py-2.5 sm:px-5 sm:py-4">
                         <div className="flex items-center gap-2">
                           <Link
                             href={`/applications/${app.id}`}

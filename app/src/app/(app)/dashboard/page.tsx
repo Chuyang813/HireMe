@@ -59,14 +59,14 @@ function StatCard({
   icon: React.ReactNode;
 }) {
   return (
-    <div className="rounded-md border border-border bg-background p-5">
+    <div className="rounded-md border border-border bg-background p-3 sm:p-5">
       <div className="flex items-start justify-between gap-4">
-        <p className="font-display text-4xl leading-none">{value}</p>
+        <p className="font-display text-2xl leading-none sm:text-4xl">{value}</p>
         <span className="flex h-8 w-8 items-center justify-center rounded-md bg-muted text-muted-foreground">
           {icon}
         </span>
       </div>
-      <p className="label-caps mt-4 text-foreground">{label}</p>
+      <p className="label-caps mt-2 text-foreground sm:mt-4">{label}</p>
       <p className="mt-0.5 text-xs text-muted-foreground">{sub}</p>
     </div>
   );
@@ -258,16 +258,16 @@ export default async function DashboardPage() {
   ];
 
   return (
-    <div className="mx-auto w-full max-w-7xl px-6 py-14">
+    <div className="mx-auto w-full max-w-7xl px-3 py-6 sm:px-6 sm:py-14">
       <section className="flex items-start justify-between gap-8">
         <div>
           <p className="label-caps mb-6">{t("overviewLabel")}</p>
-          <h1 className="font-display text-5xl leading-none md:text-6xl">
+          <h1 className="font-display text-2xl leading-none sm:text-5xl md:text-6xl">
             {t("heading")}
           </h1>
-          <div className="mt-6 space-y-1 text-lg text-muted-foreground">
+          <div className="mt-3 space-y-1 text-sm text-muted-foreground sm:mt-6 sm:text-lg">
             <p>{t("welcomeBack", { name: fullNameFromProfile(profileData).split(" ")[0] })}</p>
-            <p className="text-base">
+            <p className="text-xs sm:text-base">
               {hasApplications
                 ? t("summary", {
                     active: activeCount,
@@ -287,25 +287,25 @@ export default async function DashboardPage() {
         </Link>
       </section>
 
-      <section className="mt-14">
+      <section className="mt-8 sm:mt-14">
         <p className="label-caps mb-4">{t("statsLabel")}</p>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-5">
           {stats.map((stat) => (
             <StatCard key={stat.label} {...stat} />
           ))}
         </div>
       </section>
 
-      <section className="mt-14 grid grid-cols-1 gap-6 lg:grid-cols-[0.95fr_1.05fr]">
+      <section className="mt-8 grid grid-cols-1 gap-4 sm:mt-14 sm:gap-6 lg:grid-cols-[0.95fr_1.05fr]">
         <div>
           <p className="label-caps mb-4">{t("nextActionLabel")}</p>
-          <div className="flex min-h-72 flex-col justify-between rounded-md border border-border bg-background p-6">
+          <div className="flex min-h-72 flex-col justify-between rounded-md border border-border bg-background p-4 sm:p-6">
             <div className="flex items-start gap-6">
               <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
                 <SmallIcon kind="briefcase" />
               </span>
               <div>
-                <h2 className="font-display text-xl leading-snug">
+                <h2 className="font-display text-base leading-snug sm:text-xl">
                   {nextActionApp
                     ? t("nextActionTitle", {
                         role: nextActionApp.role_title ?? t("untitledRole"),
@@ -336,7 +336,7 @@ export default async function DashboardPage() {
               {t("viewAll")}
             </Link>
           </div>
-          <div className="rounded-md border border-border bg-background px-5 py-3">
+          <div className="rounded-md border border-border bg-background px-3 py-3 sm:px-5">
             {events.length === 0 ? (
               <p className="py-8 text-sm text-muted-foreground">{t("noActivity")}</p>
             ) : (
