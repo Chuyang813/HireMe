@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { requireUser } from "@/lib/auth/current-user";
+import { OnboardingChecklist } from "@/components/OnboardingChecklist";
 import type {
   ApplicationStatus,
   ApplicationTimelineEvent,
@@ -189,7 +190,7 @@ export default async function DashboardPage() {
     redirect("/onboarding");
   }
 
-  const [{ data: allAppsData }, { data: recentData }, { data: eventsData }] = await Promise.all([
+  const [{ data: allAppsData }, { data: recentData }, { data: eventsData }, { count: docEventCount }] = await Promise.all([
     supabase
       .from("job_applications")
       .select("id, current_status")
@@ -206,6 +207,11 @@ export default async function DashboardPage() {
       .eq("user_id", user.id)
       .order("created_at", { ascending: false })
       .limit(5),
+    supabase
+      .from("application_timeline_events")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", user.id)
+      .eq("event_type", "document_generated"),
   ]);
 
   const allApps = (allAppsData ?? []) as Pick<JobApplication, "id" | "current_status">[];
@@ -213,6 +219,8 @@ export default async function DashboardPage() {
   const events = (eventsData ?? []) as TimelineEventWithApp[];
   const profileData = profile as Pick<Profile, "full_name" | "display_name"> | null;
   const hasApplications = allApps.length > 0;
+  const hasGeneratedDocument = (docEventCount ?? 0) > 0;
+  const firstApplicationId = allApps[0]?.id ?? null;
 
   const activeCount = allApps.filter(
     (a) => !INACTIVE_STATUSES.includes(a.current_status),
@@ -259,6 +267,16 @@ export default async function DashboardPage() {
 
   return (
     <div className="mx-auto w-full max-w-7xl px-3 py-6 sm:px-6 sm:py-14">
+      {(!hasApplications || !hasGeneratedDocument) && (
+        <div className="mb-8 sm:mb-10">
+          <OnboardingChecklist
+            hasApplication={hasApplications}
+            hasGeneratedDocument={hasGeneratedDocument}
+            firstApplicationId={firstApplicationId}
+          />
+        </div>
+      )}
+
       <section className="flex items-start justify-between gap-8">
         <div>
           <p className="label-caps mb-6">{t("overviewLabel")}</p>

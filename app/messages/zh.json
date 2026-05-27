@@ -463,5 +463,18 @@
     "styleAcademic": "学术",
     "styleStory": "故事性",
     "styleEnthusiastic": "热情"
+  },
+  "OnboardingChecklist": {
+    "label": "开始使用",
+    "heading": "完成初始设置",
+    "sub": "三个简单步骤，让你的第一份定制申请材料准备就绪。",
+    "dismiss": "暂时跳过",
+    "step1Title": "上传基础简历",
+    "step2Title": "添加第一个职位",
+    "step2Body": "粘贴职位描述，HireMe 将提取职位信息并创建工作区。",
+    "step2Cta": "添加职位 →",
+    "step3Title": "生成第一份文档",
+    "step3Body": "打开你的申请，生成定制简历或求职信。",
+    "step3Cta": "打开工作区 →"
   }
 }

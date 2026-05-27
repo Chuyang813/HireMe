@@ -463,5 +463,18 @@
     "styleAcademic": "Académique",
     "styleStory": "Narratif",
     "styleEnthusiastic": "Enthousiaste"
+  },
+  "OnboardingChecklist": {
+    "label": "Démarrage",
+    "heading": "Configurez votre espace",
+    "sub": "Trois étapes rapides pour préparer votre première candidature.",
+    "dismiss": "Ignorer",
+    "step1Title": "Téléversez votre CV de base",
+    "step2Title": "Ajoutez votre premier poste",
+    "step2Body": "Collez une description de poste et HireMe extraira les détails pour créer un espace de travail.",
+    "step2Cta": "Ajouter un poste →",
+    "step3Title": "Générez votre premier document",
+    "step3Body": "Ouvrez votre candidature et générez un CV adapté ou une lettre de motivation.",
+    "step3Cta": "Ouvrir l'espace →"
   }
 }

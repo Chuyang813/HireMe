@@ -463,5 +463,18 @@
     "styleAcademic": "Academic",
     "styleStory": "Story-driven",
     "styleEnthusiastic": "Enthusiastic"
+  },
+  "OnboardingChecklist": {
+    "label": "Getting started",
+    "heading": "Set up your workspace",
+    "sub": "Three quick steps to get your first tailored application ready.",
+    "dismiss": "Dismiss",
+    "step1Title": "Upload your base resume",
+    "step2Title": "Add your first job",
+    "step2Body": "Paste a job description and HireMe will extract the role details and create a workspace.",
+    "step2Cta": "Add a job →",
+    "step3Title": "Generate your first document",
+    "step3Body": "Open your application and generate a tailored resume or cover letter.",
+    "step3Cta": "Open workspace →"
   }
 }
