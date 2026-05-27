@@ -259,6 +259,7 @@
     "colCompany": "Company",
     "colPosition": "Position",
     "colAdded": "Date Added",
+    "colFit": "ATS Fit",
     "colStatus": "Status",
     "colActions": "Actions",
     "viewCards": "Cards",

@@ -21,6 +21,25 @@ const STATUS_LABEL_KEYS: Record<ApplicationStatus, string> = {
 
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 
+function FitBadge({ score }: { score: number | null }) {
+  if (score === null) return null;
+  const { label, cls } =
+    score >= 85
+      ? { label: "Strong fit", cls: "bg-green-50 text-green-700 border-green-200" }
+      : score >= 70
+        ? { label: "Good fit", cls: "bg-blue-50 text-blue-700 border-blue-200" }
+        : score >= 50
+          ? { label: "Moderate", cls: "bg-yellow-50 text-yellow-700 border-yellow-200" }
+          : { label: "Low fit", cls: "bg-red-50 text-red-700 border-red-200" };
+  return (
+    <span
+      className={`inline-flex items-center gap-1 rounded border px-2 py-0.5 text-xs ${cls}`}
+    >
+      {label} <span className="font-semibold">{score}</span>
+    </span>
+  );
+}
+
 function isStale(app: JobApplication): boolean {
   return (
     app.current_status === "saved" &&
@@ -189,10 +208,13 @@ export function ApplicationsView({
                       />
                     </div>
                   </div>
-                  <p className="mt-2 text-xs text-muted-foreground">
-                    {t("updatedPrefix")}{" "}
-                    {new Date(app.updated_at).toLocaleDateString()}
-                  </p>
+                  <div className="mt-2 flex items-center gap-3">
+                    <p className="text-xs text-muted-foreground">
+                      {t("updatedPrefix")}{" "}
+                      {new Date(app.updated_at).toLocaleDateString()}
+                    </p>
+                    <FitBadge score={app.ats_score} />
+                  </div>
                 </Link>
               </li>
             ))}
@@ -233,6 +255,9 @@ export function ApplicationsView({
                     </th>
                     <th className="label-caps hidden px-3 py-2 text-left font-normal text-muted-foreground sm:table-cell sm:px-5 sm:py-3">
                       {t("colAdded")}
+                    </th>
+                    <th className="label-caps hidden px-3 py-2 text-left font-normal text-muted-foreground sm:table-cell sm:px-5 sm:py-3">
+                      {t("colFit")}
                     </th>
                     <th className="label-caps px-3 py-2 text-left font-normal text-muted-foreground sm:px-5 sm:py-3">
                       {t("colStatus")}
@@ -277,6 +302,9 @@ export function ApplicationsView({
                       </td>
                       <td className="hidden px-3 py-2.5 text-muted-foreground sm:table-cell sm:px-5 sm:py-4">
                         {new Date(app.created_at).toLocaleDateString()}
+                      </td>
+                      <td className="hidden whitespace-nowrap px-3 py-2.5 sm:table-cell sm:px-5 sm:py-4">
+                        <FitBadge score={app.ats_score} />
                       </td>
                       <td className="w-44 whitespace-nowrap px-3 py-2.5 sm:px-5 sm:py-4">
                         <StatusSelect

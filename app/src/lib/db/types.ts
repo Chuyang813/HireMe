@@ -163,6 +163,7 @@ export interface JobApplication {
   parsed_job_json: ParsedJob | null;
   current_status: ApplicationStatus;
   notes: string | null;
+  ats_score: number | null;
   created_at: string;
   updated_at: string;
 }

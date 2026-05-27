@@ -47,5 +47,11 @@ export async function runResumeEvals(
     checkFabrication(generatedResume, sourceResumeText, jobDescription),
   ]);
 
+  await supabase
+    .from("job_applications")
+    .update({ ats_score: ats.overall })
+    .eq("id", applicationId)
+    .eq("user_id", user.id);
+
   return { ats, fabrication };
 }

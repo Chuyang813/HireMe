@@ -259,6 +259,7 @@
     "colCompany": "Entreprise",
     "colPosition": "Poste",
     "colAdded": "Ajouté",
+    "colFit": "Score ATS",
     "colStatus": "Statut",
     "colActions": "Actions",
     "viewCards": "Cartes",
