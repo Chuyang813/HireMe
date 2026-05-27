@@ -48,7 +48,7 @@ export default async function Home() {
             HireMe
           </Link>
           <nav className="flex min-w-0 items-center gap-2 text-sm sm:gap-4">
-            <LanguageSwitcher />
+            <span className="hidden sm:block"><LanguageSwitcher /></span>
             <Link
               href="/login"
               className="whitespace-nowrap rounded-md px-2 py-2 font-medium text-muted-foreground hover:bg-muted hover:text-foreground sm:px-3"
@@ -66,17 +66,17 @@ export default async function Home() {
       </header>
 
       <main className="flex flex-1 flex-col">
-        <section className="mx-auto grid w-full max-w-7xl grid-cols-1 items-center gap-14 px-6 py-16 sm:py-20 lg:grid-cols-[1.05fr_0.95fr] lg:py-24">
+        <section className="mx-auto grid w-full max-w-7xl grid-cols-1 items-center gap-10 px-4 py-10 sm:gap-14 sm:px-6 sm:py-20 lg:grid-cols-[1.05fr_0.95fr] lg:py-24">
           <div>
-            <p className="label-caps mb-8">{t("tagline")}</p>
-            <h1 className="font-display text-5xl leading-[1.05] tracking-tight sm:text-6xl">
+            <p className="label-caps mb-5 sm:mb-8">{t("tagline")}</p>
+            <h1 className="font-display text-3xl leading-[1.1] tracking-tight sm:text-5xl sm:leading-[1.05] lg:text-6xl">
               {t("headline")}
               <br />
               <span className="italic text-muted-foreground">
                 {t("headlineItalic")}
               </span>
             </h1>
-            <p className="mt-8 max-w-2xl text-lg leading-8 text-muted-foreground">
+            <p className="mt-5 max-w-2xl text-sm leading-7 text-muted-foreground sm:mt-8 sm:text-base sm:leading-8 lg:text-lg">
               {t("description")}
             </p>
             <div className="mt-10 flex flex-wrap items-center gap-4">
