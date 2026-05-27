@@ -9,6 +9,7 @@ import {
   getDocumentVersionsAction,
   type DocumentVersion,
 } from "@/app/actions/ai";
+import { runResumeEvals, type ATSResult, type FabricationResult } from "@/app/actions/eval";
 import { Button } from "@/components/ui/Button";
 import { FeedbackButtons } from "@/components/FeedbackButtons";
 import type {
@@ -566,6 +567,144 @@ function docTypeToTabId(dt: DocumentType): string {
   return dt;
 }
 
+// ---------------------------------------------------------------------------
+// EvalResultsPanel — ATS + fabrication checks rendered below the resume
+// ---------------------------------------------------------------------------
+
+function EvalResultsPanel({
+  ats,
+  fabrication,
+  loading,
+}: {
+  ats: ATSResult | null;
+  fabrication: FabricationResult | null;
+  loading: boolean;
+}) {
+  if (loading) {
+    return (
+      <div className="mt-4 rounded-md border border-border bg-white px-4 py-3 text-sm text-muted-foreground animate-pulse">
+        Analyzing resume…
+      </div>
+    );
+  }
+
+  if (!ats || !fabrication) return null;
+
+  function scoreColor(n: number) {
+    if (n >= 75) return "#16a34a";
+    if (n >= 50) return "#d97706";
+    return "#dc2626";
+  }
+
+  const atsColor = scoreColor(ats.overall);
+  const fabColor = scoreColor(fabrication.score);
+
+  return (
+    <div className="mt-4 space-y-3">
+      {/* ATS Score Card */}
+      <div className="rounded-md border border-border bg-white p-4 shadow-sm space-y-3">
+        <div className="flex items-center justify-between">
+          <p className="label-caps">ATS Score</p>
+          <span className="text-base font-semibold tabular-nums" style={{ color: atsColor }}>
+            {ats.overall}/100
+          </span>
+        </div>
+
+        <div className="space-y-1.5">
+          {(
+            [
+              ["Keyword Match", ats.breakdown.keywordMatch],
+              ["Formatting", ats.breakdown.formatting],
+              ["Readability", ats.breakdown.readability],
+              ["Length", ats.breakdown.lengthScore],
+            ] as [string, number][]
+          ).map(([label, value]) => (
+            <div key={label} className="flex items-center gap-2 text-xs">
+              <span className="w-28 shrink-0 text-muted-foreground">{label}</span>
+              <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
+                <div
+                  className="h-full rounded-full transition-all duration-500"
+                  style={{ width: `${value}%`, backgroundColor: scoreColor(value) }}
+                />
+              </div>
+              <span className="w-8 shrink-0 text-right tabular-nums text-muted-foreground">
+                {value}%
+              </span>
+            </div>
+          ))}
+        </div>
+
+        {ats.matchedKeywords.length > 0 && (
+          <p className="text-xs text-muted-foreground">
+            <span className="text-success">✓</span>{" "}
+            {ats.matchedKeywords.slice(0, 10).join(", ")}
+            {ats.matchedKeywords.length > 10 && ` +${ats.matchedKeywords.length - 10} more`}
+          </p>
+        )}
+
+        {ats.missingKeywords.length > 0 && (
+          <p className="text-xs text-muted-foreground">
+            <span className="text-amber-600">⚠</span>{" "}
+            Missing: {ats.missingKeywords.slice(0, 6).join(", ")}
+          </p>
+        )}
+
+        {ats.suggestions.length > 0 && (
+          <div>
+            <p className="label-caps mb-1">Tips</p>
+            <ul className="space-y-1">
+              {ats.suggestions.map((s, i) => (
+                <li key={i} className="flex items-start gap-1.5 text-xs text-muted-foreground">
+                  <span className="shrink-0">•</span>
+                  <span>{s}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </div>
+
+      {/* Fabrication Check */}
+      <div className="rounded-md border border-border bg-white p-4 shadow-sm space-y-2">
+        <div className="flex items-center justify-between">
+          <p className="label-caps">Fabrication Check</p>
+          <span className="text-sm font-semibold tabular-nums" style={{ color: fabColor }}>
+            {fabrication.score >= 90 ? "✓" : "⚠"} {fabrication.score}/100
+          </span>
+        </div>
+
+        {fabrication.fabricatedClaims.length === 0 ? (
+          <p className="text-xs text-muted-foreground">
+            All {fabrication.totalClaims} claims traced to source material.
+          </p>
+        ) : (
+          <>
+            <p className="text-xs text-muted-foreground">
+              {fabrication.fabricatedClaims.length} claim
+              {fabrication.fabricatedClaims.length !== 1 ? "s" : ""} could not be
+              verified against your resume:
+            </p>
+            <ul className="space-y-1.5">
+              {fabrication.fabricatedClaims.slice(0, 5).map((c, i) => (
+                <li
+                  key={i}
+                  className="rounded border border-amber-200 bg-amber-50 px-2.5 py-1.5 text-xs"
+                >
+                  <span className="text-amber-700">⚠ </span>
+                  <span className="italic text-amber-900">
+                    &ldquo;{c.claim.length > 90 ? c.claim.slice(0, 90) + "…" : c.claim}&rdquo;
+                  </span>
+                  <span className="text-amber-600"> — {c.reason}</span>
+                </li>
+              ))}
+            </ul>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function DocumentPanel({
   applicationId,
   documentType,
@@ -591,6 +730,8 @@ function DocumentPanel({
   const [autoSaving, setAutoSaving] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [groundingWarnings, setGroundingWarnings] = useState<GroundingWarning[]>([]);
+  const [evalResult, setEvalResult] = useState<{ ats: ATSResult; fabrication: FabricationResult } | null>(null);
+  const [evalLoading, setEvalLoading] = useState(false);
 
   const styleOptions =
     documentType === "tailored_resume"
@@ -695,6 +836,18 @@ function DocumentPanel({
         return;
       }
       await saveContent(accumulated, style);
+
+      if (documentType === "tailored_resume") {
+        setEvalLoading(true);
+        try {
+          const result = await runResumeEvals(applicationId, accumulated);
+          setEvalResult(result);
+        } catch {
+          // Eval failure is non-fatal; resume is still usable
+        } finally {
+          setEvalLoading(false);
+        }
+      }
     } catch (e) {
       setGenerateError(e instanceof Error ? e.message : t("generationFailed"));
     } finally {
@@ -916,6 +1069,14 @@ function DocumentPanel({
           </div>
         )}
       </div>
+
+      {documentType === "tailored_resume" && (evalLoading || evalResult) && (
+        <EvalResultsPanel
+          ats={evalResult?.ats ?? null}
+          fabrication={evalResult?.fabrication ?? null}
+          loading={evalLoading}
+        />
+      )}
 
       {docId && content && !generating && (
         <div className="flex justify-end">
