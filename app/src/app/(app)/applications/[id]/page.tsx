@@ -274,6 +274,7 @@ export default async function ApplicationPage({
             <JobAnalysisCard
               job={job}
               resume={parsedResume}
+              rawJobText={application.raw_job_text}
             />
           )}
 
