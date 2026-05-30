@@ -31,7 +31,7 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
-  serverExternalPackages: ["mammoth"],
+  serverExternalPackages: ["mammoth", "unpdf", "pdfjs-dist"],
   experimental: {
     serverActions: {
       bodySizeLimit: "10mb",
