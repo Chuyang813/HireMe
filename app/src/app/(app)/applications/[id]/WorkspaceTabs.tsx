@@ -1195,11 +1195,15 @@ function AssessmentPanel({ applicationId }: { applicationId: string }) {
     fd.set("application_id", applicationId);
     fd.set("file", file);
     startAnalyze(async () => {
-      const res = await analyzeAssessmentAction(undefined, fd);
-      if (res && "error" in res && res.error) {
-        setError(res.error);
-      } else if (res && "result" in res && res.result) {
-        setResult(res.result);
+      try {
+        const res = await analyzeAssessmentAction(undefined, fd);
+        if (res && "error" in res && res.error) {
+          setError(res.error);
+        } else if (res && "result" in res && res.result) {
+          setResult(res.result);
+        }
+      } catch {
+        setError("Analysis failed. Please try again.");
       }
     });
   }
