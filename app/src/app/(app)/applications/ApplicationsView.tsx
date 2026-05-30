@@ -35,7 +35,8 @@ function FitBadge({ score }: { score: number | null }) {
     <span
       className={`inline-flex items-center gap-1 rounded border px-2 py-0.5 text-xs ${cls}`}
     >
-      {label} <span className="font-semibold">{score}</span>
+      {label} <span className="opacity-50">·</span>{" "}
+      <span className="font-semibold">{score}</span>
     </span>
   );
 }
