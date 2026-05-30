@@ -336,7 +336,8 @@ export async function analyzeAssessmentAction(
       job: app.parsed_job_json as ParsedJob | null,
     });
   } catch (e) {
-    console.error("[analyzeAssessmentAction] AI error:", e);
+    const msg = e instanceof Error ? e.message : String(e);
+    console.error("[analyzeAssessmentAction] AI error:", msg, e);
     return { error: "Analysis failed. Please try again." };
   }
 

@@ -353,9 +353,10 @@ async function generateDeepSeek({
             ...messages,
           ],
           max_tokens: maxTokens,
-          thinking: {
-            type: thinkingMode,
-          },
+          // Only send the thinking field when explicitly enabled.
+          // Reasoning models (e.g. deepseek-v4-pro) reject thinking:disabled;
+          // omitting the field lets the model use its own default.
+          ...(thinkingMode === "enabled" ? { thinking: { type: "enabled" } } : {}),
           response_format:
             responseMimeType === "application/json"
               ? { type: "json_object" }
@@ -591,7 +592,10 @@ export async function aiJson<T>({
               messages,
               model: candidate.model,
               maxTokens,
-              responseMimeType: "application/json",
+              // Use text/plain: deepseek reasoning models (e.g. deepseek-v4-pro) reject
+              // response_format:json_object. The system prompt enforces JSON output and
+              // extractJson() parses it from the text response.
+              responseMimeType: "text/plain",
               thinkingMode: getDeepSeekJsonThinkingMode(),
             })
           : candidate.provider === "glm"
