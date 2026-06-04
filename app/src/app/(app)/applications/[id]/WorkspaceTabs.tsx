@@ -8,7 +8,9 @@ import {
   getDocumentVersionsAction,
   type DocumentVersion,
 } from "@/app/actions/ai";
-import { runResumeEvals, type ATSResult, type FabricationResult } from "@/app/actions/eval";
+import { runResumeEvals } from "@/app/actions/eval";
+import type { ATSResult } from "@/lib/ai/ats-score";
+import type { FabricationResult } from "@/lib/ai/fabrication-check";
 import { Button } from "@/components/ui/Button";
 import { FeedbackButtons } from "@/components/FeedbackButtons";
 import type {

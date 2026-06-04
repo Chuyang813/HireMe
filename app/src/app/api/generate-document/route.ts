@@ -330,13 +330,36 @@ export async function POST(req: NextRequest) {
       try {
         console.log(`[generate-document] Starting ${AI_PROVIDER}:${usedModel} generation for ${documentType} (thinking=${aiOptions.thinkingMode ?? "env-default"})`);
         const aiStartedAt = Date.now();
-        const content = await aiText({
-          system: prompt.system,
-          messages: [{ role: "user", content: prompt.userMessage }],
-          maxTokens: prompt.maxTokens,
-          model: aiOptions.model,
-          thinkingMode: aiOptions.thinkingMode,
-        });
+
+        let content!: string;
+        let actualModel = usedModel;
+        try {
+          content = await aiText({
+            system: prompt.system,
+            messages: [{ role: "user", content: prompt.userMessage }],
+            maxTokens: prompt.maxTokens,
+            model: aiOptions.model,
+            thinkingMode: aiOptions.thinkingMode,
+          });
+        } catch (primaryErr) {
+          if (
+            documentType === "tailored_resume" &&
+            primaryErr instanceof Error &&
+            primaryErr.message.includes("no text")
+          ) {
+            console.log(`[generate-document] [fallback to deepseek-chat] tailored_resume returned no text, retrying with ${DEEPSEEK_CHAT_MODEL}`);
+            actualModel = DEEPSEEK_CHAT_MODEL;
+            content = await aiText({
+              system: prompt.system,
+              messages: [{ role: "user", content: prompt.userMessage }],
+              maxTokens: prompt.maxTokens,
+              model: DEEPSEEK_CHAT_MODEL,
+              thinkingMode: "disabled",
+            });
+          } else {
+            throw primaryErr;
+          }
+        }
 
         controller.enqueue(encoder.encode(content));
 
@@ -348,7 +371,7 @@ export async function POST(req: NextRequest) {
           application_id: applicationId,
           event_type: "document_generation_stream",
           provider: AI_PROVIDER,
-          model: usedModel,
+          model: actualModel,
           prompt_type: pt,
           prompt_version: PROMPT_VERSIONS[pt],
           document_type: documentType,
@@ -361,7 +384,7 @@ export async function POST(req: NextRequest) {
           user_id: user.id,
           event_type: "document_generated",
           new_value: documentType,
-          note: auditNote(pt, usedModel),
+          note: auditNote(pt, actualModel),
         });
       } catch (e) {
         clearTimeout(timer);

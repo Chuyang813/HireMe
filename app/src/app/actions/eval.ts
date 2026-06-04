@@ -7,7 +7,6 @@ import { checkFabrication, type FabricationResult } from "@/lib/ai/fabrication-c
 import { uuidSchema } from "@/lib/security/limits";
 import type { ParsedJob, ParsedResume } from "@/lib/db/types";
 
-export type { ATSResult, FabricationResult };
 
 export async function runResumeEvals(
   applicationId: string,
