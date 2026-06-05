@@ -51,5 +51,5 @@ const nextConfig: NextConfig = {
 export default withSentryConfig(withNextIntl(nextConfig), {
   silent: true,
   sourcemaps: { disable: true },
-  automaticVercelMonitors: false,
+  webpack: { automaticVercelMonitors: false },
 });
