@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { DemoSection } from "@/components/DemoSection";
 
 export default async function Home() {
   const t = await getTranslations("Landing");
@@ -131,6 +132,12 @@ export default async function Home() {
             </div>
           </div>
         </section>
+
+        <DemoSection
+          heading={t("demoHeading")}
+          sub={t("demoSub")}
+          stepLabels={[t("demoStep1"), t("demoStep2"), t("demoStep3"), t("demoStep4")]}
+        />
 
         <section className="border-t border-border">
           <div className="mx-auto grid w-full max-w-7xl gap-10 px-6 py-16 lg:grid-cols-[0.8fr_1.2fr]">

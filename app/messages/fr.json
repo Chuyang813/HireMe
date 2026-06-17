@@ -29,7 +29,13 @@
     "feature03Body": "Sauvegardé → Postulé → Test → Entretien → Offre. Vous voyez où en est chaque candidature et à quelle étape ça coince, depuis un seul tableau de bord.",
     "feature04Title": "Jusqu'à l'entretien",
     "feature04Body": "Quand l'invitation tombe, HireMe prépare les questions probables et une fiche de prép structurée à partir de l'offre et de votre profil — vous arrivez prêt, pas en train de réviser.",
-    "footerDisclaimer": "Les brouillons générés sont des points de départ — relisez-les avant d'envoyer."
+    "footerDisclaimer": "Les brouillons générés sont des points de départ — relisez-les avant d'envoyer.",
+    "demoHeading": "De l'offre à la candidature complète",
+    "demoSub": "Voyez comment HireMe transforme une fiche de poste en dossier de candidature prêt à envoyer.",
+    "demoStep1": "Collez l'offre d'emploi",
+    "demoStep2": "L'IA génère les documents",
+    "demoStep3": "Score ATS et compatibilité",
+    "demoStep4": "Préparation d'entretien"
   },
   "Login": {
     "label": "Correspondance · Connexion",

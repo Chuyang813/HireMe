@@ -29,7 +29,13 @@
     "feature03Body": "Saved → Applied → Assessment → Interview → Offer. See where each role stands and where you're losing momentum, from a single dashboard.",
     "feature04Title": "All the way to the interview",
     "feature04Body": "When a callback comes, HireMe drafts the likely questions and a structured prep doc from the job description and your background — so you walk in ready, not cramming.",
-    "footerDisclaimer": "Drafts are starting points — give them one read before you send."
+    "footerDisclaimer": "Drafts are starting points — give them one read before you send.",
+    "demoHeading": "From paste to offer-ready",
+    "demoSub": "Watch how HireMe turns a job description into a complete, tailored application.",
+    "demoStep1": "Paste job description",
+    "demoStep2": "AI generates documents",
+    "demoStep3": "ATS score & fit",
+    "demoStep4": "Interview prep"
   },
   "Login": {
     "label": "Correspondence · Log in",

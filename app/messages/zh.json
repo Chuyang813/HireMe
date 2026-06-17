@@ -29,7 +29,13 @@
     "feature03Body": "收藏 → 已投递 → 测评 → 面试 → Offer。每个岗位走到哪一步、哪个环节最容易掉链子，一个看板里看得清清楚楚。",
     "feature04Title": "陪你一路到面试",
     "feature04Body": "收到面试邀请后，HireMe 会根据岗位描述和你的背景生成高频问题和结构化备考笔记——准备充分，临场不慌。",
-    "footerDisclaimer": "AI 生成的内容是给你打底的初稿，发送前自己过一遍再点发送。"
+    "footerDisclaimer": "AI 生成的内容是给你打底的初稿，发送前自己过一遍再点发送。",
+    "demoHeading": "从粘贴 JD 到面试就绪",
+    "demoSub": "看看 HireMe 如何把一份岗位描述变成完整的求职材料。",
+    "demoStep1": "粘贴职位描述",
+    "demoStep2": "AI 生成申请材料",
+    "demoStep3": "ATS 分数与匹配度",
+    "demoStep4": "面试备考"
   },
   "Login": {
     "label": "登录",
