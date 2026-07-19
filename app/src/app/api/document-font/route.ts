@@ -2,7 +2,9 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 
 export const runtime = "nodejs";
-export const dynamic = "force-static";
+// Must stay dynamic: with `force-static` this route is prerendered at build
+// time without query params, so every request served the baked-in 400.
+export const dynamic = "force-dynamic";
 
 const FONT_FILES = {
   regular: ["400Regular", "Caladea_400Regular.ttf"],

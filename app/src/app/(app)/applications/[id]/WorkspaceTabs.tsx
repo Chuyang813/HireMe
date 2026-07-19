@@ -45,17 +45,6 @@ const TABS: { id: TabId; labelKey: string; shortLabelKey: string; docType?: Docu
 ];
 
 // ---------------------------------------------------------------------------
-// Style constants for document generation
-// ---------------------------------------------------------------------------
-
-const COVER_LETTER_STYLES = [
-  { value: 'professional', labelKey: 'styleProfessional' },
-  { value: 'story', labelKey: 'styleStory' },
-  { value: 'concise', labelKey: 'styleConcise' },
-  { value: 'enthusiastic', labelKey: 'styleEnthusiastic' },
-] as const;
-
-// ---------------------------------------------------------------------------
 // Export helpers (browser-only, loaded lazily)
 // ---------------------------------------------------------------------------
 
@@ -580,22 +569,7 @@ function DocumentPanel({
   const sourcePreviewRef = useRef<SourceDocumentPreviewHandle>(null);
   const [sourceType, setSourceType] = useState<ResumeSourceType | null>(null);
 
-  const styleOptions = documentType === "cover_letter" ? COVER_LETTER_STYLES : null;
-
-  const storageKey = `hireme-style-${applicationId}-${docTypeToTabId(documentType)}`;
-
-  const [style, setStyle] = useState(() => {
-    if (typeof window === "undefined" || !styleOptions) return "professional";
-    const saved = localStorage.getItem(storageKey);
-    return saved && styleOptions.some((s) => s.value === saved) ? saved : "professional";
-  });
-
-  function handleStyleChange(newStyle: string) {
-    setStyle(newStyle);
-    if (typeof window !== "undefined") localStorage.setItem(storageKey, newStyle);
-  }
-
-  async function saveContent(nextContent: string, styleToSave?: string) {
+  async function saveContent(nextContent: string) {
     if (!nextContent.trim() || nextContent.includes("[Error:")) return false;
     setSaveStatus("idle");
     setAutoSaving(true);
@@ -605,7 +579,6 @@ function DocumentPanel({
     fd.set("document_type", documentType);
     fd.set("content", nextContent);
     if (docId) fd.set("document_id", docId);
-    if (styleToSave && styleOptions) fd.set("style", styleToSave);
 
     try {
       const result = await saveDocumentAction(undefined, fd);
@@ -630,9 +603,6 @@ function DocumentPanel({
     setSaveStatus("idle");
     setContent("");
     setGenerating(true);
-    if (typeof window !== "undefined" && styleOptions) {
-      localStorage.setItem(storageKey, style);
-    }
     try {
       const res = await fetch("/api/generate-document", {
         method: "POST",
@@ -640,7 +610,6 @@ function DocumentPanel({
         body: JSON.stringify({
           application_id: applicationId,
           document_type: documentType,
-          style,
         }),
       });
 
@@ -677,7 +646,7 @@ function DocumentPanel({
         setGenerateError(t("generationFailed"));
         return;
       }
-      await saveContent(accumulated, style);
+      await saveContent(accumulated);
 
       if (documentType === "tailored_resume") {
         setEvalLoading(true);
@@ -817,24 +786,6 @@ function DocumentPanel({
           <p>{t("formatLocked")}</p>
         </div>
       )}
-      {styleOptions && (
-        <div className="flex items-center gap-2">
-          <label className="label-caps text-muted-foreground shrink-0">
-            {t("styleSelectorLabel")}
-          </label>
-          <select
-            value={style}
-            onChange={(e) => handleStyleChange(e.target.value)}
-            className="select-input w-auto"
-          >
-            {styleOptions.map((s) => (
-              <option key={s.value} value={s.value}>
-                {t(s.labelKey)}
-              </option>
-            ))}
-          </select>
-        </div>
-      )}
       <div className="flex flex-wrap items-center justify-between gap-3">
         {!hasResume && (
           <p className="text-sm text-muted-foreground">
@@ -873,16 +824,6 @@ function DocumentPanel({
               >
                 {t("downloadPDF")}
               </Button>
-              {sourceType === "docx" && (
-                <Button
-                  variant="outline"
-                  onClick={() => handleExport("docx")}
-                  disabled={exporting || !content.trim()}
-                  title={t("downloadDOCX")}
-                >
-                  {t("downloadDOCX")}
-                </Button>
-              )}
             </>
           )}
           {docId && (
