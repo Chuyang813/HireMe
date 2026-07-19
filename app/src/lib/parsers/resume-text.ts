@@ -32,11 +32,9 @@ export async function extractTextFromUpload(
     // Serverless-friendly PDF text extraction (no native deps). AI parsing happens after this step through DeepSeek.
     try {
       const { extractText, getDocumentProxy } = await import("unpdf");
-      const uint8 = new Uint8Array(
-        buffer.buffer,
-        buffer.byteOffset,
-        buffer.byteLength,
-      );
+      // PDF.js transfers (detaches) the buffer it receives, so hand it a copy —
+      // otherwise the caller's bytes are zeroed and later uploads store empty files.
+      const uint8 = new Uint8Array(buffer);
       const pdf = await getDocumentProxy(uint8);
       const { text } = await extractText(pdf, { mergePages: true });
       const rawText = (Array.isArray(text) ? text.join("\n") : text)?.trim() ?? "";

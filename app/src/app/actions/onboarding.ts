@@ -95,7 +95,7 @@ export async function uploadOnboardingResumeAction(
   }
 
   const uploadedFile = await supabase.storage.from("resumes").info(storagePath);
-  if (uploadedFile.error || uploadedFile.data.size !== bytes.byteLength) {
+  if (uploadedFile.error || uploadedFile.data.size !== file.size) {
     await supabase.storage.from("resumes").remove([storagePath]);
     console.error(
       "[uploadOnboardingResumeAction] Storage integrity check failed:",
