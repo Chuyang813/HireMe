@@ -32,6 +32,10 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  // Pin the workspace root so Turbopack doesn't infer it from stray lockfiles above the repo
+  turbopack: {
+    root: __dirname,
+  },
   serverExternalPackages: ["mammoth", "unpdf", "pdfjs-dist"],
   experimental: {
     serverActions: {

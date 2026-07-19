@@ -64,7 +64,7 @@ export function LanguageSwitcher() {
         aria-haspopup="menu"
         aria-expanded={open}
         aria-label="Switch language"
-        className="inline-flex h-10 items-center gap-2 rounded-md px-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+        className="inline-flex h-10 items-center gap-2 rounded-md px-2 text-sm font-medium text-muted-foreground transition duration-150 ease-out hover:bg-muted hover:text-foreground active:scale-[0.97]"
       >
         <span>{current.shortLabel}</span>
         <span className="text-xs opacity-70" aria-hidden="true">
@@ -75,7 +75,7 @@ export function LanguageSwitcher() {
       {open && (
         <div
           role="menu"
-          className="absolute right-0 top-[calc(100%+0.375rem)] z-30 w-56 overflow-hidden rounded-md border border-border bg-background shadow-sm"
+          className="popover-enter absolute right-0 top-[calc(100%+0.375rem)] z-30 w-56 overflow-hidden rounded-md border border-border bg-background shadow-[var(--shadow-float)]"
         >
           <div className="border-b border-border bg-muted/40 px-3 py-2">
             <p className="label-caps">Language · Langue · 语言</p>

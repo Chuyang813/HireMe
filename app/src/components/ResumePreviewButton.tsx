@@ -30,7 +30,7 @@ export function ResumePreviewButton({ resumeId, title }: { resumeId: string; tit
       <button
         onClick={handleOpen}
         title={t("previewResume")}
-        className="rounded-sm border border-border px-3 py-1.5 text-xs hover:bg-muted flex items-center gap-1.5"
+        className="rounded-sm border border-border px-3 py-1.5 text-xs transition duration-150 ease-out hover:bg-muted active:scale-[0.97] flex items-center gap-1.5"
       >
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M1 12S5 4 12 4s11 8 11 8-4 8-11 8S1 12 1 12z" />
@@ -41,15 +41,15 @@ export function ResumePreviewButton({ resumeId, title }: { resumeId: string; tit
 
       {open && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          className="overlay-enter fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
           onClick={(e) => { if (e.target === e.currentTarget) setOpen(false); }}
         >
-          <div className="relative flex h-[90vh] w-full max-w-3xl flex-col rounded-lg bg-background shadow-md overflow-hidden">
+          <div className="modal-enter relative flex h-[90vh] w-full max-w-3xl flex-col rounded-lg bg-background shadow-md overflow-hidden">
             <div className="flex items-center justify-between border-b border-border px-5 py-3 shrink-0">
               <h2 className="font-display text-lg truncate">{title}</h2>
               <button
                 onClick={() => setOpen(false)}
-                className="rounded p-1 hover:bg-muted text-muted-foreground"
+                className="rounded p-1 transition duration-150 ease-out hover:bg-muted active:scale-95 text-muted-foreground"
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
               </button>

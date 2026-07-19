@@ -15,7 +15,7 @@ export function MobileNav({
   return (
     <>
       <button
-        className="md:hidden flex items-center justify-center rounded-md p-1.5 text-muted-foreground hover:text-foreground"
+        className="md:hidden flex items-center justify-center rounded-md p-1.5 text-muted-foreground transition duration-150 ease-out hover:text-foreground active:scale-95"
         onClick={() => setOpen(true)}
         aria-label="Open menu"
       >
@@ -29,16 +29,18 @@ export function MobileNav({
         </svg>
       </button>
 
-      {open && (
-        <div
-          className="fixed inset-0 z-40 bg-black/40 md:hidden"
-          onClick={() => setOpen(false)}
-        />
-      )}
+      <div
+        className={[
+          "fixed inset-0 z-40 bg-black/40 md:hidden transition-opacity duration-300 ease-drawer motion-reduce:transition-none",
+          open ? "opacity-100" : "pointer-events-none opacity-0",
+        ].join(" ")}
+        onClick={() => setOpen(false)}
+        aria-hidden="true"
+      />
 
       <div
         className={[
-          "fixed inset-y-0 left-0 z-50 flex w-64 flex-col bg-background shadow-lg transition-transform duration-200 md:hidden",
+          "fixed inset-y-0 left-0 z-50 flex w-64 flex-col bg-background shadow-lg transition-transform duration-300 ease-drawer motion-reduce:transition-none md:hidden",
           open ? "translate-x-0" : "-translate-x-full",
         ].join(" ")}
       >
@@ -47,7 +49,7 @@ export function MobileNav({
           <button
             onClick={() => setOpen(false)}
             aria-label="Close menu"
-            className="flex items-center justify-center rounded-md p-1.5 text-muted-foreground hover:text-foreground"
+            className="flex items-center justify-center rounded-md p-1.5 text-muted-foreground transition duration-150 ease-out hover:text-foreground active:scale-95"
           >
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
               <path

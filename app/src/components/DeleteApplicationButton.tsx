@@ -23,8 +23,8 @@ export function DeleteApplicationButton({
 
   const buttonClass =
     variant === "text"
-      ? "inline-flex h-9 items-center gap-2 rounded-md border border-[var(--danger)] bg-white px-3 text-[13px] font-medium text-[var(--danger)] transition hover:bg-[var(--danger-light)]"
-      : "inline-flex h-8 w-8 items-center justify-center rounded-md border border-border bg-white text-muted-foreground transition hover:border-[var(--danger)] hover:bg-[var(--danger-light)] hover:text-[var(--danger)]";
+      ? "inline-flex h-9 items-center gap-2 rounded-md border border-[var(--danger)] bg-white px-3 text-[13px] font-medium text-[var(--danger)] transition duration-150 ease-out hover:bg-[var(--danger-light)] active:scale-[0.97]"
+      : "inline-flex h-8 w-8 items-center justify-center rounded-md border border-border bg-white text-muted-foreground transition duration-150 ease-out hover:border-[var(--danger)] hover:bg-[var(--danger-light)] hover:text-[var(--danger)] active:scale-95";
 
   return (
     <div className="relative inline-flex">
@@ -43,7 +43,7 @@ export function DeleteApplicationButton({
       </button>
 
       {confirming && (
-        <div className="absolute right-0 top-[calc(100%+0.5rem)] z-30 w-64 rounded-md border border-border bg-background p-3 text-left shadow">
+        <div className="popover-enter absolute right-0 top-[calc(100%+0.5rem)] z-30 w-64 rounded-md border border-border bg-background p-3 text-left shadow-[var(--shadow-float)]">
           <p className="mb-3 text-sm font-medium text-foreground">
             {t("deleteConfirm")}
           </p>
@@ -51,7 +51,7 @@ export function DeleteApplicationButton({
             <button
               type="button"
               onClick={() => setConfirming(false)}
-              className="h-8 rounded-md border border-border px-3 text-xs font-medium hover:bg-[var(--bg-hover)]"
+              className="h-8 rounded-md border border-border px-3 text-xs font-medium transition duration-150 ease-out hover:bg-[var(--bg-hover)] active:scale-[0.97]"
             >
               {t("deleteCancel")}
             </button>
@@ -59,7 +59,7 @@ export function DeleteApplicationButton({
               type="button"
               onClick={handleDelete}
               disabled={pending}
-              className="h-8 rounded-md bg-[var(--danger)] px-3 text-xs font-medium text-white hover:opacity-90 disabled:opacity-50"
+              className="h-8 rounded-md bg-[var(--danger)] px-3 text-xs font-medium text-white transition duration-150 ease-out hover:opacity-90 active:scale-[0.97] disabled:opacity-50"
             >
               {pending ? t("deleting") : t("deleteYes")}
             </button>

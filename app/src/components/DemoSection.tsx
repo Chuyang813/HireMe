@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 
 // ---------------------------------------------------------------------------
 // Static mock data — English demo content, no AI calls
@@ -336,10 +336,12 @@ export function DemoSection({ heading, sub, stepLabels }: DemoSectionProps) {
   const [step, setStep] = useState(0);
   const [visible, setVisible] = useState(true);
   const [openAccordion, setOpenAccordion] = useState(0);
+  const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const goTo = useCallback((next: number) => {
+    if (hideTimer.current) clearTimeout(hideTimer.current);
     setVisible(false);
-    setTimeout(() => {
+    hideTimer.current = setTimeout(() => {
       setStep(next);
       setVisible(true);
       if (next === 3) setOpenAccordion(0);
@@ -381,7 +383,7 @@ export function DemoSection({ heading, sub, stepLabels }: DemoSectionProps) {
               type="button"
               onClick={() => goTo(i)}
               className={[
-                "flex items-center gap-2 rounded-full border px-4 py-1.5 text-xs font-medium transition-colors",
+                "flex items-center gap-2 rounded-full border px-4 py-1.5 text-xs font-medium transition duration-150 ease-out active:scale-[0.97]",
                 step === i
                   ? "border-accent bg-accent text-accent-foreground"
                   : "border-border bg-background text-muted-foreground hover:border-foreground hover:text-foreground",
@@ -422,7 +424,7 @@ export function DemoSection({ heading, sub, stepLabels }: DemoSectionProps) {
         <div
           className="overflow-hidden rounded-lg border border-border bg-background shadow-sm"
           style={{
-            transition: "opacity 200ms ease, transform 200ms ease",
+            transition: "opacity 200ms var(--ease-out), transform 200ms var(--ease-out)",
             opacity: visible ? 1 : 0,
             transform: visible ? "translateY(0)" : "translateY(6px)",
           }}

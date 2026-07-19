@@ -89,7 +89,7 @@ export function OnboardingChecklist({ hasApplication, hasGeneratedDocument, firs
       <div className="mb-6 flex items-center gap-2">
         <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
           <div
-            className="h-full rounded-full bg-accent transition-all duration-500"
+            className="h-full rounded-full bg-accent transition-[width] duration-500 ease-out"
             style={{
               width: hasGeneratedDocument ? "100%" : hasApplication ? "66%" : "33%",
             }}
@@ -123,7 +123,7 @@ export function OnboardingChecklist({ hasApplication, hasGeneratedDocument, firs
                 <p className="mt-0.5 text-xs text-muted-foreground">{t("step2Body")}</p>
                 <Link
                   href="/applications/new"
-                  className="mt-2.5 inline-flex h-8 items-center rounded-md bg-accent px-3.5 text-xs font-medium text-accent-foreground hover:bg-[var(--accent-hover)]"
+                  className="mt-2.5 inline-flex h-8 items-center rounded-md bg-accent px-3.5 text-xs font-medium text-accent-foreground transition duration-150 ease-out hover:bg-[var(--accent-hover)] active:scale-[0.97]"
                 >
                   {t("step2Cta")}
                 </Link>
@@ -144,7 +144,7 @@ export function OnboardingChecklist({ hasApplication, hasGeneratedDocument, firs
                 <p className="mt-0.5 text-xs text-muted-foreground">{t("step3Body")}</p>
                 <Link
                   href={docTarget}
-                  className="mt-2.5 inline-flex h-8 items-center rounded-md bg-accent px-3.5 text-xs font-medium text-accent-foreground hover:bg-[var(--accent-hover)]"
+                  className="mt-2.5 inline-flex h-8 items-center rounded-md bg-accent px-3.5 text-xs font-medium text-accent-foreground transition duration-150 ease-out hover:bg-[var(--accent-hover)] active:scale-[0.97]"
                 >
                   {t("step3Cta")}
                 </Link>

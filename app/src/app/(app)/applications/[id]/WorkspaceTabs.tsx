@@ -623,7 +623,7 @@ function EvalResultsPanel({
               <span className="w-28 shrink-0 text-muted-foreground">{label}</span>
               <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
                 <div
-                  className="h-full rounded-full transition-all duration-500"
+                  className="h-full rounded-full transition-[width] duration-500 ease-out"
                   style={{ width: `${value}%`, backgroundColor: scoreColor(value) }}
                 />
               </div>
@@ -1660,7 +1660,7 @@ export function WorkspaceTabs({
                   type="button"
                   onClick={() => setActiveTab(tab.id)}
                   className={[
-                    "group flex min-w-fit items-center gap-3 rounded-md px-3 py-2.5 text-left text-sm transition-colors",
+                    "group flex min-w-fit items-center gap-3 rounded-md px-3 py-2.5 text-left text-sm transition duration-150 ease-out active:scale-[0.98]",
                     isActive
                       ? "bg-background text-foreground font-medium"
                       : "text-muted-foreground hover:bg-[var(--bg-hover)] hover:text-foreground",

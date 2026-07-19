@@ -58,7 +58,7 @@ export default async function Home() {
             </Link>
             <Link
               href="/signup"
-              className="inline-flex h-11 items-center justify-center whitespace-nowrap rounded-md bg-accent px-3 font-semibold text-accent-foreground shadow-sm transition-opacity hover:opacity-90 sm:px-5"
+              className="inline-flex h-11 items-center justify-center whitespace-nowrap rounded-md bg-accent px-3 font-semibold text-accent-foreground shadow-sm transition duration-150 ease-out hover:opacity-90 active:scale-[0.98] sm:px-5"
             >
               {nav("getStarted")}
             </Link>
@@ -83,13 +83,13 @@ export default async function Home() {
             <div className="mt-10 flex flex-wrap items-center gap-4">
               <Link
                 href="/signup"
-                className="inline-flex h-12 items-center justify-center rounded-md bg-accent px-6 text-sm font-semibold text-accent-foreground shadow-sm transition-opacity hover:opacity-90"
+                className="inline-flex h-12 items-center justify-center rounded-md bg-accent px-6 text-sm font-semibold text-accent-foreground shadow-sm transition duration-150 ease-out hover:opacity-90 active:scale-[0.98]"
               >
                 {t("cta")}
               </Link>
               <Link
                 href="/login"
-                className="inline-flex h-12 items-center justify-center rounded-md border border-border px-6 text-sm font-semibold shadow-sm transition-colors hover:bg-muted"
+                className="inline-flex h-12 items-center justify-center rounded-md border border-border px-6 text-sm font-semibold shadow-sm transition duration-150 ease-out hover:bg-muted active:scale-[0.98]"
               >
                 {t("ctaSecondary")}
               </Link>

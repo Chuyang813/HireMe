@@ -40,7 +40,7 @@ export function FeedbackButtons({
         disabled={isPending}
         onClick={() => handleRate(1)}
         aria-label="Thumbs up"
-        className={`rounded p-1 transition-colors hover:bg-muted disabled:opacity-50 ${
+        className={`rounded p-1 transition duration-150 ease-out hover:bg-muted active:scale-95 disabled:opacity-50 ${
           rating === 1 ? "text-green-600 dark:text-green-400" : "text-muted-foreground"
         }`}
       >
@@ -64,7 +64,7 @@ export function FeedbackButtons({
         disabled={isPending}
         onClick={() => handleRate(-1)}
         aria-label="Thumbs down"
-        className={`rounded p-1 transition-colors hover:bg-muted disabled:opacity-50 ${
+        className={`rounded p-1 transition duration-150 ease-out hover:bg-muted active:scale-95 disabled:opacity-50 ${
           rating === -1 ? "text-red-600 dark:text-red-400" : "text-muted-foreground"
         }`}
       >

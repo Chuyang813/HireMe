@@ -38,6 +38,7 @@
   /* Shadows */
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
   --shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+  --shadow-float: 0 4px 16px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.05);
   --card-shadow: var(--shadow-sm);
 }
 
@@ -55,6 +56,13 @@
   --font-sans: var(--font-inter);
   --font-mono: var(--font-geist-mono);
   --font-serif: var(--font-playfair);
+}
+
+/* Motion tokens — strong curves; also override Tailwind's ease-out/ease-in-out utilities */
+@theme {
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
 }
 
 @keyframes progress {
@@ -130,7 +138,7 @@ hr,
   font-size: 13px;
   font-weight: 500;
   line-height: 1;
-  transition: background 150ms;
+  transition: background 150ms, border-color 150ms, transform 150ms var(--ease-out);
   cursor: pointer;
   white-space: nowrap;
   border: 1px solid transparent;
@@ -141,6 +149,9 @@ hr,
 .btn[disabled] {
   opacity: 0.5;
   pointer-events: none;
+}
+.btn:active:not(:disabled) {
+  transform: scale(0.97);
 }
 .btn-sm {
   height: 32px;
@@ -234,6 +245,39 @@ hr,
 .badge-interview  { background: var(--warning-light); color: var(--warning); }
 .badge-offer      { background: var(--success-light); color: var(--success); }
 .badge-rejected   { background: var(--danger-light); color: var(--danger); }
+
+/* ── Motion: floating layers ──────────────────────────── */
+.popover-enter {
+  transform-origin: top right;
+  transition: opacity 150ms var(--ease-out), transform 150ms var(--ease-out);
+  @starting-style {
+    opacity: 0;
+    transform: scale(0.97) translateY(-2px);
+  }
+}
+
+.modal-enter {
+  transition: opacity 180ms var(--ease-out), transform 180ms var(--ease-out);
+  @starting-style {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+}
+
+.overlay-enter {
+  transition: opacity 180ms var(--ease-out);
+  @starting-style {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .popover-enter,
+  .modal-enter {
+    /* keep the fade, drop the movement */
+    transition-property: opacity;
+  }
+}
 
 /* ── Section title ────────────────────────────────────── */
 .section-title {

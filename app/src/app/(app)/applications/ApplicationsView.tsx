@@ -130,7 +130,7 @@ export function ApplicationsView({
             aria-label={t("viewCards")}
             title={t("viewCards")}
             className={[
-              "flex h-7 w-7 items-center justify-center rounded transition",
+              "flex h-7 w-7 items-center justify-center rounded transition duration-150 ease-out active:scale-95",
               view === "cards"
                 ? "bg-accent text-accent-foreground shadow-sm"
                 : "text-muted-foreground hover:text-foreground",
@@ -144,7 +144,7 @@ export function ApplicationsView({
             aria-label={t("viewTable")}
             title={t("viewTable")}
             className={[
-              "flex h-7 w-7 items-center justify-center rounded transition",
+              "flex h-7 w-7 items-center justify-center rounded transition duration-150 ease-out active:scale-95",
               view === "table"
                 ? "bg-accent text-accent-foreground shadow-sm"
                 : "text-muted-foreground hover:text-foreground",
