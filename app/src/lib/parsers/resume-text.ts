@@ -31,13 +31,28 @@ export async function extractTextFromUpload(
     console.log(`[resume-text] PDF size: ${buffer.length} bytes`);
     // Serverless-friendly PDF text extraction (no native deps). AI parsing happens after this step through DeepSeek.
     try {
-      const { extractText, getDocumentProxy } = await import("unpdf");
+      const { getDocumentProxy } = await import("unpdf");
       // PDF.js transfers (detaches) the buffer it receives, so hand it a copy —
       // otherwise the caller's bytes are zeroed and later uploads store empty files.
       const uint8 = new Uint8Array(buffer);
       const pdf = await getDocumentProxy(uint8);
-      const { text } = await extractText(pdf, { mergePages: true });
-      const rawText = (Array.isArray(text) ? text.join("\n") : text)?.trim() ?? "";
+      // unpdf's extractText joins items with spaces and loses line breaks, which
+      // collapses the resume into one line and breaks every line-based consumer
+      // (header extraction, format-lock candidates). Walk the text items and
+      // honor pdf.js line-break markers instead.
+      const pageTexts: string[] = [];
+      for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
+        const page = await pdf.getPage(pageNumber);
+        const { items } = await page.getTextContent();
+        let pageText = "";
+        for (const item of items) {
+          if (!("str" in item)) continue;
+          pageText += item.str;
+          if (item.hasEOL) pageText += "\n";
+        }
+        pageTexts.push(pageText);
+      }
+      const rawText = pageTexts.join("\n").trim();
       const normalized = rawText
         .replace(/--\s*\d+\s*of\s*\d+\s*--/gi, "")
         .trim();

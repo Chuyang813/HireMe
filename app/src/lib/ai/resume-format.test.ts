@@ -66,6 +66,14 @@ describe("resume format preservation", () => {
     }]);
   });
 
+  it("does not treat an unsegmented single-line resume as a header", () => {
+    const collapsed =
+      "Alex Chen alex@example.com | Toronto, ON PROFILE Senior designer with a decade "
+      + "of experience shipping design systems, native apps, and web platforms across "
+      + "four product teams and two continents.";
+    expect(extractResumeHeader(collapsed)).toEqual([]);
+  });
+
   it("reuses the exact resume header for cover letters", () => {
     expect(extractResumeHeader(source)).toEqual([
       "Alex Chen",

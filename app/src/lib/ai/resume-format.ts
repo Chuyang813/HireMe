@@ -142,6 +142,10 @@ export function diffResumeReplacements(
   });
 }
 
+// Real contact-header lines are short; anything longer is unsegmented body text
+// (e.g. legacy extractions that collapsed the whole resume into one line).
+const MAX_HEADER_LINE_LENGTH = 160;
+
 export function extractResumeHeader(rawResumeText: string): string[] {
   const lines = splitLines(rawResumeText);
   const start = lines.findIndex((line) => line.trim());
@@ -151,6 +155,7 @@ export function extractResumeHeader(rawResumeText: string): string[] {
   for (let i = start; i < lines.length && header.length < 6; i += 1) {
     const line = lines[i];
     if (!line.trim()) break;
+    if (line.trim().length > MAX_HEADER_LINE_LENGTH) break;
     if (header.length > 0 && looksLikeHeading(line)) break;
     header.push(line.trimEnd());
   }

@@ -88,6 +88,9 @@ export function splitDocumentHeader(content: string): {
   for (; cursor < lines.length && headerLines.length < 6; cursor += 1) {
     const line = lines[cursor];
     if (!line.trim()) break;
+    // A run-on line this long is unsegmented body text, not a contact header —
+    // render it as body instead of cramming it into the header row.
+    if (line.trim().length > 160) break;
     if (headerLines.length > 0 && isResumeSectionHeading(line)) break;
     headerLines.push(stripInlineMarkdown(line).trim());
   }
