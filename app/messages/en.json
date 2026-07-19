@@ -502,6 +502,7 @@
     "pdfPreviewLabel": "PDF preview",
     "sourcePreviewLoading": "Rebuilding the document from the uploaded source format…",
     "sourcePreviewUnavailable": "The source-formatted preview could not be created. Please try again.",
+    "sourcePreviewRecovered": "The uploaded source file is empty or unavailable. This recovery preview uses extracted text and cannot preserve the original layout. Re-upload the resume to restore exact formatting.",
     "sourcePreviewLabel": "source-formatted preview",
     "sourceFormatOnly": "This download format is not available for the uploaded source file type.",
     "exportFailed": "The source-formatted document could not be exported."

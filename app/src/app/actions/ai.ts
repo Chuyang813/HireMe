@@ -220,18 +220,11 @@ export async function getApplicationResumeSourceAction(
     };
   }
 
-  const { data: signed, error } = await supabase.storage
-    .from("resumes")
-    .createSignedUrl(resume.source_file_path, 900);
-  if (error || !signed?.signedUrl) {
-    return { ok: false, error: "Could not load the source resume." };
-  }
-
   return {
     ok: true,
     sourceType,
     rawText: resume.raw_text ?? "",
-    url: signed.signedUrl,
+    url: `/api/applications/${applicationId}/resume-source`,
   };
 }
 

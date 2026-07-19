@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { sourceTextMatchScore } from "./source-document";
+import { sourceDocumentHasBytes, sourceTextMatchScore } from "./source-document";
 
 describe("source-format matching", () => {
   it("matches PDF and DOCX text despite bullets and whitespace differences", () => {
@@ -14,5 +14,10 @@ describe("source-format matching", () => {
       "Bachelor of Computing",
       "Managed production incident response",
     )).toBeLessThan(0.3);
+  });
+
+  it("rejects an empty source file before PDF or DOCX parsing", () => {
+    expect(sourceDocumentHasBytes(new ArrayBuffer(0))).toBe(false);
+    expect(sourceDocumentHasBytes(new ArrayBuffer(1))).toBe(true);
   });
 });

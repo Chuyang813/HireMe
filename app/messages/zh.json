@@ -502,6 +502,7 @@
     "pdfPreviewLabel": "PDF 预览",
     "sourcePreviewLoading": "正在按照上传文件的原始格式重建文档…",
     "sourcePreviewUnavailable": "无法生成保留原格式的预览，请重试。",
+    "sourcePreviewRecovered": "上传的源文件为空或暂时不可用。当前恢复预览使用已提取的文字，无法保留原始排版；请重新上传该简历以恢复完全一致的格式。",
     "sourcePreviewLabel": "原格式预览",
     "sourceFormatOnly": "该上传文件类型不支持这种下载格式。",
     "exportFailed": "无法导出保留原格式的文档。"

@@ -45,6 +45,7 @@ export const SourceDocumentPreview = forwardRef<
   const [artifact, setArtifact] = useState<SourceFormattedArtifact | null>(null);
   const [previewUrl, setPreviewUrl] = useState("");
   const [previewError, setPreviewError] = useState("");
+  const [previewWarning, setPreviewWarning] = useState("");
   const [previewLoading, setPreviewLoading] = useState(false);
 
   useEffect(() => {
@@ -52,6 +53,7 @@ export const SourceDocumentPreview = forwardRef<
       setArtifact(null);
       setPreviewUrl("");
       setPreviewError("");
+      setPreviewWarning("");
       setPreviewLoading(false);
       onSourceTypeChange?.(null);
       return;
@@ -62,19 +64,34 @@ export const SourceDocumentPreview = forwardRef<
     setArtifact(null);
     setPreviewUrl("");
     setPreviewError("");
+    setPreviewWarning("");
     setPreviewLoading(true);
 
     void getApplicationResumeSourceAction(applicationId)
       .then(async (source) => {
         if (!source.ok) throw new Error(source.error);
-        const nextArtifact = await createSourceFormattedArtifact({
-          sourceType: source.sourceType,
-          sourceUrl: source.url,
-          rawSourceText: source.rawText,
-          content,
-          documentType,
-          title,
-        });
+        let nextArtifact: SourceFormattedArtifact;
+        try {
+          nextArtifact = await createSourceFormattedArtifact({
+            sourceType: source.sourceType,
+            sourceUrl: source.url,
+            rawSourceText: source.rawText,
+            content,
+            documentType,
+            title,
+          });
+        } catch (error) {
+          if (source.sourceType === "txt") throw error;
+          nextArtifact = await createSourceFormattedArtifact({
+            sourceType: "txt",
+            sourceUrl: null,
+            rawSourceText: source.rawText,
+            content,
+            documentType,
+            title,
+          });
+          if (active) setPreviewWarning(t("sourcePreviewRecovered"));
+        }
         if (!active) return;
         if (nextArtifact.pdfBlob) {
           objectUrl = URL.createObjectURL(nextArtifact.pdfBlob);
@@ -163,20 +180,34 @@ export const SourceDocumentPreview = forwardRef<
 
   if (artifact?.previewType === "docx") {
     return (
-      <div className="source-docx-shell overflow-auto rounded-xl border border-border bg-muted/40 p-3 shadow-[var(--shadow-sm)] sm:p-5">
-        <div ref={docxContainerRef} aria-label={`${title} ${t("sourcePreviewLabel")}`} />
+      <div className="space-y-3">
+        {previewWarning ? (
+          <p className="rounded-xl border border-[var(--warning)]/30 bg-[var(--warning-light)] px-4 py-3 text-sm text-[var(--warning)]">
+            {previewWarning}
+          </p>
+        ) : null}
+        <div className="source-docx-shell overflow-auto rounded-xl border border-border bg-muted/40 p-3 shadow-[var(--shadow-sm)] sm:p-5">
+          <div ref={docxContainerRef} aria-label={`${title} ${t("sourcePreviewLabel")}`} />
+        </div>
       </div>
     );
   }
 
   if (previewUrl) {
     return (
-      <div className="overflow-hidden rounded-xl border border-border bg-muted/30 shadow-[var(--shadow-sm)]">
-        <iframe
-          src={previewUrl}
-          title={`${title} ${t("sourcePreviewLabel")}`}
-          className="h-[75vh] min-h-[42rem] w-full bg-white"
-        />
+      <div className="space-y-3">
+        {previewWarning ? (
+          <p className="rounded-xl border border-[var(--warning)]/30 bg-[var(--warning-light)] px-4 py-3 text-sm text-[var(--warning)]">
+            {previewWarning}
+          </p>
+        ) : null}
+        <div className="overflow-hidden rounded-xl border border-border bg-muted/30 shadow-[var(--shadow-sm)]">
+          <iframe
+            src={previewUrl}
+            title={`${title} ${t("sourcePreviewLabel")}`}
+            className="h-[75vh] min-h-[42rem] w-full bg-white"
+          />
+        </div>
       </div>
     );
   }

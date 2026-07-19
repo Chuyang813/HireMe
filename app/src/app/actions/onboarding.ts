@@ -94,6 +94,16 @@ export async function uploadOnboardingResumeAction(
     return { error: "Upload failed. Please try again." };
   }
 
+  const uploadedFile = await supabase.storage.from("resumes").info(storagePath);
+  if (uploadedFile.error || uploadedFile.data.size !== bytes.byteLength) {
+    await supabase.storage.from("resumes").remove([storagePath]);
+    console.error(
+      "[uploadOnboardingResumeAction] Storage integrity check failed:",
+      uploadedFile.error,
+    );
+    return { error: "Upload verification failed. Please try again." };
+  }
+
   let parsed = null;
   try {
     parsed = await parseResume(rawText);
@@ -119,6 +129,7 @@ export async function uploadOnboardingResumeAction(
   });
 
   if (insertError) {
+    await supabase.storage.from("resumes").remove([storagePath]);
     console.error("[uploadOnboardingResumeAction] DB insert error:", insertError);
     return { error: "Failed to save resume. Please try again." };
   }

@@ -502,6 +502,7 @@
     "pdfPreviewLabel": "aperçu PDF",
     "sourcePreviewLoading": "Reconstruction du document à partir du format source importé…",
     "sourcePreviewUnavailable": "Impossible de créer l’aperçu au format source. Réessayez.",
+    "sourcePreviewRecovered": "Le fichier source importé est vide ou indisponible. Cet aperçu de récupération utilise le texte extrait et ne peut pas conserver la mise en page d’origine. Réimportez le CV pour restaurer le format exact.",
     "sourcePreviewLabel": "aperçu au format source",
     "sourceFormatOnly": "Ce format de téléchargement n’est pas disponible pour le type de fichier source importé.",
     "exportFailed": "Impossible d’exporter le document au format source."

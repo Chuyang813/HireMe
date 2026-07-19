@@ -765,6 +765,9 @@ export async function createSourceFormattedArtifact({
   const response = await fetch(sourceUrl);
   if (!response.ok) throw new Error("Could not load the source resume.");
   const sourceBytes = await response.arrayBuffer();
+  if (!sourceDocumentHasBytes(sourceBytes)) {
+    throw new Error("The uploaded source resume is empty.");
+  }
 
   if (sourceType === "pdf") {
     return {
@@ -783,6 +786,10 @@ export async function createSourceFormattedArtifact({
       ? await createTailoredDocxFromSource(sourceBytes, rawSourceText, content)
       : await createCoverDocxFromSource(sourceBytes, rawSourceText, content),
   };
+}
+
+export function sourceDocumentHasBytes(sourceBytes: { byteLength: number }): boolean {
+  return sourceBytes.byteLength > 0;
 }
 
 export async function renderDocxPreview(blob: Blob, container: HTMLElement): Promise<void> {

@@ -1,0 +1,71 @@
+import { getOptionalUser } from "@/lib/auth/current-user";
+import { uuidSchema } from "@/lib/security/limits";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+export async function GET(
+  _request: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const { supabase, user } = await getOptionalUser();
+  if (!user) {
+    return Response.json({ error: "Authentication required." }, { status: 401 });
+  }
+
+  const { id } = await params;
+  if (!uuidSchema.safeParse(id).success) {
+    return Response.json({ error: "Application not found." }, { status: 404 });
+  }
+
+  const { data: application } = await supabase
+    .from("job_applications")
+    .select("base_resume_id")
+    .eq("id", id)
+    .eq("user_id", user.id)
+    .single();
+  if (!application) {
+    return Response.json({ error: "Application not found." }, { status: 404 });
+  }
+
+  const resumeQuery = supabase
+    .from("base_resumes")
+    .select("source_file_path, source_file_type")
+    .eq("user_id", user.id);
+  const { data: resume } = application.base_resume_id
+    ? await resumeQuery.eq("id", application.base_resume_id).single()
+    : await resumeQuery.eq("is_default", true).single();
+
+  const sourceType = resume?.source_file_type;
+  if (
+    !resume?.source_file_path
+    || (sourceType !== "pdf" && sourceType !== "docx")
+  ) {
+    return Response.json({ error: "Source resume file not found." }, { status: 404 });
+  }
+
+  const sourceFile = await supabase.storage
+    .from("resumes")
+    .download(resume.source_file_path);
+  if (sourceFile.error || !sourceFile.data) {
+    return Response.json({ error: "Could not load the source resume." }, { status: 404 });
+  }
+
+  if (sourceFile.data.size === 0) {
+    return Response.json(
+      { error: "The uploaded source resume is empty." },
+      { status: 422 },
+    );
+  }
+
+  return new Response(sourceFile.data.stream(), {
+    headers: {
+      "Cache-Control": "private, no-store",
+      "Content-Length": String(sourceFile.data.size),
+      "Content-Type": sourceType === "pdf"
+        ? "application/pdf"
+        : "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "X-Content-Type-Options": "nosniff",
+    },
+  });
+}
