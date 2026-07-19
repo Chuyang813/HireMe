@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/auth/current-user";
 import { parseJobPosting } from "@/lib/ai/job-parser";
 import { embedText, shouldUseSemanticEvidence } from "@/lib/ai/embeddings";
+import { computeSkillMatch, type SkillMatch } from "@/lib/ai/skill-match";
 import { logTimelineEvent } from "@/lib/db/timeline";
 import {
   applicationStatusSchema,
@@ -21,7 +22,9 @@ import { getClientIp } from "@/lib/security/request";
 import type { ApplicationStatus, ParsedJob } from "@/lib/db/types";
 
 export type CreateApplicationState = { error?: string } | undefined;
-export type AnalyzeJobState = { parsed?: ParsedJob; rawJobText?: string; error?: string } | undefined;
+export type AnalyzeJobState =
+  | { parsed?: ParsedJob; rawJobText?: string; skillMatch?: SkillMatch | null; error?: string }
+  | undefined;
 
 const MIN_FETCHED_JOB_TEXT_LENGTH = 300;
 
@@ -139,7 +142,7 @@ export async function analyzeJobAction(
   const { supabase, user } = await requireUser();
   const { data: defaultResume } = await supabase
     .from("base_resumes")
-    .select("id")
+    .select("id, parsed_resume_json, raw_text")
     .eq("user_id", user.id)
     .eq("is_default", true)
     .limit(1)
@@ -173,7 +176,13 @@ export async function analyzeJobAction(
   if (!rawJobText) return { error: "Please paste the job description." };
   try {
     const parsed = await parseJobPosting(rawJobText);
-    return { parsed, rawJobText };
+    const skillMatch = computeSkillMatch(
+      defaultResume.parsed_resume_json,
+      defaultResume.raw_text,
+      parsed,
+      rawJobText,
+    );
+    return { parsed, rawJobText, skillMatch };
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     console.error("[analyzeJobAction] parseJobPosting failed:", msg, e);

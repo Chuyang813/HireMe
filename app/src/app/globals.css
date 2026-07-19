@@ -271,9 +271,19 @@ hr,
   }
 }
 
+/* Entrance for content blocks (dark/glass pages): fade + rise */
+.rise-enter {
+  transition: opacity 150ms var(--ease-out), transform 150ms var(--ease-out);
+  @starting-style {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .popover-enter,
-  .modal-enter {
+  .modal-enter,
+  .rise-enter {
     /* keep the fade, drop the movement */
     transition-property: opacity;
   }
