@@ -31,19 +31,24 @@ export default async function ResumesPage({
   // No resumes yet — hero layout
   if (resumes.length === 0) {
     return (
-      <div className="mx-auto w-full max-w-2xl px-6 py-16">
-        <div className="label-caps mb-2">{t("dossierLabel")}</div>
-
-        {needsResume && (
-          <div className="mb-6 flex items-start gap-3 rounded-md border border-amber-300 bg-amber-50 px-4 py-3">
-            <span className="mt-0.5 shrink-0 text-amber-500">⚠</span>
-            <p className="text-sm text-amber-800">
-              {t("needResumeWarning")}
+      <div className="app-page">
+        <div className="app-page-container app-page-container-narrow">
+          <div className="app-page-header rise-enter">
+            <div className="label-caps mb-2">{t("dossierLabel")}</div>
+            <h1 className="app-page-title">{t("heroHeading")}</h1>
+            <p className="app-page-subtitle">
+              {isWelcome ? t("heroBodyWelcome") : t("heroBodyDefault")}
             </p>
           </div>
-        )}
 
-        <div className="rounded-md border border-border bg-white p-10 text-center">
+          {needsResume && (
+            <div className="surface-card mt-6 flex items-start gap-3 border-amber-300 px-4 py-3 rise-enter [transition-delay:40ms]">
+              <span className="mt-0.5 shrink-0 text-amber-500">⚠</span>
+              <p className="text-sm text-amber-800">{t("needResumeWarning")}</p>
+            </div>
+          )}
+
+          <div className="surface-card app-page-content p-6 rise-enter [transition-delay:80ms] sm:p-8">
           <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-muted">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-muted-foreground">
               <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
@@ -52,14 +57,10 @@ export default async function ResumesPage({
               <line x1="9" y1="15" x2="15" y2="15" />
             </svg>
           </div>
-          <h1 className="font-display text-3xl leading-tight">{t("heroHeading")}</h1>
-          <p className="mt-3 text-sm text-muted-foreground max-w-sm mx-auto">
-            {isWelcome ? t("heroBodyWelcome") : t("heroBodyDefault")}
-          </p>
-
-          <div className="mt-8 text-left rounded-sm border border-border bg-muted/40 p-6">
-            <h2 className="label-caps mb-4">{t("newUpload")}</h2>
+            <h2 className="text-center font-display text-xl leading-tight">{t("newUpload")}</h2>
+            <div className="mt-6 rounded-lg border border-border bg-canvas p-5 text-left">
             <UploadForm />
+            </div>
           </div>
         </div>
       </div>
@@ -67,15 +68,16 @@ export default async function ResumesPage({
   }
 
   return (
-    <div className="mx-auto w-full max-w-5xl px-6 py-12">
-      <div className="label-caps mb-2">{t("dossierLabel")}</div>
-      <h1 className="font-display text-4xl leading-tight">{t("heading")}</h1>
-      <p className="mt-2 text-sm text-muted-foreground">
-        {t("headingSub")}
-      </p>
+    <div className="app-page">
+      <div className="app-page-container">
+        <div className="app-page-header rise-enter">
+          <div className="label-caps mb-2">{t("dossierLabel")}</div>
+          <h1 className="app-page-title">{t("heading")}</h1>
+          <p className="app-page-subtitle">{t("headingSub")}</p>
+        </div>
 
       {showBanner && (
-        <div className="mt-6 flex items-start gap-3 rounded-md border border-green-300 bg-green-50 px-4 py-3">
+        <div className="surface-card mt-6 flex items-start gap-3 border-green-300 px-4 py-3 rise-enter [transition-delay:40ms]">
           <span className="mt-0.5 shrink-0 text-green-600">✓</span>
           <p className="text-sm text-green-800">
             {isWelcome ? t("welcomeBanner") : t("needResumeBanner")}
@@ -83,26 +85,26 @@ export default async function ResumesPage({
         </div>
       )}
 
-      <div className="mt-10 grid gap-10 lg:grid-cols-[1fr_1.2fr]">
-        <section className="rounded-sm border border-border bg-muted/40 p-6">
+        <div className="app-page-content grid gap-6 rise-enter [transition-delay:80ms] lg:grid-cols-[0.9fr_1.1fr]">
+        <section className="surface-card p-5 sm:p-6">
           <h2 className="label-caps mb-4">{t("newUpload")}</h2>
           <UploadForm />
         </section>
 
-        <section>
+        <section className="surface-card p-5 sm:p-6">
           <h2 className="label-caps mb-4">{t("onFile", { count: resumes.length })}</h2>
           <ul className="flex flex-col gap-3">
             {resumes.map((r) => (
               <li
                 key={r.id}
-                className="rounded-sm border border-border bg-background p-5"
+                className="rounded-lg border border-border bg-canvas p-4"
               >
                 <div className="flex items-baseline justify-between gap-4">
                   <div>
                     <div className="flex items-center gap-2">
                       <h3 className="font-display text-xl">{r.title}</h3>
                       {r.is_default ? (
-                        <span className="label-caps rounded-sm border border-border px-1.5 py-0.5">
+                        <span className="label-caps rounded-md border border-accent/20 bg-[var(--accent-light)] px-2 py-0.5 text-accent">
                           {t("defaultBadge")}
                         </span>
                       ) : null}
@@ -159,6 +161,7 @@ export default async function ResumesPage({
             ))}
           </ul>
         </section>
+        </div>
       </div>
     </div>
   );

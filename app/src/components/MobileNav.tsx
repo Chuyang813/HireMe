@@ -40,12 +40,12 @@ export function MobileNav({
 
       <div
         className={[
-          "fixed inset-y-0 left-0 z-50 flex w-64 flex-col bg-background shadow-lg transition-transform duration-300 ease-drawer motion-reduce:transition-none md:hidden",
+          "fixed inset-y-0 left-0 z-50 flex w-72 flex-col border-r border-border bg-background shadow-[var(--shadow-float)] transition-transform duration-300 ease-drawer motion-reduce:transition-none md:hidden",
           open ? "translate-x-0" : "-translate-x-full",
         ].join(" ")}
       >
         <div className="flex h-14 items-center justify-between border-b border-border px-4">
-          <span className="font-display text-xl leading-none">HireMe</span>
+          <span className="font-display text-xl leading-none tracking-[-0.04em]">HireMe</span>
           <button
             onClick={() => setOpen(false)}
             aria-label="Close menu"
@@ -74,7 +74,7 @@ export function MobileNav({
                 className={[
                   "flex items-center rounded-md px-3 py-2.5 text-sm transition-colors",
                   active
-                    ? "bg-accent/10 font-medium text-accent"
+                    ? "bg-[var(--accent-light)] font-medium text-accent"
                     : "text-muted-foreground hover:bg-muted hover:text-foreground",
                 ].join(" ")}
               >

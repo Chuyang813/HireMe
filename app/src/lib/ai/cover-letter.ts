@@ -1,44 +1,57 @@
-import { aiText } from "./provider";
+import { aiJson } from "./provider";
 import { selectResumeEvidenceSemantic, resumeToText, jobToText } from "./evidence";
+import {
+  extractResumeHeader,
+  renderCoverLetterWithResumeFormat,
+  type CoverLetterDraft,
+} from "./resume-format";
 import type { ParsedJob, ParsedResume } from "@/lib/db/types";
 
 const SYSTEM = `You are a cover letter writing assistant.
 
-Given the candidate's parsed resume and a parsed job description, write a concise, role-specific cover letter.
+Given the candidate's parsed resume, exact source-resume header, and a parsed job description, return the content fields for a concise, role-specific cover letter.
 
 Rules:
-- 3 to 4 short paragraphs.
-- Open with why the candidate is interested in this specific company/role.
-- Second paragraph: 2-3 concrete examples from the candidate's actual experience that align with the posting.
-- Third paragraph: fit / working style / what they'd bring.
+- Write a specific opening, 3-4 short titled evidence sections, and a confident final paragraph. Keep the total under 650 words so it fits on one Letter page.
+- Each section heading must be concise Title Case plain text that names the evidence theme; the application will render it in bold.
+- Open with why the candidate is interested in this specific company and role.
+- Use 2-3 concrete examples from the candidate's actual experience that align with the posting.
+- Explain fit and what the candidate would bring.
 - Never fabricate details, metrics, employers, or accomplishments not present in the resume.
-- Warm but professional. No clichés like "I'm excited to apply for this opportunity".
-- Output plain text only, no subject line, no markdown, no signature block beyond "Sincerely, {Name}".`;
+- Stay warm but professional and avoid generic opening clichés.
+- The application, not you, controls layout. Do not add Markdown, bullets, or formatting instructions.
+- Use a concise subject line in the form "Re: Position Title".
+- Output exactly this JSON shape and no commentary: {"date":"...","recipient":["Company","Location"],"subject":"Re: Position Title","greeting":"Dear Hiring Manager,","opening":"...","sections":[{"heading":"Evidence Theme","paragraph":"..."}],"finalParagraph":"...","closing":"Sincerely,","signature":"Candidate Name"}.`;
 
 export async function generateCoverLetter({
   resume,
   job,
+  rawResumeText,
   extraInstructions,
 }: {
   resume: ParsedResume;
   job: ParsedJob;
+  rawResumeText?: string | null;
   extraInstructions?: string;
 }): Promise<string> {
-  const matchedEvidence = (await selectResumeEvidenceSemantic(resumeToText(resume), jobToText(job))).join('\n\n');
+  const sourceResume = rawResumeText?.trim() ? rawResumeText : resumeToText(resume);
+  const header = extractResumeHeader(sourceResume);
+  const matchedEvidence = (
+    await selectResumeEvidenceSemantic(resumeToText(resume), jobToText(job))
+  ).join("\n\n");
 
-  return aiText({
+  const draft = await aiJson<CoverLetterDraft>({
     system: SYSTEM,
     messages: [
       {
         role: "user",
         content: [
+          `Exact source-resume header to be reused by the application (JSON):\n${JSON.stringify(header)}`,
           `Candidate parsed resume (JSON):\n${JSON.stringify(resume, null, 2)}`,
           `Parsed job posting (JSON):\n${JSON.stringify(job, null, 2)}`,
           `Most relevant candidate evidence selected for this job:\n${matchedEvidence}`,
-          extraInstructions
-            ? `Additional instructions:\n${extraInstructions}`
-            : "",
-          "Write the cover letter.",
+          extraInstructions ? `Additional content instructions:\n${extraInstructions}` : "",
+          "Return only the cover-letter content JSON. The application will render it with the resume's header and spacing conventions.",
         ]
           .filter(Boolean)
           .join("\n\n"),
@@ -46,4 +59,6 @@ export async function generateCoverLetter({
     ],
     maxTokens: 2048,
   });
+
+  return renderCoverLetterWithResumeFormat(sourceResume, draft);
 }

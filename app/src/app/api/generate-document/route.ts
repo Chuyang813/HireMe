@@ -2,10 +2,17 @@ export const runtime = "edge";
 
 import { type NextRequest } from "next/server";
 import { getOptionalUser } from "@/lib/auth/current-user";
-import { aiText, AI_PROVIDER, DEFAULT_MODEL } from "@/lib/ai/provider";
+import { aiText, extractJson, AI_PROVIDER, DEFAULT_MODEL } from "@/lib/ai/provider";
 import { PROMPT_VERSIONS, type PromptType } from "@/lib/ai/prompt-versions";
 import { selectResumeEvidenceSemantic, resumeToText, jobToText } from "@/lib/ai/evidence";
 import { INTERVIEW_PREP_SYSTEM } from "@/lib/ai/interview-prep";
+import {
+  applyResumeReplacements,
+  createResumeFormatTemplate,
+  extractResumeHeader,
+  renderCoverLetterWithResumeFormat,
+  type CoverLetterDraft,
+} from "@/lib/ai/resume-format";
 import { logTimelineEvent } from "@/lib/db/timeline";
 import { logAiEvent } from "@/lib/db/ai-events";
 import { documentTypeSchema, MAX_REQUEST_BODY_LENGTH, uuidSchema } from "@/lib/security/limits";
@@ -46,17 +53,10 @@ function getDocTypeAiOptions(dt: DocumentType): {
 // Style instructions
 // ---------------------------------------------------------------------------
 
-const RESUME_STYLE_INSTRUCTIONS: Record<string, string> = {
-  professional: "Write in a formal, achievement-focused tone. Lead every bullet with a strong action verb. Quantify achievements with metrics wherever possible.",
-  concise: "Be extremely concise. Every bullet must be under 15 words. Aim for a 1-page result. Cut any sentence that doesn't directly demonstrate value.",
-  creative: "Use a slightly warmer, more personal tone. Show personality while staying professional. Good for startups and creative industries. The summary section should feel human and memorable.",
-  academic: "Prioritize Education and Publications/Research sections. Use formal academic tone. List technical skills comprehensively. Publications and projects before work experience if available.",
-};
-
 const COVER_LETTER_STYLE_INSTRUCTIONS: Record<string, string> = {
   professional: "Write a formal business letter. Start with a direct statement of interest and qualifications.",
   story: "Open with a compelling anecdote or hook that connects the candidate's experience to the role. Use narrative structure throughout.",
-  concise: "Write exactly 3 short paragraphs: (1) who I am and the role, (2) my top 2 relevant achievements, (3) next steps. Total under 200 words.",
+  concise: "Keep the opening and close brief, and use 3 very short titled evidence sections. Total under 350 words.",
   enthusiastic: "Write with genuine enthusiasm and energy. Show passion for the company's mission. Warmer, more conversational tone while staying professional.",
 };
 
@@ -66,49 +66,30 @@ const COVER_LETTER_STYLE_INSTRUCTIONS: Record<string, string> = {
 
 const RESUME_SYSTEM = `You are a resume tailoring assistant.
 
-You will receive a candidate's parsed resume and a parsed job description. Produce a tailored, role-aligned resume in clean plaintext Markdown.
+You will receive immutable source-resume lines and a parsed job description. Return a JSON object containing replacement text only for the supplied editable line IDs.
 
 Absolute rules:
 - Never invent employers, schools, dates, titles, degrees, certifications, tools, or accomplishments.
-- You may reorganize, reprioritize, and rephrase bullets the candidate already has. You may drop weakly-relevant items.
-- Highlight experience, projects, and skills that align with the job's required and desired skills.
-- Keep the candidate's factual claims intact; only the framing changes.
-- Use simple Markdown: # Name, contact line, ## Sections, - bullets.
-- Do not include any preamble or trailing commentary. Output only the resume.`;
+- Never add, remove, merge, split, or reorder lines, bullets, jobs, projects, or sections.
+- Never return a replacement for an ID that was not supplied.
+- Keep every factual claim intact. Rephrase only when it improves alignment with the job.
+- Do not include bullet symbols, indentation, Markdown, headings, or line breaks inside replacement values; the application restores those from the source template.
+- If a source line should remain unchanged, omit its ID.
+- Output exactly this JSON shape and no commentary: {"replacements":{"L0001":"replacement text"}}.`;
 
 const COVER_LETTER_SYSTEM = `You are a professional cover letter writing assistant.
 
-Given the candidate's parsed resume and a parsed job description, write a complete, polished cover letter that a hiring manager would be impressed to receive.
-
-Structure (output as clean Markdown):
-
-[Candidate Name]
-[Email] | [Phone if available] | [Location if available]
-[Today's date]
-
-[Company Name]
-[Company City/Location if known]
-
-Dear Hiring Manager,
-
-**Opening paragraph** — A strong, specific hook: why this candidate is genuinely excited about this company and role. Reference something concrete about the company or the role that makes it distinctive. Not generic.
-
-**Body paragraph 1** — Most relevant experience: 1-2 specific achievements with numbers or tangible impact drawn directly from the resume. Show what the candidate has actually done that maps to the job requirements.
-
-**Body paragraph 2** — Skills alignment and fit: connect the candidate's specific skill set to the job's key requirements. Add one sentence about working style or cultural fit if supported by the resume.
-
-**Closing paragraph** — Confident, forward-looking close: express enthusiasm, invite next steps, thank the reader.
-
-Sincerely,
-[Candidate Full Name]
+Return content fields for a polished cover letter. The application will deterministically render those fields with the source resume's exact header and spacing conventions.
 
 Rules:
-- 4-5 paragraphs, 400-500 words total. Complete and professional — not a stub.
+- Write a specific opening, 3-4 short titled evidence sections, and a confident final paragraph. Keep the total under 650 words so it fits on one Letter page.
+- Each section heading must be concise Title Case plain text that names the evidence theme; the application will render it in bold.
+- Use grounded achievements and skills alignment in each section.
 - Never fabricate employers, titles, degrees, metrics, or accomplishments not in the resume.
-- Reference actual details from both the resume and job description — no generic filler.
-- Professional but warm tone. No clichés like "I'm writing to express my interest" or "I'm excited to apply".
-- Use clean Markdown: blank lines between each section block, bold for paragraph labels removed in final output.
-- Output the full letter only — no commentary, no subject line, no notes.`;
+- Reference actual details from both the resume and job description; avoid generic filler and opening clichés.
+- Do not add Markdown, bullets, or formatting instructions.
+- Use a concise subject in the form "Re: Position Title".
+- Output exactly this JSON shape and no commentary: {"date":"...","recipient":["Company","Location"],"subject":"Re: Position Title","greeting":"Dear Hiring Manager,","opening":"...","sections":[{"heading":"Evidence Theme","paragraph":"..."}],"finalParagraph":"...","closing":"Sincerely,","signature":"Candidate Name"}.`;
 
 const EMAIL_SYSTEM = `You are an email drafting assistant for job applications submitted by email.
 
@@ -162,6 +143,7 @@ async function buildPrompt(
   resume: ParsedResume,
   job: ParsedJob,
   rawJobText?: string | null,
+  rawResumeText?: string | null,
   style?: string,
 ): Promise<{ system: string; userMessage: string; maxTokens: number } | null> {
   const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
@@ -172,32 +154,36 @@ async function buildPrompt(
   ).join('\n\n');
 
   if (documentType === "tailored_resume") {
-    const styleKey = style && style in RESUME_STYLE_INSTRUCTIONS ? style : 'professional';
-    const styleInstruction = RESUME_STYLE_INSTRUCTIONS[styleKey];
+    const sourceResume = rawResumeText?.trim() ? rawResumeText : resumeToText(resume);
+    const template = createResumeFormatTemplate(sourceResume);
     return {
-      system: `${RESUME_SYSTEM}\n\nToday's date is ${today}. Use this date if the document requires a date.\n\nStyle instruction: ${styleInstruction}`,
+      system: RESUME_SYSTEM,
       maxTokens: 4096,
       userMessage: [
-        `Candidate parsed resume (JSON):\n${resumeJson}`,
+        `Immutable source resume (verbatim):\n${sourceResume}`,
+        `Editable source lines (JSON):\n${JSON.stringify(template.candidates, null, 2)}`,
+        `Candidate parsed resume for fact checking only (JSON):\n${resumeJson}`,
         `Parsed job posting (JSON):\n${jobJson}`,
         `Most relevant candidate evidence selected for this job:\n${matchedEvidence}`,
-        "Write the tailored resume as Markdown. Only output the resume.",
+        "Return only the replacement-map JSON. Preserve the source format and structure exactly.",
       ].join("\n\n"),
     };
   }
 
   if (documentType === "cover_letter") {
+    const sourceResume = rawResumeText?.trim() ? rawResumeText : resumeToText(resume);
+    const resumeHeader = extractResumeHeader(sourceResume);
     const styleKey = style && style in COVER_LETTER_STYLE_INSTRUCTIONS ? style : 'professional';
     const styleInstruction = COVER_LETTER_STYLE_INSTRUCTIONS[styleKey];
-    const coverLetterSystem = COVER_LETTER_SYSTEM.replace('[Today\'s date]', today);
     return {
-      system: `${coverLetterSystem}\n\nToday's date is ${today}. Always use this exact date in the document header.\n\nStyle instruction: ${styleInstruction}`,
-      maxTokens: 1024,
+      system: `${COVER_LETTER_SYSTEM}\n\nToday's date is ${today}. Use this exact date.\n\nTone instruction: ${styleInstruction}`,
+      maxTokens: 2048,
       userMessage: [
+        `Exact source-resume header to be reused by the application (JSON):\n${JSON.stringify(resumeHeader)}`,
         `Candidate parsed resume (JSON):\n${resumeJson}`,
         `Parsed job posting (JSON):\n${jobJson}`,
         `Most relevant candidate evidence selected for this job:\n${matchedEvidence}`,
-        "Write the complete cover letter.",
+        "Return only the cover-letter content JSON. The application will apply the resume format.",
       ].join("\n\n"),
     };
   }
@@ -290,7 +276,7 @@ export async function POST(req: NextRequest) {
       .single(),
     supabase
       .from("base_resumes")
-      .select("parsed_resume_json")
+      .select("parsed_resume_json, raw_text")
       .eq("user_id", user.id)
       .eq("is_default", true)
       .single(),
@@ -309,7 +295,15 @@ export async function POST(req: NextRequest) {
   }
 
   const parsedResume = (resumeRow?.parsed_resume_json as ParsedResume | null) ?? {};
-  const prompt = await buildPrompt(documentType, parsedResume, job, app.raw_job_text, style);
+  const rawResumeText = resumeRow?.raw_text ?? "";
+  const prompt = await buildPrompt(
+    documentType,
+    parsedResume,
+    job,
+    app.raw_job_text,
+    rawResumeText,
+    style,
+  );
   if (!prompt) {
     return Response.json({ error: `Unsupported document type: ${documentType}` }, { status: 400 });
   }
@@ -359,6 +353,23 @@ export async function POST(req: NextRequest) {
           } else {
             throw primaryErr;
           }
+        }
+
+        if (documentType === "tailored_resume") {
+          try {
+            const result = extractJson<{ replacements?: Record<string, unknown> }>(content);
+            content = applyResumeReplacements(rawResumeText || resumeToText(parsedResume), result.replacements);
+          } catch {
+            // Formatting is a hard constraint. If the model ignores the JSON
+            // contract, return the untouched source instead of a reformatted resume.
+            content = rawResumeText || resumeToText(parsedResume);
+          }
+        } else if (documentType === "cover_letter") {
+          const draft = extractJson<CoverLetterDraft>(content);
+          content = renderCoverLetterWithResumeFormat(
+            rawResumeText || resumeToText(parsedResume),
+            draft,
+          );
         }
 
         controller.enqueue(encoder.encode(content));

@@ -102,8 +102,8 @@ function formatTimestamp(iso: string, locale: string): string {
 
 function TimelineSidebar({ events, locale, t }: { events: ApplicationTimelineEvent[]; locale: string; t: Translator }) {
   return (
-    <aside>
-      <div className="sticky top-6">
+    <aside className="surface-card p-5">
+      <div className="sticky top-20">
         <p className="label-caps mb-4">{t("detailActivity")}</p>
         {events.length === 0 ? (
           <p className="text-xs text-muted-foreground">{t("detailNoActivity")}</p>
@@ -215,32 +215,19 @@ export default async function ApplicationPage({
     new Date(application.created_at) < staleCutoff;
 
   return (
-    <div className="mx-auto w-full max-w-[1500px] px-3 py-6 sm:px-6 sm:py-12 xl:px-10">
-      <div className="label-caps mb-2">
-        <Link href="/applications" className="hover:underline">
-          {t("heading")}
-        </Link>{" "}
-        / {application.company_name ?? t("heading")}
-      </div>
-
-      {isStaleSaved && (
-        <div className="mb-6 flex items-start gap-3 rounded-md border border-[var(--warning)] bg-[var(--warning-light)] px-4 py-3">
-          <span className="mt-0.5 shrink-0 text-[var(--warning)]">⚠</span>
-          <p className="text-sm text-amber-900">
-            <strong>{t("detailStaleReminder")}</strong> {t("detailStaleBody")}{" "}
-            <span className="opacity-75">
-              {t("detailStaleHint")}
-            </span>
-          </p>
-        </div>
-      )}
-
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="font-display text-xl leading-tight sm:text-4xl">
+    <div className="app-page">
+      <div className="app-page-container app-page-container-wide">
+        <div className="app-page-header rise-enter">
+          <div className="label-caps mb-2">
+            <Link href="/applications" className="hover:text-foreground hover:underline">
+              {t("heading")}
+            </Link>{" "}
+            / {application.company_name ?? t("heading")}
+          </div>
+          <h1 className="app-page-title">
             {application.role_title ?? t("detailUntitledRole")}
           </h1>
-          <p className="mt-1 text-muted-foreground">
+          <p className="app-page-subtitle">
             {application.company_name ?? t("detailUnknownCompany")}
             {application.location ? ` · ${application.location}` : ""}
             {application.job_url ? (
@@ -250,52 +237,54 @@ export default async function ApplicationPage({
                   href={application.job_url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="underline underline-offset-2 opacity-60 hover:opacity-100"
+                  className="underline underline-offset-2 hover:text-foreground"
                 >
                   {t("detailJobPosting")}
                 </a>
               </>
             ) : null}
           </p>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <StatusSelect
-            applicationId={application.id}
-            current={application.current_status}
-          />
-          <DeleteApplicationButton applicationId={application.id} variant="text" />
-        </div>
-      </div>
-
-      <div className="mt-6 grid grid-cols-1 items-start gap-6 sm:mt-10 sm:gap-8 lg:grid-cols-[minmax(0,1fr)_220px] xl:grid-cols-[minmax(0,1fr)_240px] xl:gap-10">
-        <main className="min-w-0">
-          {job && (
-            <JobAnalysisCard
-              job={job}
-              resume={parsedResume}
-              rawJobText={application.raw_job_text}
-            />
-          )}
-
-          <div className={job ? "mt-8" : undefined}>
-            <WorkspaceTabs
-              applicationId={application.id}
-              hasResume={!!resume}
-              documents={{
-                tailored_resume: docMap.get("tailored_resume") ?? null,
-                cover_letter: docMap.get("cover_letter") ?? null,
-                email_draft: docMap.get("email_draft") ?? null,
-                interview_prep: docMap.get("interview_prep") ?? null,
-              }}
-              roleTitle={application.role_title ?? undefined}
-              userFirstName={userFirstName}
-              companyName={application.company_name ?? undefined}
-              statusLabel={statusLabel(t, application.current_status)}
-            />
+          <div className="mt-6 flex items-center justify-center gap-2">
+            <StatusSelect applicationId={application.id} current={application.current_status} />
+            <DeleteApplicationButton applicationId={application.id} variant="text" />
           </div>
-        </main>
-        <TimelineSidebar events={events} locale={locale} t={t} />
+        </div>
+
+        {isStaleSaved && (
+          <div className="surface-card mt-6 flex items-start gap-3 border-[var(--warning)] bg-[var(--warning-light)] px-4 py-3 rise-enter [transition-delay:40ms]">
+            <span className="mt-0.5 shrink-0 text-[var(--warning)]">⚠</span>
+            <p className="text-sm text-amber-900">
+              <strong>{t("detailStaleReminder")}</strong> {t("detailStaleBody")}{" "}
+              <span className="opacity-75">{t("detailStaleHint")}</span>
+            </p>
+          </div>
+        )}
+
+        <div className="app-page-content grid grid-cols-1 items-start gap-6 rise-enter [transition-delay:80ms] lg:grid-cols-[minmax(0,1fr)_220px]">
+          <main className="min-w-0">
+            {job && (
+              <JobAnalysisCard job={job} resume={parsedResume} rawJobText={application.raw_job_text} />
+            )}
+
+            <div className={job ? "mt-6" : undefined}>
+              <WorkspaceTabs
+                applicationId={application.id}
+                hasResume={!!resume}
+                documents={{
+                  tailored_resume: docMap.get("tailored_resume") ?? null,
+                  cover_letter: docMap.get("cover_letter") ?? null,
+                  email_draft: docMap.get("email_draft") ?? null,
+                  interview_prep: docMap.get("interview_prep") ?? null,
+                }}
+                roleTitle={application.role_title ?? undefined}
+                userFirstName={userFirstName}
+                companyName={application.company_name ?? undefined}
+                statusLabel={statusLabel(t, application.current_status)}
+              />
+            </div>
+          </main>
+          <TimelineSidebar events={events} locale={locale} t={t} />
+        </div>
       </div>
     </div>
   );

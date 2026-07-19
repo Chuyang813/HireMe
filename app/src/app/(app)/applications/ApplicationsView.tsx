@@ -94,7 +94,7 @@ export function ApplicationsView({
   return (
     <>
       {!hasResume && (
-        <div className="mt-6 flex items-center gap-3 rounded-md border border-border bg-muted/50 px-4 py-3 text-sm text-muted-foreground">
+        <div className="surface-card flex items-center gap-3 px-4 py-3 text-sm text-muted-foreground">
           <svg
             xmlns="http://www.w3.org/2000/svg"
             viewBox="0 0 20 20"
@@ -119,24 +119,21 @@ export function ApplicationsView({
         </div>
       )}
 
-      <div className="mt-6 flex items-center justify-end gap-2">
-        <span className="label-caps text-muted-foreground">
-          {t("viewToggleLabel")}
-        </span>
-        <div className="flex items-center gap-0.5 rounded-md border border-border p-0.5">
+      <div className="mt-6 flex items-center justify-center gap-2">
+        <span className="sr-only">{t("viewToggleLabel")}</span>
+        <div className="segmented-control">
           <button
             type="button"
             onClick={() => switchView("cards")}
             aria-label={t("viewCards")}
             title={t("viewCards")}
             className={[
-              "flex h-7 w-7 items-center justify-center rounded transition duration-150 ease-out active:scale-95",
-              view === "cards"
-                ? "bg-accent text-accent-foreground shadow-sm"
-                : "text-muted-foreground hover:text-foreground",
+              "segmented-control-item gap-2",
+              view === "cards" ? "segmented-control-item-active" : "",
             ].join(" ")}
           >
             <GridIcon />
+            <span>{t("viewCards")}</span>
           </button>
           <button
             type="button"
@@ -144,20 +141,19 @@ export function ApplicationsView({
             aria-label={t("viewTable")}
             title={t("viewTable")}
             className={[
-              "flex h-7 w-7 items-center justify-center rounded transition duration-150 ease-out active:scale-95",
-              view === "table"
-                ? "bg-accent text-accent-foreground shadow-sm"
-                : "text-muted-foreground hover:text-foreground",
+              "segmented-control-item gap-2",
+              view === "table" ? "segmented-control-item-active" : "",
             ].join(" ")}
           >
             <ListIcon />
+            <span>{t("viewTable")}</span>
           </button>
         </div>
       </div>
 
       <div className="mt-4">
         {applications.length === 0 ? (
-          <div className="rounded-md border border-dashed border-border p-6 text-center sm:p-12">
+          <div className="surface-card border-dashed p-8 text-center sm:p-12">
             <p className="font-display text-lg text-muted-foreground sm:text-2xl">
               {t("noAppsHeading")}
             </p>
@@ -174,7 +170,7 @@ export function ApplicationsView({
               <li key={app.id} className="relative">
                 <Link
                   href={`/applications/${app.id}`}
-                  className="block rounded-md border border-border bg-white p-3 transition-colors hover:border-[var(--border-strong)] hover:bg-[var(--muted)] sm:p-5"
+                  className="surface-card block p-4 transition duration-150 ease-out hover:border-[var(--border-strong)] hover:bg-muted/35 active:scale-[0.995] sm:p-5"
                 >
                   <div className="flex items-baseline justify-between gap-4">
                     <div>
@@ -223,7 +219,7 @@ export function ApplicationsView({
         ) : (
           <>
             <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-5">
-              <div className="rounded-md border border-border bg-white p-3 sm:p-4">
+              <div className="surface-card p-3 sm:p-4">
                 <p className="label-caps text-muted-foreground">
                   {t("active")}
                 </p>
@@ -232,7 +228,7 @@ export function ApplicationsView({
               {PIPELINE_STATS.map((s) => (
                 <div
                   key={s}
-                  className="rounded-md border border-border bg-white p-3 sm:p-4"
+                  className="surface-card p-3 sm:p-4"
                 >
                   <p className="label-caps text-muted-foreground">
                     {t(STATUS_LABEL_KEYS[s] as Parameters<typeof t>[0])}
@@ -244,7 +240,7 @@ export function ApplicationsView({
               ))}
             </div>
 
-            <div className="overflow-x-auto rounded-md border border-border">
+            <div className="surface-card overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-border bg-muted/40">
@@ -272,7 +268,7 @@ export function ApplicationsView({
                   {applications.map((app) => (
                     <tr
                       key={app.id}
-                      className={`border-b border-border last:border-0 bg-white ${statusRowColor(app.current_status)}`}
+                      className={`border-b border-border last:border-0 bg-background ${statusRowColor(app.current_status)}`}
                     >
                       <td className="max-w-[200px] px-3 py-2.5 sm:px-5 sm:py-4">
                         <div className="flex items-center gap-2">

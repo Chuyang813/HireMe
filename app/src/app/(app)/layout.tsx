@@ -32,11 +32,11 @@ export default async function AppLayout({
 
   return (
     <div className="flex flex-1 flex-col">
-      <header className="border-b border-border bg-background">
+      <header className="sticky top-0 z-30 border-b border-border bg-background/90 backdrop-blur-xl">
         <div className="mx-auto flex h-14 w-full max-w-7xl items-center justify-between px-3 sm:px-6">
           <Link
             href={hasRequiredResume ? "/dashboard" : "/onboarding"}
-            className="font-display text-xl leading-none"
+            className="font-display text-xl leading-none tracking-[-0.04em]"
           >
             HireMe
           </Link>
@@ -69,7 +69,7 @@ export default async function AppLayout({
           </div>
         </div>
       </header>
-      <main className="flex-1">{children}</main>
+      <main className="flex-1 bg-canvas">{children}</main>
     </div>
   );
 }

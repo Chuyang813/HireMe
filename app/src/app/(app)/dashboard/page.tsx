@@ -60,14 +60,14 @@ function StatCard({
   icon: React.ReactNode;
 }) {
   return (
-    <div className="rounded-md border border-border bg-background p-3 sm:p-5">
+    <div className="surface-card p-5">
       <div className="flex items-start justify-between gap-4">
-        <p className="font-display text-2xl leading-none sm:text-4xl">{value}</p>
+        <p className="font-display text-3xl leading-none tabular-nums">{value}</p>
         <span className="flex h-8 w-8 items-center justify-center rounded-md bg-muted text-muted-foreground">
           {icon}
         </span>
       </div>
-      <p className="label-caps mt-2 text-foreground sm:mt-4">{label}</p>
+      <p className="label-caps mt-4 text-foreground">{label}</p>
       <p className="mt-0.5 text-xs text-muted-foreground">{sub}</p>
     </div>
   );
@@ -266,95 +266,77 @@ export default async function DashboardPage() {
   ];
 
   return (
-    <div className="mx-auto w-full max-w-7xl px-3 py-6 sm:px-6 sm:py-14">
-      {(!hasApplications || !hasGeneratedDocument) && (
-        <div className="mb-8 sm:mb-10">
-          <OnboardingChecklist
-            hasApplication={hasApplications}
-            hasGeneratedDocument={hasGeneratedDocument}
-            firstApplicationId={firstApplicationId}
-          />
-        </div>
-      )}
-
-      <section className="flex items-start justify-between gap-8">
-        <div>
-          <p className="label-caps mb-6">{t("overviewLabel")}</p>
-          <h1 className="font-display text-2xl leading-none sm:text-5xl md:text-6xl">
-            {t("heading")}
-          </h1>
-          <div className="mt-3 space-y-1 text-sm text-muted-foreground sm:mt-6 sm:text-lg">
+    <div className="app-page">
+      <div className="app-page-container app-page-container-wide">
+        <section className="app-page-header rise-enter">
+          <p className="label-caps mb-2">{t("overviewLabel")}</p>
+          <h1 className="app-page-title">{t("heading")}</h1>
+          <div className="app-page-subtitle space-y-1">
             <p>{t("welcomeBack", { name: fullNameFromProfile(profileData).split(" ")[0] })}</p>
-            <p className="text-xs sm:text-base">
+            <p>
               {hasApplications
-                ? t("summary", {
-                    active: activeCount,
-                    interviews: interviewCount,
-                  })
+                ? t("summary", { active: activeCount, interviews: interviewCount })
                 : t("emptySummary")}
             </p>
           </div>
-        </div>
+          <Link href="/applications/new" className="btn btn-primary mt-6">
+            <span className="text-base leading-none">+</span>
+            {t("newApplication")}
+          </Link>
+        </section>
 
-        <Link
-          href="/applications/new"
-          className="mt-10 hidden items-center gap-2 rounded-md bg-accent px-4 py-2 text-[13px] font-medium text-accent-foreground hover:bg-[var(--accent-hover)] sm:inline-flex"
-        >
-          <span className="text-lg leading-none">+</span>
-          {t("newApplication")}
-        </Link>
-      </section>
+        {(!hasApplications || !hasGeneratedDocument) && (
+          <div className="app-page-content rise-enter [transition-delay:40ms]">
+            <OnboardingChecklist
+              hasApplication={hasApplications}
+              hasGeneratedDocument={hasGeneratedDocument}
+              firstApplicationId={firstApplicationId}
+            />
+          </div>
+        )}
 
-      <section className="mt-8 sm:mt-14">
-        <p className="label-caps mb-4">{t("statsLabel")}</p>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-5">
-          {stats.map((stat) => (
-            <StatCard key={stat.label} {...stat} />
-          ))}
-        </div>
-      </section>
+        <section className="app-page-content rise-enter [transition-delay:80ms]">
+          <p className="label-caps mb-4 text-center">{t("statsLabel")}</p>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
+            {stats.map((stat) => <StatCard key={stat.label} {...stat} />)}
+          </div>
+        </section>
 
-      <section className="mt-8 grid grid-cols-1 gap-4 sm:mt-14 sm:gap-6 lg:grid-cols-[0.95fr_1.05fr]">
-        <div>
-          <p className="label-caps mb-4">{t("nextActionLabel")}</p>
-          <div className="flex min-h-72 flex-col justify-between rounded-md border border-border bg-background p-4 sm:p-6">
-            <div className="flex items-start gap-6">
-              <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
-                <SmallIcon kind="briefcase" />
-              </span>
-              <div>
-                <h2 className="font-display text-base leading-snug sm:text-xl">
-                  {nextActionApp
-                    ? t("nextActionTitle", {
-                        role: nextActionApp.role_title ?? t("untitledRole"),
-                      })
-                    : t("firstApplicationTitle")}
-                </h2>
-                <p className="mt-2 max-w-xl text-sm leading-relaxed text-muted-foreground">
-                  {nextActionApp ? t("nextActionBody") : t("firstApplicationBody")}
-                </p>
+        <section className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2 rise-enter [transition-delay:120ms]">
+          <div className="surface-card flex min-h-72 flex-col justify-between p-5 sm:p-6">
+            <div>
+              <p className="label-caps mb-5">{t("nextActionLabel")}</p>
+              <div className="flex items-start gap-4">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
+                  <SmallIcon kind="briefcase" />
+                </span>
+                <div>
+                  <h2 className="font-display text-lg leading-snug">
+                    {nextActionApp
+                      ? t("nextActionTitle", { role: nextActionApp.role_title ?? t("untitledRole") })
+                      : t("firstApplicationTitle")}
+                  </h2>
+                  <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                    {nextActionApp ? t("nextActionBody") : t("firstApplicationBody")}
+                  </p>
+                </div>
               </div>
             </div>
-            <div className="mt-10 flex justify-end">
-              <Link
-                href={nextActionApp ? `/applications/${nextActionApp.id}` : "/applications/new"}
-                className="inline-flex h-9 min-w-36 items-center justify-center gap-2 rounded-md border border-border px-4 text-[13px] font-medium transition-colors hover:bg-[var(--bg-hover)]"
-              >
+            <div className="mt-8 flex justify-end">
+              <Link href={nextActionApp ? `/applications/${nextActionApp.id}` : "/applications/new"} className="btn btn-secondary">
                 {nextActionApp ? t("prepareNow") : t("addApplication")}
                 <span aria-hidden="true">-&gt;</span>
               </Link>
             </div>
           </div>
-        </div>
 
-        <div>
-          <div className="mb-4 flex items-center justify-between gap-4">
-            <p className="label-caps">{t("recentActivityLabel")}</p>
-            <Link href="/applications" className="text-sm text-muted-foreground hover:text-foreground">
-              {t("viewAll")}
-            </Link>
-          </div>
-          <div className="rounded-md border border-border bg-background px-3 py-3 sm:px-5">
+          <div className="surface-card p-5 sm:p-6">
+            <div className="mb-4 flex items-center justify-between gap-4">
+              <p className="label-caps">{t("recentActivityLabel")}</p>
+              <Link href="/applications" className="text-xs font-medium text-muted-foreground hover:text-foreground">
+                {t("viewAll")}
+              </Link>
+            </div>
             {events.length === 0 ? (
               <p className="py-8 text-sm text-muted-foreground">{t("noActivity")}</p>
             ) : (
@@ -362,28 +344,16 @@ export default async function DashboardPage() {
                 {events.map((ev) => {
                   const status = eventStatus(ev);
                   return (
-                    <li
-                      key={ev.id}
-                      className="grid grid-cols-[1fr_auto_auto] items-center gap-5 border-b border-border py-3 last:border-0"
-                    >
+                    <li key={ev.id} className="grid grid-cols-[1fr_auto] items-center gap-4 border-b border-border py-3 last:border-0">
                       <div className="min-w-0">
-                        <p className="truncate font-display text-base leading-tight">
-                          {activityTitle(ev, t)}
-                        </p>
-                        <p className="mt-1 truncate text-xs text-muted-foreground">
-                          {activitySubtitle(ev, t)}
-                        </p>
+                        <p className="truncate text-sm font-medium">{activityTitle(ev, t)}</p>
+                        <p className="mt-1 truncate text-xs text-muted-foreground">{activitySubtitle(ev, t)}</p>
                       </div>
-                      <p className="hidden text-xs text-muted-foreground sm:block">
-                        {new Date(ev.created_at).toLocaleDateString()}
-                      </p>
                       <EventBadge
                         status={status}
-                        label={
-                          status
-                            ? t(STATUS_LABEL_KEY[status] as Parameters<typeof t>[0])
-                            : t(EVENT_TYPE_LABEL_KEY[ev.event_type] as Parameters<typeof t>[0])
-                        }
+                        label={status
+                          ? t(STATUS_LABEL_KEY[status] as Parameters<typeof t>[0])
+                          : t(EVENT_TYPE_LABEL_KEY[ev.event_type] as Parameters<typeof t>[0])}
                       />
                     </li>
                   );
@@ -391,8 +361,8 @@ export default async function DashboardPage() {
               </ul>
             )}
           </div>
-        </div>
-      </section>
+        </section>
+      </div>
     </div>
   );
 }

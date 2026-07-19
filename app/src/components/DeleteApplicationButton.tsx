@@ -23,8 +23,8 @@ export function DeleteApplicationButton({
 
   const buttonClass =
     variant === "text"
-      ? "inline-flex h-9 items-center gap-2 rounded-md border border-[var(--danger)] bg-white px-3 text-[13px] font-medium text-[var(--danger)] transition duration-150 ease-out hover:bg-[var(--danger-light)] active:scale-[0.97]"
-      : "inline-flex h-8 w-8 items-center justify-center rounded-md border border-border bg-white text-muted-foreground transition duration-150 ease-out hover:border-[var(--danger)] hover:bg-[var(--danger-light)] hover:text-[var(--danger)] active:scale-95";
+      ? "inline-flex h-10 items-center gap-2 rounded-lg border border-[var(--danger)] bg-background px-3 text-[13px] font-medium text-[var(--danger)] transition duration-150 ease-out hover:bg-[var(--danger-light)] active:scale-[0.97]"
+      : "inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-background text-muted-foreground shadow-[var(--shadow-sm)] transition duration-150 ease-out hover:border-[var(--danger)] hover:bg-[var(--danger-light)] hover:text-[var(--danger)] active:scale-95";
 
   return (
     <div className="relative inline-flex">
@@ -43,7 +43,7 @@ export function DeleteApplicationButton({
       </button>
 
       {confirming && (
-        <div className="popover-enter absolute right-0 top-[calc(100%+0.5rem)] z-30 w-64 rounded-md border border-border bg-background p-3 text-left shadow-[var(--shadow-float)]">
+        <div className="popover-enter absolute right-0 top-[calc(100%+0.5rem)] z-30 w-64 rounded-xl border border-border bg-background p-3 text-left shadow-[var(--shadow-float)]">
           <p className="mb-3 text-sm font-medium text-foreground">
             {t("deleteConfirm")}
           </p>

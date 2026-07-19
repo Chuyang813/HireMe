@@ -15,31 +15,31 @@ const MAX_JOB_TEXT_LENGTH = 30_000;
 
 // Linear-inspired light system (see DESIGN.md): white cards on #fafafa,
 // hairline borders, 12px card radius, 8px control radius, single lavender accent.
-const ACCENT = "#5e6ad2";
+const ACCENT = "var(--accent)";
 
 const cardPanel =
-  "rounded-xl border border-black/[0.08] bg-white shadow-[0_1px_3px_rgba(0,0,0,0.04)]";
+  "surface-card";
 
 const primaryButton =
   "inline-flex h-10 items-center justify-center gap-1.5 rounded-lg px-5 text-[13px] font-medium text-white " +
-  "bg-[#5e6ad2] transition duration-150 ease-out hover:bg-[#4d58bd] active:scale-[0.97] " +
-  "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#5e6ad2]/50 " +
+  "bg-accent transition duration-150 ease-out hover:bg-[var(--accent-hover)] active:scale-[0.97] " +
+  "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent/50 " +
   "disabled:opacity-50 disabled:pointer-events-none";
 
 const secondaryButton =
   "inline-flex h-10 items-center justify-center rounded-lg px-4 text-[13px] font-medium " +
-  "text-muted-foreground border border-black/[0.08] bg-white " +
+  "text-muted-foreground border border-border bg-background shadow-[var(--shadow-sm)] " +
   "transition duration-150 ease-out hover:text-foreground hover:bg-[var(--bg-hover)] active:scale-[0.97] " +
   "disabled:opacity-50 disabled:pointer-events-none";
 
 const lightInput =
-  "h-10 w-full rounded-lg border border-black/[0.08] bg-white px-3 text-sm text-foreground " +
+  "h-10 w-full rounded-lg border border-border bg-background px-3 text-sm text-foreground " +
   "placeholder:text-[var(--text-placeholder)] outline-none transition duration-150 " +
-  "focus:border-[#5e6ad2] focus:shadow-[0_0_0_3px_rgba(94,106,210,0.15)]";
+  "focus:border-accent focus:shadow-[0_0_0_3px_var(--focus-ring)]";
 
 const FIT_STYLES: Record<SkillFit, string> = {
   strong: "border-green-200 bg-green-50 text-green-700",
-  good: "border-[#5e6ad2]/25 bg-[#5e6ad2]/[0.08] text-[#4d58bd]",
+  good: "border-accent/25 bg-[var(--accent-light)] text-[var(--accent-hover)]",
   moderate: "border-amber-200 bg-amber-50 text-amber-700",
   low: "border-red-200 bg-red-50 text-red-700",
 };
@@ -48,8 +48,8 @@ function useCountUp(target: number, durationMs = 800): number {
   const [value, setValue] = useState(0);
   useEffect(() => {
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      setValue(target);
-      return;
+      const reducedRaf = requestAnimationFrame(() => setValue(target));
+      return () => cancelAnimationFrame(reducedRaf);
     }
     let raf = 0;
     const start = performance.now();
@@ -366,7 +366,7 @@ export function NewApplicationForm() {
     <form onSubmit={handleAnalyze} className="flex flex-col gap-6">
       {/* Pill segment control — macOS style: gray track, white active pill */}
       <div className="rise-enter flex justify-center">
-        <div className="inline-flex rounded-full border border-black/[0.06] bg-[#f4f4f5] p-1">
+        <div className="inline-flex rounded-full border border-border bg-muted p-1">
           {(["paste", "url"] as const).map((key) => (
             <button
               key={key}
@@ -378,7 +378,7 @@ export function NewApplicationForm() {
               aria-pressed={tab === key}
               className={`rounded-full px-5 py-1.5 text-[13px] font-medium transition duration-150 ease-out active:scale-[0.97] ${
                 tab === key
-                  ? "bg-white text-foreground shadow-[0_1px_3px_rgba(0,0,0,0.08)]"
+                  ? "bg-background text-foreground shadow-[var(--shadow-sm)]"
                   : "text-muted-foreground hover:text-foreground"
               }`}
             >
@@ -397,7 +397,7 @@ export function NewApplicationForm() {
               rows={14}
               maxLength={MAX_JOB_TEXT_LENGTH}
               placeholder={t("jobDescriptionPlaceholder")}
-              className="min-h-72 w-full resize-y rounded-lg border border-black/[0.08] bg-[#fafafa] p-4 font-mono text-xs leading-relaxed text-foreground placeholder:text-[var(--text-placeholder)] outline-none transition duration-150 focus:border-[#5e6ad2] focus:bg-white focus:shadow-[0_0_0_3px_rgba(94,106,210,0.15)]"
+              className="min-h-72 w-full resize-y rounded-lg border border-border bg-canvas p-4 font-mono text-xs leading-relaxed text-foreground placeholder:text-[var(--text-placeholder)] outline-none transition duration-150 focus:border-accent focus:bg-background focus:shadow-[0_0_0_3px_var(--focus-ring)]"
               value={rawJobText}
               onChange={(e) => setRawJobText(e.target.value)}
             />

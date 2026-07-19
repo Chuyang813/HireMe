@@ -1,43 +1,58 @@
-import { aiText } from "./provider";
+import { aiJson } from "./provider";
 import { selectResumeEvidenceSemantic, resumeToText, jobToText } from "./evidence";
+import {
+  applyResumeReplacements,
+  createResumeFormatTemplate,
+} from "./resume-format";
 import type { ParsedJob, ParsedResume } from "@/lib/db/types";
 
 const SYSTEM = `You are a resume tailoring assistant.
 
-You will receive a candidate's parsed resume and a parsed job description. Produce a tailored, role-aligned resume in clean plaintext Markdown.
+You will receive immutable source-resume lines and a parsed job description. Return a JSON object containing replacement text only for the supplied editable line IDs.
 
 Absolute rules:
 - Never invent employers, schools, dates, titles, degrees, certifications, tools, or accomplishments.
-- You may reorganize, reprioritize, and rephrase bullets the candidate already has. You may drop weakly-relevant items.
-- Highlight experience, projects, and skills that align with the job's required and desired skills.
-- Keep the candidate's factual claims intact; only the framing changes.
-- Use simple Markdown: # Name, contact line, ## Sections, - bullets.
-- Do not include any preamble or trailing commentary. Output only the resume.`;
+- Never add, remove, merge, split, or reorder lines, bullets, jobs, projects, or sections.
+- Never return a replacement for an ID that was not supplied.
+- Keep every factual claim intact. Rephrase only when it improves alignment with the job.
+- Do not include bullet symbols, indentation, Markdown, headings, or line breaks inside replacement values; the application restores those from the source template.
+- If a source line should remain unchanged, omit its ID.
+- Output exactly this JSON shape and no commentary: {"replacements":{"L0001":"replacement text"}}.`;
 
 export async function tailorResume({
   resume,
   job,
+  rawResumeText,
   extraInstructions,
 }: {
   resume: ParsedResume;
   job: ParsedJob;
+  rawResumeText?: string | null;
   extraInstructions?: string;
 }): Promise<string> {
-  const matchedEvidence = (await selectResumeEvidenceSemantic(resumeToText(resume), jobToText(job))).join('\n\n');
+  const sourceResume = rawResumeText?.trim() ? rawResumeText : resumeToText(resume);
+  const template = createResumeFormatTemplate(sourceResume);
+  if (template.candidates.length === 0) return sourceResume;
 
-  return aiText({
+  const matchedEvidence = (
+    await selectResumeEvidenceSemantic(resumeToText(resume), jobToText(job))
+  ).join("\n\n");
+
+  const result = await aiJson<{ replacements?: Record<string, unknown> }>({
     system: SYSTEM,
     messages: [
       {
         role: "user",
         content: [
-          `Candidate parsed resume (JSON):\n${JSON.stringify(resume, null, 2)}`,
+          `Immutable source resume (verbatim):\n${sourceResume}`,
+          `Editable source lines (JSON):\n${JSON.stringify(template.candidates, null, 2)}`,
+          `Candidate parsed resume for fact checking only (JSON):\n${JSON.stringify(resume, null, 2)}`,
           `Parsed job posting (JSON):\n${JSON.stringify(job, null, 2)}`,
           `Most relevant candidate evidence selected for this job:\n${matchedEvidence}`,
           extraInstructions
-            ? `Additional instructions from the candidate:\n${extraInstructions}`
+            ? `Additional wording instructions from the candidate (these never override the format lock):\n${extraInstructions}`
             : "",
-          "Write the tailored resume as Markdown. Only output the resume.",
+          "Return only the replacement-map JSON. Preserve the source format and structure exactly.",
         ]
           .filter(Boolean)
           .join("\n\n"),
@@ -45,4 +60,6 @@ export async function tailorResume({
     ],
     maxTokens: 4096,
   });
+
+  return applyResumeReplacements(sourceResume, result.replacements);
 }

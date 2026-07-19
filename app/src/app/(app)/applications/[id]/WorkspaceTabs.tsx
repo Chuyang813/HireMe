@@ -19,6 +19,12 @@ import type {
   DocumentType,
 } from "@/lib/db/types";
 import type { GroundingWarning } from "@/lib/ai/grounding";
+import {
+  createApplicationPdf,
+  downloadBlob,
+  isResumeSectionHeading,
+  splitDocumentHeader,
+} from "@/lib/documents/application-pdf";
 
 // ---------------------------------------------------------------------------
 // Tab config — Notes tab removed
@@ -43,13 +49,6 @@ const TABS: { id: TabId; labelKey: string; shortLabelKey: string; docType?: Docu
 // Style constants for document generation
 // ---------------------------------------------------------------------------
 
-const RESUME_STYLES = [
-  { value: 'professional', labelKey: 'styleProfessional' },
-  { value: 'concise', labelKey: 'styleConcise' },
-  { value: 'creative', labelKey: 'styleCreative' },
-  { value: 'academic', labelKey: 'styleAcademic' },
-] as const;
-
 const COVER_LETTER_STYLES = [
   { value: 'professional', labelKey: 'styleProfessional' },
   { value: 'story', labelKey: 'styleStory' },
@@ -69,123 +68,106 @@ function sanitizeName(s: string) {
     .slice(0, 40);
 }
 
-async function exportPDF(content: string, filename: string) {
-  const { jsPDF } = await import("jspdf");
-  const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
-  const pageW = doc.internal.pageSize.getWidth();
-  const pageH = doc.internal.pageSize.getHeight();
-  const marginX = 20;
-  const marginY = 24;
-  const maxW = pageW - marginX * 2;
-  let y = marginY;
-
-  function checkPage(needed: number) {
-    if (y + needed > pageH - marginY) {
-      doc.addPage();
-      y = marginY;
-    }
-  }
-
-  for (const raw of content.split("\n")) {
-    const line = raw.trimEnd();
-
-    if (line.startsWith("# ")) {
-      checkPage(12);
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(18);
-      doc.text(line.slice(2), marginX, y);
-      y += 9;
-      doc.setDrawColor(180, 180, 180);
-      doc.setLineWidth(0.3);
-      doc.line(marginX, y, pageW - marginX, y);
-      y += 5;
-      doc.setDrawColor(0, 0, 0);
-    } else if (line.startsWith("## ")) {
-      checkPage(10);
-      y += 3;
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(11);
-      doc.text(line.slice(3).toUpperCase(), marginX, y);
-      y += 5;
-      doc.setDrawColor(200, 200, 200);
-      doc.setLineWidth(0.2);
-      doc.line(marginX, y, pageW - marginX, y);
-      y += 4;
-      doc.setDrawColor(0, 0, 0);
-    } else if (line.startsWith("- ") || line.startsWith("* ")) {
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(10);
-      const text = line.slice(2);
-      const wrapped = doc.splitTextToSize(text, maxW - 6) as string[];
-      checkPage(wrapped.length * 5 + 1);
-      doc.text("•", marginX + 2, y);
-      doc.text(wrapped, marginX + 7, y);
-      y += wrapped.length * 5 + 1;
-    } else if (line === "") {
-      y += 3;
-    } else {
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(10);
-      const wrapped = doc.splitTextToSize(line, maxW) as string[];
-      checkPage(wrapped.length * 5 + 1);
-      doc.text(wrapped, marginX, y);
-      y += wrapped.length * 5 + 1;
-    }
-  }
-
-  doc.save(`${filename}.pdf`);
+function cleanDocumentLine(value: string) {
+  return value
+    .replace(/^#{1,6}\s+/, "")
+    .replace(/\*\*([^*]+)\*\*/g, "$1")
+    .replace(/__([^_]+)__/g, "$1")
+    .replace(/^[_*]([^_*]+)[_*]$/, "$1")
+    .trimEnd();
 }
 
-async function exportDOCX(content: string, filename: string) {
+async function exportDOCX(
+  content: string,
+  filename: string,
+  documentType: "tailored_resume" | "cover_letter",
+) {
   const {
     Document,
     Packer,
     Paragraph,
     TextRun,
-    HeadingLevel,
     AlignmentType,
     BorderStyle,
   } = await import("docx");
 
   const paragraphs: InstanceType<typeof Paragraph>[] = [];
+  const { headerLines, bodyLines } = splitDocumentHeader(content);
+  const [name = "", ...contactLines] = headerLines;
+  const contact = contactLines.join(" | ");
 
-  for (const raw of content.split("\n")) {
-    const line = raw.trimEnd();
+  if (name || contact) {
+    paragraphs.push(
+      new Paragraph({
+        children: [
+          new TextRun({ text: name, font: "Caladea", size: 22, bold: true }),
+          new TextRun({
+            text: name && contact ? `  ${contact}` : contact,
+            font: "Caladea",
+            size: 21,
+          }),
+        ],
+        spacing: { before: 0, after: 260, line: 240 },
+        border: {
+          top: { style: BorderStyle.SINGLE, size: 8, color: "000000", space: 6 },
+          bottom: { style: BorderStyle.SINGLE, size: 8, color: "000000", space: 6 },
+        },
+      }),
+    );
+  }
 
-    if (line.startsWith("# ")) {
+  for (let index = 0; index < bodyLines.length; index += 1) {
+    const raw = bodyLines[index];
+    const line = cleanDocumentLine(raw);
+    const next = bodyLines.slice(index + 1).find((candidate) => candidate.trim()) ?? "";
+    const bullet = line.match(/^\s*(?:[-*\u2022\u25cf\u25aa\u25e6\u2023\u2013\u2014\uf0b7])\s+(.*)$/u);
+    const isRoleLine = documentType === "tailored_resume"
+      && !bullet
+      && (Boolean(next.match(/^\s*(?:[-*\u2022\u25cf\u25aa\u25e6\u2023\u2013\u2014\uf0b7])\s+/u))
+        || /\b(?:19|20)\d{2}\b|\b(?:present|current)\b/i.test(line));
+
+    if (!line.trim()) {
       paragraphs.push(
         new Paragraph({
-          text: line.slice(2),
-          heading: HeadingLevel.TITLE,
-          spacing: { after: 120 },
-          border: {
-            bottom: { style: BorderStyle.SINGLE, size: 6, color: "AAAAAA", space: 4 },
-          },
+          spacing: { after: documentType === "cover_letter" ? 100 : 40 },
         }),
       );
-    } else if (line.startsWith("## ")) {
+    } else if (documentType === "tailored_resume" && isResumeSectionHeading(raw)) {
       paragraphs.push(
         new Paragraph({
-          text: line.slice(3),
-          heading: HeadingLevel.HEADING_2,
-          spacing: { before: 240, after: 80 },
+          children: [new TextRun({
+            text: line,
+            font: "Caladea",
+            size: 22,
+            bold: true,
+            color: "1F4E79",
+          })],
+          spacing: { before: 140, after: 40, line: 240 },
         }),
       );
-    } else if (line.startsWith("- ") || line.startsWith("* ")) {
+    } else if (bullet) {
       paragraphs.push(
         new Paragraph({
-          children: [new TextRun({ text: line.slice(2), font: "Calibri", size: 22 })],
+          children: [new TextRun({ text: bullet[1], font: "Caladea", size: 20 })],
           bullet: { level: 0 },
-          spacing: { after: 80 },
+          spacing: { after: 20, line: 248 },
         }),
       );
-    } else if (line === "") {
-      paragraphs.push(new Paragraph({ spacing: { after: 80 } }));
     } else {
+      const emphasized = isRoleLine || /^Re\s*:/i.test(line);
       paragraphs.push(
         new Paragraph({
-          children: [new TextRun({ text: line, font: "Calibri", size: 22 })],
-          spacing: { after: 100 },
+          children: [new TextRun({
+            text: line,
+            font: "Caladea",
+            size: emphasized ? 21 : 20,
+            bold: emphasized,
+            color: isRoleLine ? "1F4E79" : "000000",
+          })],
+          spacing: {
+            after: documentType === "cover_letter" ? 80 : 24,
+            line: 248,
+          },
           alignment: AlignmentType.LEFT,
         }),
       );
@@ -196,7 +178,8 @@ async function exportDOCX(content: string, filename: string) {
     styles: {
       default: {
         document: {
-          run: { font: "Calibri", size: 22 },
+          run: { font: "Caladea", size: 20 },
+          paragraph: { spacing: { line: 248 } },
         },
       },
     },
@@ -204,7 +187,8 @@ async function exportDOCX(content: string, filename: string) {
       {
         properties: {
           page: {
-            margin: { top: 1080, bottom: 1080, left: 1080, right: 1080 },
+            size: { width: 12240, height: 15840 },
+            margin: { top: 820, bottom: 840, left: 880, right: 880 },
           },
         },
         children: paragraphs,
@@ -312,8 +296,94 @@ function MarkdownViewer({ content, isStreaming }: { content: string; isStreaming
   flushList();
 
   return (
-    <div className={`rounded-md border border-border bg-white p-3 min-h-[28rem] sm:p-6${isStreaming ? ' streaming' : ''}`}>
+    <div className={`rounded-xl border border-border bg-background p-3 min-h-[28rem] shadow-[var(--shadow-sm)] sm:p-6${isStreaming ? ' streaming' : ''}`}>
       {nodes}
+    </div>
+  );
+}
+
+function PdfDocumentPreview({
+  content,
+  documentType,
+  title,
+  isGenerating,
+}: {
+  content: string;
+  documentType: "tailored_resume" | "cover_letter";
+  title: string;
+  isGenerating: boolean;
+}) {
+  const t = useTranslations("Workspace");
+  const [previewUrl, setPreviewUrl] = useState("");
+  const [previewError, setPreviewError] = useState(false);
+  const [previewLoading, setPreviewLoading] = useState(false);
+
+  useEffect(() => {
+    if (!content.trim() || isGenerating) {
+      setPreviewUrl("");
+      setPreviewError(false);
+      setPreviewLoading(false);
+      return;
+    }
+
+    let active = true;
+    let objectUrl = "";
+    setPreviewLoading(true);
+    setPreviewError(false);
+
+    void createApplicationPdf(content, documentType, title)
+      .then((blob) => {
+        if (!active) return;
+        objectUrl = URL.createObjectURL(blob);
+        setPreviewUrl(objectUrl);
+      })
+      .catch(() => {
+        if (active) setPreviewError(true);
+      })
+      .finally(() => {
+        if (active) setPreviewLoading(false);
+      });
+
+    return () => {
+      active = false;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [content, documentType, isGenerating, title]);
+
+  if (isGenerating || previewLoading) {
+    return (
+      <div className="flex min-h-[40rem] items-center justify-center rounded-xl border border-border bg-muted/20">
+        <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+          <span className="h-4 w-4 animate-spin rounded-full border border-current border-t-transparent" />
+          {isGenerating ? t("generating") : t("pdfPreviewLoading")}
+        </div>
+      </div>
+    );
+  }
+
+  if (!content.trim()) {
+    return (
+      <div className="flex min-h-[40rem] items-center justify-center rounded-xl border border-dashed border-border bg-muted/20 px-6 text-center">
+        <p className="text-sm italic text-muted-foreground">{t("noContent")}</p>
+      </div>
+    );
+  }
+
+  if (previewError || !previewUrl) {
+    return (
+      <div className="flex min-h-[40rem] items-center justify-center rounded-xl border border-danger/30 bg-danger/5 px-6 text-center">
+        <p className="text-sm text-danger">{t("pdfPreviewUnavailable")}</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="overflow-hidden rounded-xl border border-border bg-muted/30 shadow-[var(--shadow-sm)]">
+      <iframe
+        src={previewUrl}
+        title={`${title} ${t("pdfPreviewLabel")}`}
+        className="h-[75vh] min-h-[42rem] w-full bg-white"
+      />
     </div>
   );
 }
@@ -419,7 +489,7 @@ function EmailDraftView({ content }: { content: string }) {
 
   if (!hasStructure) {
     return (
-      <div className="rounded-md border border-border bg-white shadow-sm">
+      <div className="rounded-xl border border-border bg-background shadow-[var(--shadow-sm)]">
         <div className="flex items-center justify-between border-b border-border px-3 py-3 sm:px-6">
           <span className="label-caps">{t("emailDraftHeader")}</span>
         </div>
@@ -431,7 +501,7 @@ function EmailDraftView({ content }: { content: string }) {
   }
 
   return (
-    <div className="rounded-md border border-border bg-white shadow-sm overflow-hidden">
+    <div className="overflow-hidden rounded-xl border border-border bg-background shadow-[var(--shadow-sm)]">
       <div className="flex items-center justify-between border-b border-border bg-muted/40 px-6 py-3">
         <span className="label-caps">{t("emailDraftHeader")}</span>
         <span className="text-xs text-muted-foreground">{t("emailSuggestionHint")}</span>
@@ -470,7 +540,7 @@ function EmailDraftView({ content }: { content: string }) {
           <ul className="flex flex-col gap-2">
             {parsed.attachments.map((a, i) => (
               <li key={i} className="flex items-start gap-3 text-sm">
-                <span className="mt-0.5 inline-flex shrink-0 items-center gap-1.5 rounded-sm border border-border bg-white px-2 py-0.5 text-xs text-foreground">
+                <span className="mt-0.5 inline-flex shrink-0 items-center gap-1.5 rounded-md border border-border bg-background px-2 py-0.5 text-xs text-foreground">
                   <span className="text-muted-foreground">◆</span>
                   <span className="font-medium">{a.name}</span>
                 </span>
@@ -582,7 +652,7 @@ function EvalResultsPanel({
 }) {
   if (loading) {
     return (
-      <div className="mt-4 rounded-md border border-border bg-white px-4 py-3 text-sm text-muted-foreground animate-pulse">
+      <div className="mt-4 animate-pulse rounded-lg border border-border bg-background px-4 py-3 text-sm text-muted-foreground">
         Analyzing resume…
       </div>
     );
@@ -602,7 +672,7 @@ function EvalResultsPanel({
   return (
     <div className="mt-4 space-y-3">
       {/* ATS Score Card */}
-      <div className="rounded-md border border-border bg-white p-4 shadow-sm space-y-3">
+      <div className="surface-card space-y-3 p-4">
         <div className="flex items-center justify-between">
           <p className="label-caps">ATS Score</p>
           <span className="text-base font-semibold tabular-nums" style={{ color: atsColor }}>
@@ -665,7 +735,7 @@ function EvalResultsPanel({
       </div>
 
       {/* Fabrication Check */}
-      <div className="rounded-md border border-border bg-white p-4 shadow-sm space-y-2">
+      <div className="surface-card space-y-2 p-4">
         <div className="flex items-center justify-between">
           <p className="label-caps">Fabrication Check</p>
           <span className="text-sm font-semibold tabular-nums" style={{ color: fabColor }}>
@@ -733,12 +803,7 @@ function DocumentPanel({
   const [evalResult, setEvalResult] = useState<{ ats: ATSResult; fabrication: FabricationResult } | null>(null);
   const [evalLoading, setEvalLoading] = useState(false);
 
-  const styleOptions =
-    documentType === "tailored_resume"
-      ? RESUME_STYLES
-      : documentType === "cover_letter"
-        ? COVER_LETTER_STYLES
-        : null;
+  const styleOptions = documentType === "cover_letter" ? COVER_LETTER_STYLES : null;
 
   const storageKey = `hireme-style-${applicationId}-${docTypeToTabId(documentType)}`;
 
@@ -871,9 +936,17 @@ function DocumentPanel({
     setExporting(true);
     try {
       if (format === "pdf") {
-        await exportPDF(content, exportFilename);
+        const printableType = documentType === "cover_letter"
+          ? "cover_letter"
+          : "tailored_resume";
+        const blob = await createApplicationPdf(content, printableType, exportFilename);
+        downloadBlob(blob, `${exportFilename}.pdf`);
       } else {
-        await exportDOCX(content, exportFilename);
+        await exportDOCX(
+          content,
+          exportFilename,
+          documentType === "cover_letter" ? "cover_letter" : "tailored_resume",
+        );
       }
     } finally {
       setExporting(false);
@@ -942,14 +1015,14 @@ function DocumentPanel({
             </div>
           )}
           {generating && (
-            <div className="absolute inset-0 flex items-center justify-center rounded-md bg-white/80">
+            <div className="absolute inset-0 flex items-center justify-center rounded-xl bg-background/85 backdrop-blur-sm">
               <div className="flex flex-col items-center gap-3">
                 <div className="flex items-center gap-1.5">
-                  <span className="h-2.5 w-2.5 animate-bounce rounded-full bg-[#2563eb] [animation-delay:-0.3s]" />
-                  <span className="h-2.5 w-2.5 animate-bounce rounded-full bg-[#2563eb] [animation-delay:-0.15s]" />
-                  <span className="h-2.5 w-2.5 animate-bounce rounded-full bg-[#2563eb]" />
+                  <span className="h-2.5 w-2.5 animate-bounce rounded-full bg-accent [animation-delay:-0.3s]" />
+                  <span className="h-2.5 w-2.5 animate-bounce rounded-full bg-accent [animation-delay:-0.15s]" />
+                  <span className="h-2.5 w-2.5 animate-bounce rounded-full bg-accent" />
                 </div>
-                <p className="text-sm font-medium text-[#2563eb]">{t("generating")}</p>
+                <p className="text-sm font-medium text-accent">{t("generating")}</p>
               </div>
             </div>
           )}
@@ -969,6 +1042,12 @@ function DocumentPanel({
 
   return (
     <div className="flex flex-col gap-4">
+      {(documentType === "tailored_resume" || documentType === "cover_letter") && (
+        <div className="flex items-start gap-2 rounded-lg border border-accent/20 bg-[var(--accent-light)] px-3.5 py-3 text-xs leading-5 text-[var(--accent-hover)]">
+          <span aria-hidden="true">◆</span>
+          <p>{t("formatLocked")}</p>
+        </div>
+      )}
       {styleOptions && (
         <div className="flex items-center gap-2">
           <label className="label-caps text-muted-foreground shrink-0">
@@ -1055,19 +1134,12 @@ function DocumentPanel({
       <GroundingWarnings warnings={groundingWarnings} />
 
       <div className="relative">
-        <MarkdownViewer content={content} isStreaming={generating} />
-        {generating && (
-          <div className="absolute inset-0 flex items-center justify-center rounded-md bg-white/80">
-            <div className="flex flex-col items-center gap-3">
-              <div className="flex items-center gap-1.5">
-                <span className="h-2.5 w-2.5 animate-bounce rounded-full bg-[#2563eb] [animation-delay:-0.3s]" />
-                <span className="h-2.5 w-2.5 animate-bounce rounded-full bg-[#2563eb] [animation-delay:-0.15s]" />
-                <span className="h-2.5 w-2.5 animate-bounce rounded-full bg-[#2563eb]" />
-              </div>
-              <p className="text-sm font-medium text-[#2563eb]">{t("generating")}</p>
-            </div>
-          </div>
-        )}
+        <PdfDocumentPreview
+          content={content}
+          documentType={documentType === "cover_letter" ? "cover_letter" : "tailored_resume"}
+          title={exportFilename}
+          isGenerating={generating}
+        />
       </div>
 
       {documentType === "tailored_resume" && (evalLoading || evalResult) && (
@@ -1329,7 +1401,8 @@ function InterviewPrepViewer({ content, isStreaming }: { content: string; isStre
 
   for (const line of lines) {
     if (line.startsWith("### Q:")) {
-      inQ ? commitQ() : flushMainList();
+      if (inQ) commitQ();
+      else flushMainList();
       inQ = true;
       qText = line.slice(6).trim();
       continue;
@@ -1393,10 +1466,11 @@ function InterviewPrepViewer({ content, isStreaming }: { content: string; isStre
     }
   }
 
-  inQ ? commitQ() : flushMainList();
+  if (inQ) commitQ();
+  else flushMainList();
 
   return (
-    <div className="rounded-md border border-border bg-white p-3 min-h-[28rem] sm:p-6">
+    <div className="min-h-[28rem] rounded-xl border border-border bg-background p-3 shadow-[var(--shadow-sm)] sm:p-6">
       {nodes}
     </div>
   );
@@ -1541,14 +1615,14 @@ function InterviewPrepPanel({
       <div className="relative">
         <InterviewPrepViewer content={content} isStreaming={generating} />
         {generating && (
-          <div className="absolute inset-0 flex items-center justify-center rounded-md bg-white/80">
+          <div className="absolute inset-0 flex items-center justify-center rounded-xl bg-background/85 backdrop-blur-sm">
             <div className="flex flex-col items-center gap-3">
               <div className="flex items-center gap-1.5">
-                <span className="h-2.5 w-2.5 animate-bounce rounded-full bg-[#2563eb] [animation-delay:-0.3s]" />
-                <span className="h-2.5 w-2.5 animate-bounce rounded-full bg-[#2563eb] [animation-delay:-0.15s]" />
-                <span className="h-2.5 w-2.5 animate-bounce rounded-full bg-[#2563eb]" />
+                <span className="h-2.5 w-2.5 animate-bounce rounded-full bg-accent [animation-delay:-0.3s]" />
+                <span className="h-2.5 w-2.5 animate-bounce rounded-full bg-accent [animation-delay:-0.15s]" />
+                <span className="h-2.5 w-2.5 animate-bounce rounded-full bg-accent" />
               </div>
-              <p className="text-sm font-medium text-[#2563eb]">{t("generating")}</p>
+              <p className="text-sm font-medium text-accent">{t("generating")}</p>
             </div>
           </div>
         )}
@@ -1587,10 +1661,13 @@ export function WorkspaceTabs({
   const [activeTab, setActiveTabState] = useState<TabId>("resume");
 
   useEffect(() => {
-    const saved = sessionStorage.getItem(`workspace-tab-${applicationId}`);
-    if (saved && TABS.some((t) => t.id === saved)) {
-      setActiveTabState(saved as TabId);
-    }
+    const timer = window.setTimeout(() => {
+      const saved = sessionStorage.getItem(`workspace-tab-${applicationId}`);
+      if (saved && TABS.some((t) => t.id === saved)) {
+        setActiveTabState(saved as TabId);
+      }
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, [applicationId]);
 
   function setActiveTab(tab: TabId) {
@@ -1614,43 +1691,24 @@ export function WorkspaceTabs({
   const activeLabel = t(TABS.find((tab) => tab.id === activeTab)?.labelKey ?? "tabResume");
 
   return (
-    <div className="overflow-hidden rounded-md border border-border bg-background">
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-3 py-3 sm:px-6 sm:py-5">
+    <div className="surface-card overflow-hidden">
+      <div className="border-b border-border px-5 py-5 text-center sm:px-6">
         <div className="min-w-0">
-          <p className="font-display text-lg leading-tight sm:text-2xl">
+          <p className="font-display text-xl leading-tight">
             {roleTitle || t("workspaceUntitledRole")}
           </p>
-          <p className="mt-1 truncate text-sm text-muted-foreground">
+          <p className="mt-1 truncate text-xs text-muted-foreground">
             {companyName || t("workspaceUnknownCompany")}
           </p>
         </div>
         {statusLabel ? (
-          <span className="badge badge-saved">{statusLabel}</span>
+          <span className="badge badge-saved mt-3">{statusLabel}</span>
         ) : null}
       </div>
 
-      <div className="grid min-h-[40rem] grid-cols-1 lg:grid-cols-[15.5rem_1fr]">
-        <nav className="border-b border-border bg-[var(--muted)] p-3 lg:border-b-0 lg:border-r">
-          {/* Mobile: select dropdown */}
-          <div className="lg:hidden">
-            <select
-              value={activeTab}
-              onChange={(e) => setActiveTab(e.target.value as TabId)}
-              className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
-            >
-              {TABS.map((tab) => {
-                const isDone = tab.docType ? !!documentStatus[tab.docType] : false;
-                return (
-                  <option key={tab.id} value={tab.id}>
-                    {isDone ? "✓ " : ""}{t(tab.shortLabelKey)}
-                  </option>
-                );
-              })}
-            </select>
-          </div>
-
-          {/* Desktop: sidebar buttons */}
-          <div className="hidden lg:flex lg:flex-col gap-1">
+      <nav className="overflow-x-auto border-b border-border bg-canvas px-4 py-4" aria-label={activeLabel}>
+        <div className="flex min-w-max justify-center sm:min-w-0" role="tablist">
+          <div className="segmented-control">
             {TABS.map((tab) => {
               const isActive = activeTab === tab.id;
               const isDone = tab.docType ? documentStatus[tab.docType] : false;
@@ -1660,36 +1718,22 @@ export function WorkspaceTabs({
                   type="button"
                   onClick={() => setActiveTab(tab.id)}
                   className={[
-                    "group flex min-w-fit items-center gap-3 rounded-md px-3 py-2.5 text-left text-sm transition duration-150 ease-out active:scale-[0.98]",
-                    isActive
-                      ? "bg-background text-foreground font-medium"
-                      : "text-muted-foreground hover:bg-[var(--bg-hover)] hover:text-foreground",
+                    "segmented-control-item gap-1.5",
+                    isActive ? "segmented-control-item-active" : "",
                   ].join(" ")}
-                  aria-current={isActive ? "page" : undefined}
+                  role="tab"
+                  aria-selected={isActive}
                 >
-                  <span
-                    className={[
-                      "flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-xs",
-                      isDone
-                        ? "bg-accent text-accent-foreground"
-                        : isActive
-                          ? "border border-accent text-accent"
-                          : "border border-border text-muted-foreground",
-                    ].join(" ")}
-                    aria-hidden="true"
-                  >
-                    {isDone ? "✓" : ""}
-                  </span>
-                  <span className="whitespace-nowrap font-medium">
-                    {t(tab.shortLabelKey)}
-                  </span>
+                  {isDone ? <span className="text-accent" aria-hidden="true">✓</span> : null}
+                  <span>{t(tab.shortLabelKey)}</span>
                 </button>
               );
             })}
           </div>
-        </nav>
+        </div>
+      </nav>
 
-        <section className="min-w-0 p-3 sm:p-5 md:p-8">
+        <section className="min-h-[40rem] min-w-0 p-4 sm:p-6 md:p-8" role="tabpanel">
           <p className="label-caps mb-5 text-muted-foreground">{activeLabel}</p>
           {activeTab === "resume" && (
             <>
@@ -1732,7 +1776,6 @@ export function WorkspaceTabs({
             />
           )}
         </section>
-      </div>
     </div>
   );
 }

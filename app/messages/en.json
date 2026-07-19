@@ -176,6 +176,7 @@
   "Applications": {
     "dossierLabel": "Dossier",
     "heading": "Applications",
+    "headingSub": "Manage every opportunity from one focused workspace.",
     "newApplication": "New application",
     "noAppsHeading": "No applications yet.",
     "noAppsSub": "Start by adding a job you're interested in.",
@@ -298,6 +299,7 @@
   "Insights": {
     "analyticsLabel": "Analytics",
     "heading": "Insights",
+    "headingSub": "See where your search is moving and where to focus next.",
     "totalApplied": "Total applied",
     "interviewRate": "Interview rate",
     "interviewRateSub": "applied → interview",
@@ -315,6 +317,7 @@
   "Settings": {
     "eyebrow": "Account · Settings",
     "heading": "Settings.",
+    "headingSub": "Manage your profile, language, security, and account preferences.",
     "profileHeading": "Profile",
     "displayName": "Display name",
     "emailLabel": "Email",
@@ -492,7 +495,11 @@
     "styleCreative": "Creative",
     "styleAcademic": "Academic",
     "styleStory": "Story-driven",
-    "styleEnthusiastic": "Enthusiastic"
+    "styleEnthusiastic": "Enthusiastic",
+    "formatLocked": "Format lock is on. Resume generation preserves the uploaded structure, spacing, headings, and bullet style; cover letters reuse the same header and spacing conventions.",
+    "pdfPreviewLoading": "Preparing the formatted PDF preview…",
+    "pdfPreviewUnavailable": "The PDF preview could not be displayed. Please try downloading the PDF.",
+    "pdfPreviewLabel": "PDF preview"
   },
   "OnboardingChecklist": {
     "label": "Getting started",

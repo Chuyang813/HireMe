@@ -69,7 +69,7 @@ export function UploadForm() {
           type="file"
           accept=".pdf,.docx,.txt,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain"
           required
-          className="h-10 rounded-sm border border-border bg-background px-3 text-sm file:mr-3 file:rounded-sm file:border-0 file:bg-muted file:px-3 file:py-1.5 file:text-sm"
+          className="h-10 rounded-lg border border-border bg-background px-3 text-sm file:mr-3 file:rounded-md file:border-0 file:bg-muted file:px-3 file:py-1.5 file:text-sm"
         />
         <span className="text-xs text-muted-foreground">{t("uploadFileHint")}</span>
       </label>
@@ -84,7 +84,7 @@ export function UploadForm() {
       </label>
 
       {pending && (
-        <div className="flex flex-col gap-2 rounded-sm border border-border bg-muted/40 px-4 py-3">
+        <div className="flex flex-col gap-2 rounded-lg border border-border bg-canvas px-4 py-3">
           <div className="flex items-center gap-2.5">
             <div className="h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-border border-t-accent" />
             <span className="text-sm text-foreground">{loadingMessages[msgIndex]}</span>

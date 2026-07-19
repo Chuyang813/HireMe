@@ -42,6 +42,11 @@ const nextConfig: NextConfig = {
       bodySizeLimit: "10mb",
     },
   },
+  outputFileTracingIncludes: {
+    "/api/document-font": [
+      "./node_modules/@expo-google-fonts/caladea/**/*.ttf",
+    ],
+  },
   async headers() {
     return [
       {

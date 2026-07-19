@@ -176,6 +176,7 @@
   "Applications": {
     "dossierLabel": "Dossier",
     "heading": "Candidatures",
+    "headingSub": "Gérez chaque opportunité depuis un espace de travail clair et centralisé.",
     "newApplication": "Nouvelle candidature",
     "noAppsHeading": "Aucune candidature pour l'instant.",
     "noAppsSub": "Commencez par ajouter un poste qui vous intéresse.",
@@ -298,6 +299,7 @@
   "Insights": {
     "analyticsLabel": "Statistiques",
     "heading": "Statistiques",
+    "headingSub": "Suivez l’évolution de votre recherche et déterminez où concentrer vos efforts.",
     "totalApplied": "Candidatures envoyées",
     "interviewRate": "Taux d'entretien",
     "interviewRateSub": "postulé → entretien",
@@ -315,6 +317,7 @@
   "Settings": {
     "eyebrow": "Compte · Paramètres",
     "heading": "Paramètres.",
+    "headingSub": "Gérez votre profil, votre langue, votre sécurité et vos préférences.",
     "profileHeading": "Profil",
     "displayName": "Nom affiché",
     "emailLabel": "E-mail",
@@ -492,7 +495,11 @@
     "styleCreative": "Créatif",
     "styleAcademic": "Académique",
     "styleStory": "Narratif",
-    "styleEnthusiastic": "Enthousiaste"
+    "styleEnthusiastic": "Enthousiaste",
+    "formatLocked": "Le verrouillage de mise en forme est activé. Le CV conserve la structure, les espacements, les titres et les puces du fichier importé ; la lettre reprend le même en-tête et les mêmes espacements.",
+    "pdfPreviewLoading": "Préparation de l’aperçu PDF mis en page…",
+    "pdfPreviewUnavailable": "Impossible d’afficher l’aperçu PDF. Essayez de télécharger le PDF.",
+    "pdfPreviewLabel": "aperçu PDF"
   },
   "OnboardingChecklist": {
     "label": "Démarrage",

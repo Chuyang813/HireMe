@@ -4,7 +4,7 @@ export const metadata = { title: "AI Events · HireMe" };
 
 function StatCard({ label, value, sub }: { label: string; value: string | number; sub?: string }) {
   return (
-    <div className="rounded-lg border border-border bg-card p-5">
+    <div className="surface-card p-5">
       <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{label}</p>
       <p className="mt-1 text-3xl font-bold tabular-nums">{value}</p>
       {sub && <p className="mt-0.5 text-xs text-muted-foreground">{sub}</p>}
@@ -16,17 +16,18 @@ export default async function AiEventsPage() {
   const stats = await getAiEventStats();
 
   return (
-    <div className="mx-auto max-w-7xl space-y-8 px-6 py-10">
-      <div>
+    <div className="app-page">
+      <div className="app-page-container app-page-container-wide">
+      <div className="app-page-header rise-enter">
         <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
           Admin · Observability
         </p>
-        <h1 className="mt-1 text-3xl font-semibold">AI Events</h1>
-        <p className="mt-1 text-sm text-muted-foreground">Last 100 events</p>
+        <h1 className="app-page-title">AI Events</h1>
+        <p className="app-page-subtitle">Last 100 events</p>
       </div>
 
       {/* Stat cards */}
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+      <div className="app-page-content grid grid-cols-2 gap-4 rise-enter [transition-delay:40ms] sm:grid-cols-4">
         <StatCard label="Total events" value={stats.totalEvents} />
         <StatCard label="Success rate" value={`${stats.successRate}%`} />
         <StatCard
@@ -36,9 +37,9 @@ export default async function AiEventsPage() {
         <StatCard label="Errors" value={stats.errorCount} />
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="mt-6 grid gap-6 rise-enter [transition-delay:80ms] lg:grid-cols-2">
         {/* By model */}
-        <section className="rounded-lg border border-border bg-card">
+        <section className="surface-card overflow-hidden">
           <div className="border-b border-border px-5 py-3">
             <h2 className="text-sm font-semibold">By model</h2>
           </div>
@@ -71,7 +72,7 @@ export default async function AiEventsPage() {
         </section>
 
         {/* By prompt type */}
-        <section className="rounded-lg border border-border bg-card">
+        <section className="surface-card overflow-hidden">
           <div className="border-b border-border px-5 py-3">
             <h2 className="text-sm font-semibold">By prompt type</h2>
           </div>
@@ -107,7 +108,7 @@ export default async function AiEventsPage() {
       </div>
 
       {/* Recent events */}
-      <section className="rounded-lg border border-border bg-card">
+      <section className="surface-card mt-6 overflow-hidden rise-enter [transition-delay:120ms]">
         <div className="border-b border-border px-5 py-3">
           <h2 className="text-sm font-semibold">Recent events</h2>
         </div>
@@ -168,6 +169,7 @@ export default async function AiEventsPage() {
           </table>
         </div>
       </section>
+      </div>
     </div>
   );
 }

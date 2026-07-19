@@ -18,13 +18,17 @@ export default async function SettingsPage() {
   const profile = data as Pick<Profile, "full_name" | "display_name"> | null;
 
   return (
-    <div className="mx-auto w-full max-w-2xl px-6 py-12">
-      <div className="label-caps mb-2">{t("eyebrow")}</div>
-      <h1 className="font-display text-4xl leading-tight">{t("heading")}</h1>
-      <SettingsClient
-        user={{ email: user.email ?? "" }}
-        profile={profile}
-      />
+    <div className="app-page">
+      <div className="app-page-container app-page-container-narrow">
+        <div className="app-page-header rise-enter">
+          <div className="label-caps mb-2">{t("eyebrow")}</div>
+          <h1 className="app-page-title">{t("heading")}</h1>
+          <p className="app-page-subtitle">{t("headingSub")}</p>
+        </div>
+        <div className="rise-enter [transition-delay:40ms]">
+          <SettingsClient user={{ email: user.email ?? "" }} profile={profile} />
+        </div>
+      </div>
     </div>
   );
 }

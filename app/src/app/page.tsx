@@ -43,8 +43,8 @@ export default async function Home() {
 
   return (
     <div className="flex flex-1 flex-col">
-      <header className="border-b border-border bg-background/95">
-        <div className="mx-auto flex h-20 w-full max-w-7xl items-center justify-between gap-3 px-4 sm:px-6">
+      <header className="sticky top-0 z-30 border-b border-border bg-background/90 backdrop-blur-xl">
+        <div className="mx-auto flex h-14 w-full max-w-6xl items-center justify-between gap-3 px-4 sm:px-6">
           <Link href="/" className="font-display text-2xl leading-none">
             HireMe
           </Link>
@@ -52,13 +52,13 @@ export default async function Home() {
             <LanguageSwitcher />
             <Link
               href="/login"
-              className="whitespace-nowrap rounded-md px-2 py-2 font-medium text-muted-foreground hover:bg-muted hover:text-foreground sm:px-3"
+              className="whitespace-nowrap rounded-lg px-2 py-2 font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground sm:px-3"
             >
               {nav("logIn")}
             </Link>
             <Link
               href="/signup"
-              className="inline-flex h-11 items-center justify-center whitespace-nowrap rounded-md bg-accent px-3 font-semibold text-accent-foreground shadow-sm transition duration-150 ease-out hover:opacity-90 active:scale-[0.98] sm:px-5"
+              className="inline-flex h-10 items-center justify-center whitespace-nowrap rounded-lg bg-accent px-3 font-medium text-accent-foreground transition duration-150 ease-out hover:bg-[var(--accent-hover)] active:scale-[0.97] sm:px-5"
             >
               {nav("getStarted")}
             </Link>
@@ -67,36 +67,36 @@ export default async function Home() {
       </header>
 
       <main className="flex flex-1 flex-col">
-        <section className="mx-auto grid w-full max-w-7xl grid-cols-1 items-center gap-10 px-4 py-10 sm:gap-14 sm:px-6 sm:py-20 lg:grid-cols-[1.05fr_0.95fr] lg:py-24">
-          <div>
-            <p className="label-caps mb-5 sm:mb-8">{t("tagline")}</p>
-            <h1 className="font-display text-3xl leading-[1.1] tracking-tight sm:text-5xl sm:leading-[1.05] lg:text-6xl">
+        <section className="mx-auto w-full max-w-6xl px-4 py-12 sm:px-6">
+          <div className="app-page-header rise-enter">
+            <p className="label-caps mb-2">{t("tagline")}</p>
+            <h1 className="font-display text-4xl leading-tight tracking-tight sm:text-5xl">
               {t("headline")}
               <br />
-              <span className="italic text-muted-foreground">
+              <span className="text-muted-foreground">
                 {t("headlineItalic")}
               </span>
             </h1>
-            <p className="mt-5 max-w-2xl text-sm leading-7 text-muted-foreground sm:mt-8 sm:text-base sm:leading-8 lg:text-lg">
+            <p className="mx-auto mt-3 max-w-xl text-sm leading-7 text-muted-foreground sm:text-base">
               {t("description")}
             </p>
-            <div className="mt-10 flex flex-wrap items-center gap-4">
+            <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
               <Link
                 href="/signup"
-                className="inline-flex h-12 items-center justify-center rounded-md bg-accent px-6 text-sm font-semibold text-accent-foreground shadow-sm transition duration-150 ease-out hover:opacity-90 active:scale-[0.98]"
+                className="btn btn-primary"
               >
                 {t("cta")}
               </Link>
               <Link
                 href="/login"
-                className="inline-flex h-12 items-center justify-center rounded-md border border-border px-6 text-sm font-semibold shadow-sm transition duration-150 ease-out hover:bg-muted active:scale-[0.98]"
+                className="btn btn-secondary"
               >
                 {t("ctaSecondary")}
               </Link>
             </div>
           </div>
 
-          <div className="overflow-hidden rounded-lg border border-border bg-background shadow-sm">
+          <div className="surface-card mx-auto mt-10 max-w-5xl overflow-hidden rise-enter [transition-delay:60ms]">
             <div className="flex items-center justify-between border-b border-border px-5 py-4">
               <div>
                 <p className="font-display text-lg leading-tight">Prompt Engineer</p>
@@ -116,7 +116,7 @@ export default async function Home() {
                 ))}
               </div>
               <div className="p-4 sm:p-6">
-                <div className="rounded-md border border-border bg-background p-4 shadow-sm sm:p-6">
+                <div className="rounded-xl border border-border bg-background p-4 shadow-[var(--shadow-sm)] sm:p-6">
                   {["Tailored resume", "Cover letter", "Outreach email"].map((label) => (
                     <div key={label} className="mb-8 last:mb-0">
                       <p className="label-caps mb-3 text-[0.62rem]">{label}</p>
@@ -140,21 +140,21 @@ export default async function Home() {
         />
 
         <section className="border-t border-border">
-          <div className="mx-auto grid w-full max-w-7xl gap-10 px-6 py-16 lg:grid-cols-[0.8fr_1.2fr]">
-            <div>
-              <p className="label-caps mb-4">AI quality layer</p>
-              <h2 className="max-w-xl font-display text-4xl leading-tight">
+          <div className="mx-auto w-full max-w-6xl px-6 py-16">
+            <div className="app-page-header">
+              <p className="label-caps mb-2">AI quality layer</p>
+              <h2 className="app-page-title">
                 Built to be evaluated, grounded, and debugged.
               </h2>
-              <p className="mt-5 max-w-xl text-sm leading-7 text-muted-foreground">
+              <p className="app-page-subtitle">
                 HireMe treats generation like a product system: fixtures measure parser
                 behavior, prompts receive selected evidence, drafts are checked for
                 unsupported claims, and AI requests leave redacted quality logs.
               </p>
             </div>
-            <div className="grid gap-px overflow-hidden rounded-lg border border-border bg-border sm:grid-cols-2">
+            <div className="mt-10 grid gap-4 sm:grid-cols-2">
               {qualityCards.map((item) => (
-                <div key={item.label} className="bg-background p-6">
+                <div key={item.label} className="surface-card p-5">
                   <div className="flex items-start justify-between gap-4">
                     <p className="label-caps text-[0.68rem]">{item.label}</p>
                     <span className="font-display text-3xl leading-none text-accent">
@@ -172,10 +172,10 @@ export default async function Home() {
         </section>
 
         <section className="border-t border-border bg-muted/45">
-          <div className="mx-auto w-full max-w-7xl px-6 py-20">
-            <div className="grid gap-px overflow-hidden rounded-lg border border-border bg-border md:grid-cols-2 lg:grid-cols-4">
+          <div className="mx-auto w-full max-w-6xl px-6 py-16">
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
               {features.map((f) => (
-                <div key={f.title} className="flex min-h-64 flex-col justify-between bg-background p-7">
+                <div key={f.title} className="surface-card flex min-h-60 flex-col justify-between p-6">
                   <div>
                     <h2 className="font-display text-2xl leading-tight">{f.title}</h2>
                     <p className="mt-4 text-sm leading-6 text-muted-foreground">
@@ -193,7 +193,7 @@ export default async function Home() {
       </main>
 
       <footer className="border-t border-border">
-        <div className="mx-auto flex w-full max-w-7xl flex-col gap-3 px-6 py-8 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
+        <div className="mx-auto flex w-full max-w-6xl flex-col gap-3 px-6 py-8 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
           <span className="font-semibold uppercase tracking-wider">
             HireMe - &copy; {new Date().getFullYear()}
           </span>

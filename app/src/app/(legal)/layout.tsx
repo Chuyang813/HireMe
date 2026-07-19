@@ -11,12 +11,11 @@ export default async function LegalLayout({
   const t = await getTranslations("Legal");
 
   return (
-    <div className="flex flex-1 flex-col">
-      <header className="border-b border-border">
-        <div className="mx-auto flex w-full max-w-3xl items-center justify-between px-6 py-5">
-          <Link href="/" className="flex items-baseline gap-2">
+    <div className="flex flex-1 flex-col bg-canvas">
+      <header className="border-b border-border bg-background/90 backdrop-blur-xl">
+        <div className="mx-auto flex h-14 w-full max-w-6xl items-center justify-between px-6">
+          <Link href="/">
             <span className="font-display text-xl">HireMe</span>
-            <span className="label-caps">№ 01</span>
           </Link>
           <div className="flex items-center gap-1">
             <LanguageSwitcher />
@@ -27,8 +26,8 @@ export default async function LegalLayout({
         </div>
       </header>
 
-      <main className="mx-auto w-full max-w-3xl flex-1 px-6 py-16 sm:py-20">
-        {children}
+      <main className="mx-auto w-full max-w-3xl flex-1 px-6 py-12 sm:py-16">
+        <article className="surface-card rise-enter p-6 sm:p-10">{children}</article>
       </main>
 
       <footer className="border-t border-border">

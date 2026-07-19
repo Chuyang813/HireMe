@@ -137,7 +137,7 @@ function Step2() {
             Generating tailored resume…
           </span>
         </div>
-        <div className="rounded-md border border-border bg-white p-5">
+        <div className="rounded-xl border border-border bg-background p-5 shadow-[var(--shadow-sm)]">
           <p className="font-display text-lg">Alex Chen</p>
           <p className="mb-4 text-xs text-muted-foreground">Senior Product Designer · alex@email.com</p>
           <p className="label-caps mb-2 text-[0.62rem]">Experience</p>
@@ -367,33 +367,34 @@ export function DemoSection({ heading, sub, stepLabels }: DemoSectionProps) {
 
   return (
     <section className="border-t border-border">
-      <div className="mx-auto w-full max-w-7xl px-4 py-14 sm:px-6 sm:py-20">
+      <div className="mx-auto w-full max-w-6xl px-4 py-14 sm:px-6 sm:py-16">
         {/* Heading */}
-        <div className="mb-10">
-          <p className="label-caps mb-4">How it works</p>
-          <h2 className="font-display text-3xl leading-tight sm:text-4xl">{heading}</h2>
-          <p className="mt-3 max-w-xl text-sm leading-7 text-muted-foreground">{sub}</p>
+        <div className="app-page-header mb-10">
+          <p className="label-caps mb-2">How it works</p>
+          <h2 className="app-page-title">{heading}</h2>
+          <p className="app-page-subtitle">{sub}</p>
         </div>
 
         {/* Step pills */}
-        <div className="mb-6 flex flex-wrap gap-2">
+        <div className="mb-6 flex justify-center overflow-x-auto">
+          <div className="segmented-control">
           {stepLabels.map((label, i) => (
             <button
               key={i}
               type="button"
               onClick={() => goTo(i)}
               className={[
-                "flex items-center gap-2 rounded-full border px-4 py-1.5 text-xs font-medium transition duration-150 ease-out active:scale-[0.97]",
+                "segmented-control-item gap-2",
                 step === i
-                  ? "border-accent bg-accent text-accent-foreground"
-                  : "border-border bg-background text-muted-foreground hover:border-foreground hover:text-foreground",
+                  ? "segmented-control-item-active"
+                  : "",
               ].join(" ")}
             >
               <span
                 className={[
                   "flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-[10px]",
                   step === i
-                    ? "bg-accent-foreground/20 text-accent-foreground"
+                    ? "bg-accent text-accent-foreground"
                     : "bg-muted text-muted-foreground",
                 ].join(" ")}
               >
@@ -402,10 +403,11 @@ export function DemoSection({ heading, sub, stepLabels }: DemoSectionProps) {
               {label}
             </button>
           ))}
+          </div>
         </div>
 
         {/* Progress dots */}
-        <div className="mb-6 flex gap-1.5">
+        <div className="mb-6 flex justify-center gap-1.5">
           {Array.from({ length: STEP_COUNT }).map((_, i) => (
             <button
               key={i}
@@ -422,7 +424,7 @@ export function DemoSection({ heading, sub, stepLabels }: DemoSectionProps) {
 
         {/* Animated content panel */}
         <div
-          className="overflow-hidden rounded-lg border border-border bg-background shadow-sm"
+          className="overflow-hidden rounded-xl border border-border bg-background shadow-[var(--shadow-sm)]"
           style={{
             transition: "opacity 200ms var(--ease-out), transform 200ms var(--ease-out)",
             opacity: visible ? 1 : 0,

@@ -1,0 +1,184 @@
+export interface ResumeReplacementCandidate {
+  id: string;
+  text: string;
+}
+
+export interface ResumeFormatTemplate {
+  candidates: ResumeReplacementCandidate[];
+}
+
+export interface CoverLetterDraft {
+  date: string;
+  recipient: string[];
+  subject?: string;
+  greeting: string;
+  opening?: string;
+  sections?: Array<{ heading: string; paragraph: string }>;
+  finalParagraph?: string;
+  paragraphs?: string[];
+  closing: string;
+  signature: string;
+}
+
+const BULLET_RE = /^(\s*(?:(?:[-*\u2022\u25cf\u25aa\u25e6\u2023\u2013\u2014\uf0b7])|(?:\d+[.)]))\s+)(.*)$/u;
+const CONTACT_RE = /(?:@|https?:\/\/|www\.|linkedin\.com|github\.com|\+?\d[\d\s().-]{7,})/i;
+const DATE_RE = /\b(?:19|20)\d{2}\b|\b(?:present|current)\b/i;
+const SECTION_RE = /^(?:summary|profile|objective|experience|work experience|professional experience|education|skills|technical skills|projects|certifications|languages|publications|research|awards|volunteer(?:ing)?|interests)$/i;
+
+function splitLines(value: string): string[] {
+  return value.split(/\r\n|\n|\r/);
+}
+
+function newlineFor(value: string): string {
+  if (value.includes("\r\n")) return "\r\n";
+  if (value.includes("\r")) return "\r";
+  return "\n";
+}
+
+function contentWithoutPrefix(line: string): string {
+  const bullet = line.match(BULLET_RE);
+  if (bullet) return bullet[2];
+  return line.trimStart();
+}
+
+function looksLikeHeading(line: string): boolean {
+  const trimmed = line.trim().replace(/[:|]$/, "");
+  if (!trimmed || trimmed.length > 64) return false;
+  if (SECTION_RE.test(trimmed)) return true;
+
+  const letters = trimmed.replace(/[^\p{L}]/gu, "");
+  return letters.length >= 3 && letters === letters.toUpperCase();
+}
+
+function isEditableLine(line: string, lineIndex: number, nonEmptyIndex: number): boolean {
+  const trimmed = line.trim();
+  if (!trimmed || nonEmptyIndex < 3 || looksLikeHeading(trimmed)) return false;
+  if (CONTACT_RE.test(trimmed)) return false;
+
+  const bullet = line.match(BULLET_RE);
+  if (bullet) return bullet[2].trim().length >= 8;
+
+  // Long prose is usually a summary or a project/experience description. Keep
+  // short employer/title/date rows immutable so the model cannot restructure them.
+  return trimmed.length >= 56 && !DATE_RE.test(trimmed) && lineIndex > 2;
+}
+
+export function createResumeFormatTemplate(rawResumeText: string): ResumeFormatTemplate {
+  const lines = splitLines(rawResumeText);
+  const candidates: ResumeReplacementCandidate[] = [];
+  let nonEmptyIndex = 0;
+
+  lines.forEach((line, lineIndex) => {
+    if (line.trim()) nonEmptyIndex += 1;
+    if (!isEditableLine(line, lineIndex, nonEmptyIndex)) return;
+    candidates.push({
+      id: `L${String(lineIndex + 1).padStart(4, "0")}`,
+      text: contentWithoutPrefix(line),
+    });
+  });
+
+  return { candidates };
+}
+
+export function applyResumeReplacements(
+  rawResumeText: string,
+  replacements: Record<string, unknown> | null | undefined,
+): string {
+  if (!replacements) return rawResumeText;
+
+  const lines = splitLines(rawResumeText);
+  const allowed = new Set(
+    createResumeFormatTemplate(rawResumeText).candidates.map((candidate) => candidate.id),
+  );
+
+  for (const [id, replacementValue] of Object.entries(replacements)) {
+    if (!allowed.has(id) || typeof replacementValue !== "string") continue;
+    const replacement = replacementValue.trim();
+    if (!replacement || /[\r\n]/.test(replacement)) continue;
+
+    const lineIndex = Number(id.slice(1)) - 1;
+    const original = lines[lineIndex];
+    if (original === undefined) continue;
+
+    const bullet = original.match(BULLET_RE);
+    if (bullet) {
+      const replacementBody = replacement.replace(BULLET_RE, "$2").trim();
+      if (replacementBody) lines[lineIndex] = `${bullet[1]}${replacementBody}`;
+      continue;
+    }
+
+    const leadingWhitespace = original.match(/^\s*/)?.[0] ?? "";
+    lines[lineIndex] = `${leadingWhitespace}${replacement}`;
+  }
+
+  return lines.join(newlineFor(rawResumeText));
+}
+
+export function extractResumeHeader(rawResumeText: string): string[] {
+  const lines = splitLines(rawResumeText);
+  const start = lines.findIndex((line) => line.trim());
+  if (start < 0) return [];
+
+  const header: string[] = [];
+  for (let i = start; i < lines.length && header.length < 6; i += 1) {
+    const line = lines[i];
+    if (!line.trim()) break;
+    if (header.length > 0 && looksLikeHeading(line)) break;
+    header.push(line.trimEnd());
+  }
+  return header;
+}
+
+function cleanSingleLine(value: unknown): string {
+  return typeof value === "string" ? value.replace(/[\r\n]+/g, " ").trim() : "";
+}
+
+export function renderCoverLetterWithResumeFormat(
+  rawResumeText: string,
+  draft: CoverLetterDraft,
+): string {
+  const newline = newlineFor(rawResumeText);
+  const header = extractResumeHeader(rawResumeText);
+  const recipient = Array.isArray(draft.recipient)
+    ? draft.recipient.map(cleanSingleLine).filter(Boolean).slice(0, 4)
+    : [];
+  const legacyParagraphs = Array.isArray(draft.paragraphs)
+    ? draft.paragraphs.map(cleanSingleLine).filter(Boolean).slice(0, 5)
+    : [];
+  const sections = Array.isArray(draft.sections)
+    ? draft.sections
+      .map((section) => ({
+        heading: cleanSingleLine(section?.heading),
+        paragraph: cleanSingleLine(section?.paragraph),
+      }))
+      .filter((section) => section.heading && section.paragraph)
+      .slice(0, 4)
+    : [];
+
+  const blocks: string[] = [];
+  if (header.length) blocks.push(header.join(newline));
+  const date = cleanSingleLine(draft.date);
+  if (date) blocks.push(date);
+  if (recipient.length) blocks.push(recipient.join(newline));
+  const subject = cleanSingleLine(draft.subject);
+  if (subject) blocks.push(subject);
+  const greeting = cleanSingleLine(draft.greeting);
+  if (greeting) blocks.push(greeting);
+  const opening = cleanSingleLine(draft.opening);
+  const finalParagraph = cleanSingleLine(draft.finalParagraph);
+  if (opening || sections.length || finalParagraph) {
+    if (opening) blocks.push(opening);
+    for (const section of sections) {
+      blocks.push(section.heading, section.paragraph);
+    }
+    if (finalParagraph) blocks.push(finalParagraph);
+  } else {
+    blocks.push(...legacyParagraphs);
+  }
+
+  const closing = cleanSingleLine(draft.closing) || "Sincerely,";
+  const signature = cleanSingleLine(draft.signature) || header[0]?.trim() || "";
+  blocks.push([closing, signature].filter(Boolean).join(newline));
+
+  return blocks.filter(Boolean).join(`${newline}${newline}`);
+}

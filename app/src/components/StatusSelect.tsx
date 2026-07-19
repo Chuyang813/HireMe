@@ -65,7 +65,7 @@ export function StatusSelect({
         disabled={pending}
         aria-label={t(STATUS_LABEL_KEYS[selected])}
         className={[
-          "h-9 w-40 cursor-pointer appearance-none rounded-md border px-3 pr-8 text-[13px] font-medium outline-none transition-colors",
+          "h-10 w-40 cursor-pointer appearance-none rounded-lg border px-3 pr-8 text-[13px] font-medium outline-none transition-colors",
           "hover:border-[var(--border-strong)] focus:border-[var(--border-strong)] focus:ring-2 focus:ring-[var(--accent)]/10",
           STATUS_TONES[selected],
           className,

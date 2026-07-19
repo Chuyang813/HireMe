@@ -53,12 +53,15 @@ export default function OnboardingPage() {
   }, [pending, uploadMessages.length]);
 
   return (
-    <div className="mx-auto w-full max-w-2xl px-6 py-16">
-      <div className="label-caps mb-2">{t("setupLabel")}</div>
-      <h1 className="font-display text-4xl leading-tight">{t("heading")}</h1>
-      <p className="mt-3 text-sm leading-6 text-muted-foreground">{t("sub")}</p>
+    <div className="app-page">
+      <div className="app-page-container app-page-container-narrow">
+        <div className="app-page-header rise-enter">
+          <div className="label-caps mb-2">{t("setupLabel")}</div>
+          <h1 className="app-page-title">{t("heading")}</h1>
+          <p className="app-page-subtitle">{t("sub")}</p>
+        </div>
 
-      <div className="mt-8 rounded-lg border border-border bg-background p-8 shadow-sm">
+        <div className="surface-card app-page-content p-6 rise-enter [transition-delay:40ms] sm:p-8">
         <div className="mb-6 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-800">
           {t("resumeRequiredNotice")}
         </div>
@@ -73,7 +76,7 @@ export default function OnboardingPage() {
               type="file"
               required
               accept=".pdf,.docx,.txt,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain"
-              className="h-10 rounded-sm border border-border bg-background px-3 text-sm file:mr-3 file:rounded-sm file:border-0 file:bg-muted file:px-3 file:py-1.5 file:text-sm"
+              className="h-10 rounded-lg border border-border bg-background px-3 text-sm file:mr-3 file:rounded-md file:border-0 file:bg-muted file:px-3 file:py-1.5 file:text-sm"
               onChange={(e) => setHasFile(!!e.target.files?.length)}
             />
             <span className="text-xs text-muted-foreground">{t("resumeFileHint")}</span>
@@ -106,7 +109,8 @@ export default function OnboardingPage() {
         </form>
       </div>
 
-      <p className="mt-4 text-center text-xs text-muted-foreground">{t("profileNote")}</p>
+        <p className="mt-4 text-center text-xs text-muted-foreground">{t("profileNote")}</p>
+      </div>
     </div>
   );
 }

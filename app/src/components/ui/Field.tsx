@@ -16,7 +16,7 @@ export const Field = forwardRef<HTMLInputElement, InputProps>(function Field(
       <input
         ref={ref}
         id={inputId}
-        className={`h-10 rounded-sm border border-border bg-background px-3 text-sm outline-none focus:border-foreground ${className}`}
+        className={`input ${className}`}
         {...rest}
       />
       {hint ? (
@@ -40,7 +40,7 @@ export const TextareaField = forwardRef<HTMLTextAreaElement, TextareaProps>(
         <textarea
           ref={ref}
           id={inputId}
-          className={`min-h-28 rounded-sm border border-border bg-background p-3 text-sm outline-none focus:border-foreground ${className}`}
+          className={`min-h-28 rounded-lg border border-border bg-background p-3 text-sm outline-none transition duration-150 ease-out placeholder:text-[var(--text-placeholder)] focus:border-accent focus:shadow-[0_0_0_3px_var(--focus-ring)] ${className}`}
           {...rest}
         />
         {hint ? (

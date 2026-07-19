@@ -34,22 +34,18 @@ export default async function PrivacyPage() {
 
   return (
     <article>
-      <div className="label-caps mb-6">{t("eyebrow")}</div>
-      <h1 className="font-display text-4xl leading-[1.05] tracking-tight sm:text-5xl">
-        {t("heading")}
-      </h1>
-      <p className="mt-3 text-sm italic text-muted-foreground">
-        {t("lastUpdated")}
-      </p>
-      <p className="mt-8 text-base leading-7 text-muted-foreground">
-        {t("intro")}
-      </p>
+      <header className="app-page-header">
+        <div className="label-caps mb-2">{t("eyebrow")}</div>
+        <h1 className="app-page-title">{t("heading")}</h1>
+        <p className="app-page-subtitle italic">{t("lastUpdated")}</p>
+        <p className="mt-4 text-sm leading-7 text-muted-foreground">{t("intro")}</p>
+      </header>
 
-      <div className="mt-12 divide-y divide-border border-y border-border">
+      <div className="mt-10 space-y-3">
         {sections.map((s) => (
           <section
             key={s.id}
-            className="grid gap-4 py-8 sm:grid-cols-[5rem_1fr] sm:gap-8"
+            className="grid gap-4 rounded-lg border border-border bg-canvas p-5 sm:grid-cols-[4rem_1fr] sm:gap-6"
           >
             <div className="flex items-baseline gap-2 sm:flex-col sm:items-end">
               <span className="font-display text-2xl text-muted-foreground">
@@ -58,7 +54,7 @@ export default async function PrivacyPage() {
               <span className="label-caps">§</span>
             </div>
             <div>
-              <h2 className="font-display text-2xl leading-tight">{s.title}</h2>
+              <h2 className="font-display text-xl leading-tight">{s.title}</h2>
               <p className="mt-3 whitespace-pre-line text-sm leading-7 text-muted-foreground">
                 {s.body}
               </p>

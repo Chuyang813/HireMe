@@ -14,7 +14,7 @@ import {
 import { extractTextFromUpload } from "@/lib/parsers/resume-text";
 import { logTimelineEvent } from "@/lib/db/timeline";
 import { logAiEvent } from "@/lib/db/ai-events";
-import { aiJson, AI_PROVIDER, DEFAULT_MODEL } from "@/lib/ai/provider";
+import { AI_PROVIDER, DEFAULT_MODEL } from "@/lib/ai/provider";
 import { PROMPT_VERSIONS, type PromptType } from "@/lib/ai/prompt-versions";
 import {
   cleanText,
@@ -87,7 +87,7 @@ export async function generateDocumentAction(
 
   const { data: resume } = await supabase
     .from("base_resumes")
-    .select("parsed_resume_json")
+    .select("parsed_resume_json, raw_text")
     .eq("user_id", user.id)
     .eq("is_default", true)
     .single();
@@ -98,9 +98,17 @@ export async function generateDocumentAction(
   const aiStartedAt = Date.now();
   try {
     if (documentType === "tailored_resume") {
-      content = await tailorResume({ resume: parsedResume, job });
+      content = await tailorResume({
+        resume: parsedResume,
+        job,
+        rawResumeText: resume?.raw_text,
+      });
     } else if (documentType === "cover_letter") {
-      content = await generateCoverLetter({ resume: parsedResume, job });
+      content = await generateCoverLetter({
+        resume: parsedResume,
+        job,
+        rawResumeText: resume?.raw_text,
+      });
     } else if (documentType === "email_draft") {
       const draft = await generateEmailDraft({
         resume: parsedResume,

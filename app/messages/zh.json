@@ -176,6 +176,7 @@
   "Applications": {
     "dossierLabel": "申请档案",
     "heading": "申请记录",
+    "headingSub": "在一个清晰、专注的工作区中管理每个机会。",
     "newApplication": "新建申请",
     "noAppsHeading": "还没有申请记录。",
     "noAppsSub": "从感兴趣的岗位开始，添加你的第一个申请。",
@@ -298,6 +299,7 @@
   "Insights": {
     "analyticsLabel": "数据分析",
     "heading": "数据分析",
+    "headingSub": "了解求职进展，并判断下一步最值得投入的方向。",
     "totalApplied": "申请总数",
     "interviewRate": "面试转化率",
     "interviewRateSub": "申请 → 面试",
@@ -315,6 +317,7 @@
   "Settings": {
     "eyebrow": "账号 · 设置",
     "heading": "账号设置。",
+    "headingSub": "管理你的个人资料、语言、安全设置和账号偏好。",
     "profileHeading": "个人资料",
     "displayName": "显示名称",
     "emailLabel": "邮箱",
@@ -492,7 +495,11 @@
     "styleCreative": "创意",
     "styleAcademic": "学术",
     "styleStory": "故事性",
-    "styleEnthusiastic": "热情"
+    "styleEnthusiastic": "热情",
+    "formatLocked": "格式锁定已开启。简历生成会保留上传文件的结构、间距、标题和项目符号；求职信会复用同一页眉与间距规范。",
+    "pdfPreviewLoading": "正在准备排版后的 PDF 预览…",
+    "pdfPreviewUnavailable": "无法显示 PDF 预览，请尝试直接下载 PDF。",
+    "pdfPreviewLabel": "PDF 预览"
   },
   "OnboardingChecklist": {
     "label": "开始使用",

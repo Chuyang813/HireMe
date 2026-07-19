@@ -43,7 +43,7 @@ function StatCard({
   sub?: string;
 }) {
   return (
-    <div className="rounded-md border border-border bg-background p-5">
+    <div className="surface-card p-5">
       <p className="label-caps text-muted-foreground">{label}</p>
       <p className="mt-1 font-display text-4xl">{value}</p>
       {sub && <p className="mt-0.5 text-xs text-muted-foreground">{sub}</p>}
@@ -299,35 +299,39 @@ export default async function InsightsPage() {
   }));
 
   return (
-    <div className="mx-auto w-full max-w-5xl px-6 py-12">
-      <div className="label-caps mb-2">{t("analyticsLabel")}</div>
-      <h1 className="font-display text-4xl leading-tight">{t("heading")}</h1>
+    <div className="app-page">
+      <div className="app-page-container">
+        <div className="app-page-header rise-enter">
+          <div className="label-caps mb-2">{t("analyticsLabel")}</div>
+          <h1 className="app-page-title">{t("heading")}</h1>
+          <p className="app-page-subtitle">{t("headingSub")}</p>
+        </div>
 
-      <div className="mt-10 grid grid-cols-2 gap-4 sm:grid-cols-4">
+      <div className="app-page-content grid grid-cols-2 gap-4 rise-enter [transition-delay:40ms] sm:grid-cols-4">
         <StatCard label={t("totalApplied")} value={total} />
         <StatCard label={t("interviewRate")} value={`${interviewRate}%`} sub={t("interviewRateSub")} />
         <StatCard label={t("offerRate")} value={`${offerRate}%`} sub={t("offerRateSub")} />
         <StatCard label={t("active")} value={active} sub={t("activeSub")} />
       </div>
 
-      <div className="mt-10 grid gap-8 lg:grid-cols-2">
-        <section>
-          <h2 className="label-caps mb-4">{t("funnelHeading")}</h2>
-          <div className="rounded-md border border-border bg-background p-5">
+        <div className="mt-6 grid gap-6 rise-enter [transition-delay:80ms] lg:grid-cols-2">
+        <section className="surface-card p-5">
+          <h2 className="label-caps mb-5">{t("funnelHeading")}</h2>
+          <div>
             <FunnelChart counts={statusCounts} />
           </div>
         </section>
 
-        <section>
-          <h2 className="label-caps mb-4">{t("statusBreakdownHeading")}</h2>
-          <div className="rounded-md border border-border bg-background p-5">
+        <section className="surface-card p-5">
+          <h2 className="label-caps mb-5">{t("statusBreakdownHeading")}</h2>
+          <div>
             <StatusBreakdown counts={statusCounts} total={total} noDataLabel={t("noData")} />
           </div>
         </section>
 
-        <section className="lg:col-span-2">
-          <h2 className="label-caps mb-4">{t("overTimeHeading")}</h2>
-          <div className="rounded-md border border-border bg-background p-5">
+        <section className="surface-card p-5 lg:col-span-2">
+          <h2 className="label-caps mb-5">{t("overTimeHeading")}</h2>
+          <div>
             {weeklyData.length === 0 ? (
               <p className="text-sm text-muted-foreground">{t("noApps")}</p>
             ) : (
@@ -336,9 +340,9 @@ export default async function InsightsPage() {
           </div>
         </section>
 
-        <section>
-          <h2 className="label-caps mb-4">{t("topCompaniesHeading")}</h2>
-          <div className="rounded-md border border-border bg-background p-5">
+        <section className="surface-card p-5">
+          <h2 className="label-caps mb-5">{t("topCompaniesHeading")}</h2>
+          <div>
             {topCompanies.length === 0 ? (
               <p className="text-sm text-muted-foreground">{t("noData")}</p>
             ) : (
@@ -364,6 +368,7 @@ export default async function InsightsPage() {
             )}
           </div>
         </section>
+        </div>
       </div>
     </div>
   );

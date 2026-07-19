@@ -17,7 +17,7 @@ interface Props {
 }
 
 function inputClass(extra?: string) {
-  return `rounded-md border border-border bg-background px-3 h-9 text-sm focus:outline-none focus:border-[var(--border-strong)] focus:ring-2 focus:ring-[var(--accent)]/10 ${extra ?? ""}`;
+  return `h-10 rounded-lg border border-border bg-canvas px-3 text-sm outline-none transition duration-150 ease-out focus:border-accent focus:bg-background focus:shadow-[0_0_0_3px_var(--focus-ring)] ${extra ?? ""}`;
 }
 
 function labelClass() {
@@ -49,9 +49,9 @@ export function SettingsClient({ user, profile }: Props) {
   );
 
   return (
-    <div className="mt-10 flex flex-col gap-8">
+    <div className="app-page-content flex flex-col gap-6">
       {/* ── Profile ─────────────────────────────────────────── */}
-      <section className="rounded-md border border-border p-6">
+      <section className="surface-card p-5 sm:p-6">
         <h2 className="label-caps mb-5">{t("profileHeading")}</h2>
         <div className="mb-6 flex items-center gap-4">
           <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full border border-border bg-muted font-display text-xl">
@@ -83,7 +83,7 @@ export function SettingsClient({ user, profile }: Props) {
               type="email"
               value={user.email}
               readOnly
-              className="w-full rounded-md border border-border bg-muted px-3 h-9 text-sm text-muted-foreground"
+              className="h-10 w-full rounded-lg border border-border bg-muted px-3 text-sm text-muted-foreground"
             />
           </div>
           {profileState?.error && (
@@ -105,7 +105,7 @@ export function SettingsClient({ user, profile }: Props) {
       </section>
 
       {/* ── Language ─────────────────────────────────────────── */}
-      <section className="rounded-md border border-border p-6">
+      <section className="surface-card p-5 sm:p-6">
         <h2 className="label-caps mb-4">{t("languageHeading")}</h2>
         <div className="flex items-center gap-3">
           <span className="text-sm text-muted-foreground">{t("languageSub")}</span>
@@ -114,7 +114,7 @@ export function SettingsClient({ user, profile }: Props) {
       </section>
 
       {/* ── Change Password ──────────────────────────────────── */}
-      <section className="rounded-md border border-border p-6">
+      <section className="surface-card p-5 sm:p-6">
         <h2 className="label-caps mb-5">{t("passwordHeading")}</h2>
         <form action={passwordAction} className="flex flex-col gap-4">
           <div className="flex flex-col gap-1.5">
@@ -175,7 +175,7 @@ export function SettingsClient({ user, profile }: Props) {
       </section>
 
       {/* ── Developer ───────────────────────────────────────── */}
-      <section className="rounded-md border border-border p-6">
+      <section className="surface-card p-5 sm:p-6">
         <h2 className="label-caps mb-4">Developer</h2>
         <Link
           href="/admin/ai-events"
@@ -205,7 +205,7 @@ export function SettingsClient({ user, profile }: Props) {
       </section>
 
       {/* ── Danger Zone ──────────────────────────────────────── */}
-      <section className="rounded-md border border-[var(--danger)]/30 p-6">
+      <section className="surface-card border-[var(--danger)]/30 p-5 sm:p-6">
         <h2 className="label-caps mb-3 text-danger">{t("dangerHeading")}</h2>
         <p className="mb-5 text-sm text-muted-foreground">{t("deleteWarning")}</p>
         <form action={deleteAction} className="flex flex-col gap-4">
@@ -219,7 +219,7 @@ export function SettingsClient({ user, profile }: Props) {
               type="text"
               placeholder="DELETE"
               required
-              className="w-full rounded-md border border-[var(--danger)] bg-background px-3 h-9 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--danger)]/20"
+              className="h-10 w-full rounded-lg border border-[var(--danger)] bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-[var(--danger)]/20"
             />
           </div>
           {deleteState?.error && (

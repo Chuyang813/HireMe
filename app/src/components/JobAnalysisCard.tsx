@@ -108,41 +108,43 @@ export async function JobAnalysisCard({
   const ats = resumeText ? calculateATSScore(resumeText, jobText) : null;
 
   return (
-    <div className="rounded-md border border-border bg-[var(--muted)] p-5 space-y-4">
-      {/* Row 1: fit badge + top skills + verdict */}
-      <div className="flex items-start gap-5">
-        <div className="shrink-0">
+    <div className="surface-card space-y-6 p-5 sm:p-6">
+      <div className="flex flex-col items-center text-center">
+        {ats ? (
+          <>
+            <span className="font-display text-6xl font-semibold leading-none tracking-tight tabular-nums">
+              {ats.overall}
+            </span>
+            <p className="label-caps mt-2">Resume Match</p>
+          </>
+        ) : null}
+        <div className={ats ? "mt-4" : undefined}>
           <div
-            className={`flex min-h-16 w-24 items-center justify-center rounded-md border px-3 text-center text-sm font-semibold leading-tight ${fit.className}`}
+            className={`inline-flex items-center justify-center rounded-full border px-3 py-1 text-xs font-semibold ${fit.className}`}
           >
             {t(fit.labelKey)}
           </div>
         </div>
 
-        <div className="flex min-w-0 flex-col gap-3">
-          {keySkills.length > 0 && (
-            <div className="flex flex-wrap gap-1.5">
-              {keySkills.map((s) => (
-                <span
-                  key={s}
-                  className="rounded-md border border-border bg-background px-2 py-0.5 text-xs text-foreground"
-                >
-                  {s}
-                </span>
-              ))}
-            </div>
-          )}
+        {verdict ? (
+          <p className="mt-3 max-w-xl text-sm leading-relaxed text-muted-foreground">{verdict}</p>
+        ) : null}
 
-          {verdict && (
-            <p className="text-xs text-muted-foreground leading-relaxed">{verdict}</p>
-          )}
-        </div>
+        {keySkills.length > 0 ? (
+          <div className="mt-4 flex flex-wrap justify-center gap-1.5">
+            {keySkills.map((s) => (
+              <span key={s} className="rounded-md border border-border bg-canvas px-2 py-0.5 text-xs text-foreground">
+                {s}
+              </span>
+            ))}
+          </div>
+        ) : null}
       </div>
 
       {/* ATS breakdown — only rendered when the user has a base resume */}
       {ats && (
         <>
-          <div className="border-t border-border pt-4 space-y-4">
+          <div className="space-y-5 border-t border-border pt-5">
             {/* Overall score + sub-score bars */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
@@ -185,9 +187,9 @@ export async function JobAnalysisCard({
 
             {/* Matched / Missing keywords — two columns */}
             {(ats.matchedKeywords.length > 0 || ats.missingKeywords.length > 0) && (
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-3 sm:grid-cols-2">
                 {ats.matchedKeywords.length > 0 && (
-                  <div>
+                  <div className="rounded-lg border border-border bg-canvas p-4">
                     <p className="label-caps mb-2">Matched</p>
                     <div className="flex flex-wrap gap-1">
                       {ats.matchedKeywords.slice(0, 10).map((kw) => (
@@ -208,7 +210,7 @@ export async function JobAnalysisCard({
                 )}
 
                 {ats.missingKeywords.length > 0 && (
-                  <div>
+                  <div className="rounded-lg border border-border bg-canvas p-4">
                     <p className="label-caps mb-2">Missing</p>
                     <div className="flex flex-wrap gap-1">
                       {ats.missingKeywords.slice(0, 8).map((kw) => (
@@ -227,7 +229,7 @@ export async function JobAnalysisCard({
 
             {/* Improvement suggestions */}
             {ats.suggestions.length > 0 && (
-              <div>
+              <div className="rounded-lg border border-border bg-canvas p-4">
                 <p className="label-caps mb-2">Suggestions</p>
                 <ul className="space-y-1.5">
                   {ats.suggestions.map((s, i) => (

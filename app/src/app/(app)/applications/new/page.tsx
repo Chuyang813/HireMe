@@ -21,7 +21,7 @@ export default async function NewApplicationPage() {
   }
 
   return (
-    <div className="min-h-[calc(100vh-3.5rem)] bg-[#fafafa]">
+    <div className="min-h-[calc(100vh-3.5rem)] bg-canvas">
       <div className="mx-auto w-full max-w-3xl px-6 py-12">
         <div className="rise-enter text-center">
           <div className="label-caps mb-2">{t("newPageLabel")}</div>

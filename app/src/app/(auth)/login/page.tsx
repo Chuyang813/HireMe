@@ -14,13 +14,13 @@ export default async function LoginPage({
 
   return (
     <div className="flex flex-col gap-8">
-      <div>
+      <div className="text-center">
         <p className="label-caps mb-2">{t("label")}</p>
-        <h1 className="font-display text-4xl leading-tight">{t("heading")}</h1>
-        <p className="mt-2 text-sm text-muted-foreground">{t("sub")}</p>
+        <h1 className="app-page-title">{t("heading")}</h1>
+        <p className="app-page-subtitle">{t("sub")}</p>
       </div>
       <LoginForm next={next} />
-      <p className="text-sm text-muted-foreground">
+      <p className="text-center text-sm text-muted-foreground">
         {t("noAccount")}{" "}
         <Link
           href="/signup"

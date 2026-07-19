@@ -11,7 +11,7 @@ export function AppNavLink({ href, label }: { href: string; label: string }) {
     <Link
       href={href}
       className={[
-        "relative flex h-14 items-center px-2 text-sm transition-colors",
+        "relative flex h-14 items-center px-2 text-[13px] transition-colors duration-150",
         active
           ? "font-medium text-[var(--accent)]"
           : "font-normal text-muted-foreground hover:text-foreground",
@@ -19,9 +19,8 @@ export function AppNavLink({ href, label }: { href: string; label: string }) {
     >
       {label}
       {active && (
-        <span className="absolute inset-x-1 bottom-0 h-px bg-[var(--accent)]" />
+        <span className="absolute inset-x-1 bottom-0 h-0.5 rounded-full bg-[var(--accent)]" />
       )}
     </Link>
   );
 }
-

@@ -47,8 +47,11 @@ export function OnboardingChecklist({ hasApplication, hasGeneratedDocument, firs
   const [dismissed, setDismissed] = useState(true); // start hidden to avoid flash
 
   useEffect(() => {
-    const stored = localStorage.getItem(DISMISS_KEY);
-    setDismissed(stored === "true");
+    const timer = window.setTimeout(() => {
+      const stored = localStorage.getItem(DISMISS_KEY);
+      setDismissed(stored === "true");
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, []);
 
   const allDone = hasApplication && hasGeneratedDocument;
@@ -69,7 +72,7 @@ export function OnboardingChecklist({ hasApplication, hasGeneratedDocument, firs
       : "/applications";
 
   return (
-    <div className="rounded-md border border-border bg-background p-5 sm:p-6">
+    <div className="surface-card p-5 sm:p-6">
       <div className="mb-5 flex items-start justify-between gap-4">
         <div>
           <p className="label-caps mb-1">{t("label")}</p>
