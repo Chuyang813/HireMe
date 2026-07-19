@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   applyResumeReplacements,
   createResumeFormatTemplate,
+  diffResumeReplacements,
   extractResumeHeader,
   renderCoverLetterWithResumeFormat,
 } from "./resume-format";
@@ -52,6 +53,17 @@ describe("resume format preservation", () => {
     expect(candidates[0].text).toBe(
       "Built a reusable design system used across four product teams.",
     );
+  });
+
+  it("derives only the changed source lines for format-preserving document edits", () => {
+    const tailored = applyResumeReplacements(source, {
+      L0006: "Built a role-specific design system without changing the document layout.",
+    });
+    expect(diffResumeReplacements(source, tailored)).toEqual([{
+      id: "L0006",
+      originalText: "Built a reusable design system used across four product teams.",
+      replacementText: "Built a role-specific design system without changing the document layout.",
+    }]);
   });
 
   it("reuses the exact resume header for cover letters", () => {

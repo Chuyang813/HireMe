@@ -496,10 +496,15 @@
     "styleAcademic": "Académique",
     "styleStory": "Narratif",
     "styleEnthusiastic": "Enthousiaste",
-    "formatLocked": "Le verrouillage de mise en forme est activé. Le CV conserve la structure, les espacements, les titres et les puces du fichier importé ; la lettre reprend le même en-tête et les mêmes espacements.",
+    "formatLocked": "Le format source est verrouillé. Cette candidature modifie son propre CV importé tout en conservant le format de page, la mise en page, les polices, les couleurs, les espacements, les en-têtes et la pagination. La lettre reprend le même design source.",
     "pdfPreviewLoading": "Préparation de l’aperçu PDF mis en page…",
     "pdfPreviewUnavailable": "Impossible d’afficher l’aperçu PDF. Essayez de télécharger le PDF.",
-    "pdfPreviewLabel": "aperçu PDF"
+    "pdfPreviewLabel": "aperçu PDF",
+    "sourcePreviewLoading": "Reconstruction du document à partir du format source importé…",
+    "sourcePreviewUnavailable": "Impossible de créer l’aperçu au format source. Réessayez.",
+    "sourcePreviewLabel": "aperçu au format source",
+    "sourceFormatOnly": "Ce format de téléchargement n’est pas disponible pour le type de fichier source importé.",
+    "exportFailed": "Impossible d’exporter le document au format source."
   },
   "OnboardingChecklist": {
     "label": "Démarrage",

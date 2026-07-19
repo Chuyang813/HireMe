@@ -3,6 +3,12 @@ export interface ResumeReplacementCandidate {
   text: string;
 }
 
+export interface AppliedResumeReplacement {
+  id: string;
+  originalText: string;
+  replacementText: string;
+}
+
 export interface ResumeFormatTemplate {
   candidates: ResumeReplacementCandidate[];
 }
@@ -112,6 +118,28 @@ export function applyResumeReplacements(
   }
 
   return lines.join(newlineFor(rawResumeText));
+}
+
+export function diffResumeReplacements(
+  rawResumeText: string,
+  tailoredResumeText: string,
+): AppliedResumeReplacement[] {
+  const sourceLines = splitLines(rawResumeText);
+  const tailoredLines = splitLines(tailoredResumeText);
+  if (sourceLines.length !== tailoredLines.length) return [];
+
+  return createResumeFormatTemplate(rawResumeText).candidates.flatMap((candidate) => {
+    const lineIndex = Number(candidate.id.slice(1)) - 1;
+    const tailoredLine = tailoredLines[lineIndex];
+    if (tailoredLine === undefined) return [];
+    const replacementText = contentWithoutPrefix(tailoredLine).trim();
+    if (!replacementText || replacementText === candidate.text.trim()) return [];
+    return [{
+      id: candidate.id,
+      originalText: candidate.text.trim(),
+      replacementText,
+    }];
+  });
 }
 
 export function extractResumeHeader(rawResumeText: string): string[] {

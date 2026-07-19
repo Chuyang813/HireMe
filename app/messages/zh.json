@@ -496,10 +496,15 @@
     "styleAcademic": "学术",
     "styleStory": "故事性",
     "styleEnthusiastic": "热情",
-    "formatLocked": "格式锁定已开启。简历生成会保留上传文件的结构、间距、标题和项目符号；求职信会复用同一页眉与间距规范。",
+    "formatLocked": "原文件格式锁定已开启。此申请会直接以它绑定的上传简历为母版，保留该文件自己的页面尺寸、布局、字体、颜色、间距、页眉和分页；求职信也会继承同一套原始设计。",
     "pdfPreviewLoading": "正在准备排版后的 PDF 预览…",
     "pdfPreviewUnavailable": "无法显示 PDF 预览，请尝试直接下载 PDF。",
-    "pdfPreviewLabel": "PDF 预览"
+    "pdfPreviewLabel": "PDF 预览",
+    "sourcePreviewLoading": "正在按照上传文件的原始格式重建文档…",
+    "sourcePreviewUnavailable": "无法生成保留原格式的预览，请重试。",
+    "sourcePreviewLabel": "原格式预览",
+    "sourceFormatOnly": "该上传文件类型不支持这种下载格式。",
+    "exportFailed": "无法导出保留原格式的文档。"
   },
   "OnboardingChecklist": {
     "label": "开始使用",

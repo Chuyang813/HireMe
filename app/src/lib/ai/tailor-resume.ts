@@ -15,6 +15,7 @@ Absolute rules:
 - Never add, remove, merge, split, or reorder lines, bullets, jobs, projects, or sections.
 - Never return a replacement for an ID that was not supplied.
 - Keep every factual claim intact. Rephrase only when it improves alignment with the job.
+- Keep each replacement at or below the source line's approximate character length so it remains inside the original text box without changing font size, line spacing, or pagination.
 - Do not include bullet symbols, indentation, Markdown, headings, or line breaks inside replacement values; the application restores those from the source template.
 - If a source line should remain unchanged, omit its ID.
 - Output exactly this JSON shape and no commentary: {"replacements":{"L0001":"replacement text"}}.`;

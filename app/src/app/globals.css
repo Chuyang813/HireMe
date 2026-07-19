@@ -435,3 +435,16 @@ hr,
   font-weight: 500;
   color: var(--foreground);
 }
+
+/* Word previews keep the uploaded document's native page geometry and styles. */
+.source-docx-shell .docx-wrapper {
+  min-width: max-content;
+  align-items: center;
+  background: transparent;
+  padding: 0;
+}
+
+.source-docx-shell section.docx {
+  margin-bottom: 1rem;
+  box-shadow: var(--shadow-lg);
+}

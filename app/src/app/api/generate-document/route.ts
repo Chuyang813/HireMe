@@ -73,21 +73,23 @@ Absolute rules:
 - Never add, remove, merge, split, or reorder lines, bullets, jobs, projects, or sections.
 - Never return a replacement for an ID that was not supplied.
 - Keep every factual claim intact. Rephrase only when it improves alignment with the job.
+- Keep each replacement at or below the source line's approximate character length so it remains inside the original text box without changing font size, line spacing, or pagination.
 - Do not include bullet symbols, indentation, Markdown, headings, or line breaks inside replacement values; the application restores those from the source template.
 - If a source line should remain unchanged, omit its ID.
 - Output exactly this JSON shape and no commentary: {"replacements":{"L0001":"replacement text"}}.`;
 
 const COVER_LETTER_SYSTEM = `You are a professional cover letter writing assistant.
 
-Return content fields for a polished cover letter. The application will deterministically render those fields with the source resume's exact header and spacing conventions.
+Return content fields for a polished cover letter. The application will deterministically render those fields using the uploaded source resume's own page size, margins, header, fonts, colors, and spacing conventions.
 
 Rules:
-- Write a specific opening, 3-4 short titled evidence sections, and a confident final paragraph. Keep the total under 650 words so it fits on one Letter page.
+- Write a specific opening, 3-4 short titled evidence sections, and a confident final paragraph. Keep the total under 450 words so it fits inside the source document's own page geometry.
 - Each section heading must be concise Title Case plain text that names the evidence theme; the application will render it in bold.
 - Use grounded achievements and skills alignment in each section.
 - Never fabricate employers, titles, degrees, metrics, or accomplishments not in the resume.
 - Reference actual details from both the resume and job description; avoid generic filler and opening clichés.
 - Do not add Markdown, bullets, or formatting instructions.
+- Do not assume Letter or A4 page size and do not request any visual style; the source file is the sole layout authority.
 - Use a concise subject in the form "Re: Position Title".
 - Output exactly this JSON shape and no commentary: {"date":"...","recipient":["Company","Location"],"subject":"Re: Position Title","greeting":"Dear Hiring Manager,","opening":"...","sections":[{"heading":"Evidence Theme","paragraph":"..."}],"finalParagraph":"...","closing":"Sincerely,","signature":"Candidate Name"}.`;
 
@@ -267,24 +269,24 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const [{ data: app }, { data: resumeRow }] = await Promise.all([
-    supabase
-      .from("job_applications")
-      .select("parsed_job_json, raw_job_text")
-      .eq("id", applicationId)
-      .eq("user_id", user.id)
-      .single(),
-    supabase
-      .from("base_resumes")
-      .select("parsed_resume_json, raw_text")
-      .eq("user_id", user.id)
-      .eq("is_default", true)
-      .single(),
-  ]);
+  const { data: app } = await supabase
+    .from("job_applications")
+    .select("parsed_job_json, raw_job_text, base_resume_id")
+    .eq("id", applicationId)
+    .eq("user_id", user.id)
+    .single();
 
   if (!app) {
     return Response.json({ error: "Application not found." }, { status: 404 });
   }
+
+  const resumeQuery = supabase
+    .from("base_resumes")
+    .select("parsed_resume_json, raw_text")
+    .eq("user_id", user.id);
+  const { data: resumeRow } = app.base_resume_id
+    ? await resumeQuery.eq("id", app.base_resume_id).single()
+    : await resumeQuery.eq("is_default", true).single();
 
   const job = app.parsed_job_json as ParsedJob | null;
   if (!job) {

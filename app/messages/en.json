@@ -496,10 +496,15 @@
     "styleAcademic": "Academic",
     "styleStory": "Story-driven",
     "styleEnthusiastic": "Enthusiastic",
-    "formatLocked": "Format lock is on. Resume generation preserves the uploaded structure, spacing, headings, and bullet style; cover letters reuse the same header and spacing conventions.",
+    "formatLocked": "Source format lock is on. This application edits its own uploaded resume in place and preserves that file's page size, layout, fonts, colors, spacing, headers, and pagination. The cover letter inherits the same source design.",
     "pdfPreviewLoading": "Preparing the formatted PDF preview…",
     "pdfPreviewUnavailable": "The PDF preview could not be displayed. Please try downloading the PDF.",
-    "pdfPreviewLabel": "PDF preview"
+    "pdfPreviewLabel": "PDF preview",
+    "sourcePreviewLoading": "Rebuilding the document from the uploaded source format…",
+    "sourcePreviewUnavailable": "The source-formatted preview could not be created. Please try again.",
+    "sourcePreviewLabel": "source-formatted preview",
+    "sourceFormatOnly": "This download format is not available for the uploaded source file type.",
+    "exportFailed": "The source-formatted document could not be exported."
   },
   "OnboardingChecklist": {
     "label": "Getting started",

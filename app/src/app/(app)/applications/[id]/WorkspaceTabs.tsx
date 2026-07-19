@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, useEffect } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
 import {
   saveDocumentAction,
@@ -20,11 +20,10 @@ import type {
 } from "@/lib/db/types";
 import type { GroundingWarning } from "@/lib/ai/grounding";
 import {
-  createApplicationPdf,
-  downloadBlob,
-  isResumeSectionHeading,
-  splitDocumentHeader,
-} from "@/lib/documents/application-pdf";
+  SourceDocumentPreview,
+  type SourceDocumentPreviewHandle,
+} from "@/components/SourceDocumentPreview";
+import type { ResumeSourceType } from "@/lib/documents/source-document";
 
 // ---------------------------------------------------------------------------
 // Tab config — Notes tab removed
@@ -68,143 +67,6 @@ function sanitizeName(s: string) {
     .slice(0, 40);
 }
 
-function cleanDocumentLine(value: string) {
-  return value
-    .replace(/^#{1,6}\s+/, "")
-    .replace(/\*\*([^*]+)\*\*/g, "$1")
-    .replace(/__([^_]+)__/g, "$1")
-    .replace(/^[_*]([^_*]+)[_*]$/, "$1")
-    .trimEnd();
-}
-
-async function exportDOCX(
-  content: string,
-  filename: string,
-  documentType: "tailored_resume" | "cover_letter",
-) {
-  const {
-    Document,
-    Packer,
-    Paragraph,
-    TextRun,
-    AlignmentType,
-    BorderStyle,
-  } = await import("docx");
-
-  const paragraphs: InstanceType<typeof Paragraph>[] = [];
-  const { headerLines, bodyLines } = splitDocumentHeader(content);
-  const [name = "", ...contactLines] = headerLines;
-  const contact = contactLines.join(" | ");
-
-  if (name || contact) {
-    paragraphs.push(
-      new Paragraph({
-        children: [
-          new TextRun({ text: name, font: "Caladea", size: 22, bold: true }),
-          new TextRun({
-            text: name && contact ? `  ${contact}` : contact,
-            font: "Caladea",
-            size: 21,
-          }),
-        ],
-        spacing: { before: 0, after: 260, line: 240 },
-        border: {
-          top: { style: BorderStyle.SINGLE, size: 8, color: "000000", space: 6 },
-          bottom: { style: BorderStyle.SINGLE, size: 8, color: "000000", space: 6 },
-        },
-      }),
-    );
-  }
-
-  for (let index = 0; index < bodyLines.length; index += 1) {
-    const raw = bodyLines[index];
-    const line = cleanDocumentLine(raw);
-    const next = bodyLines.slice(index + 1).find((candidate) => candidate.trim()) ?? "";
-    const bullet = line.match(/^\s*(?:[-*\u2022\u25cf\u25aa\u25e6\u2023\u2013\u2014\uf0b7])\s+(.*)$/u);
-    const isRoleLine = documentType === "tailored_resume"
-      && !bullet
-      && (Boolean(next.match(/^\s*(?:[-*\u2022\u25cf\u25aa\u25e6\u2023\u2013\u2014\uf0b7])\s+/u))
-        || /\b(?:19|20)\d{2}\b|\b(?:present|current)\b/i.test(line));
-
-    if (!line.trim()) {
-      paragraphs.push(
-        new Paragraph({
-          spacing: { after: documentType === "cover_letter" ? 100 : 40 },
-        }),
-      );
-    } else if (documentType === "tailored_resume" && isResumeSectionHeading(raw)) {
-      paragraphs.push(
-        new Paragraph({
-          children: [new TextRun({
-            text: line,
-            font: "Caladea",
-            size: 22,
-            bold: true,
-            color: "1F4E79",
-          })],
-          spacing: { before: 140, after: 40, line: 240 },
-        }),
-      );
-    } else if (bullet) {
-      paragraphs.push(
-        new Paragraph({
-          children: [new TextRun({ text: bullet[1], font: "Caladea", size: 20 })],
-          bullet: { level: 0 },
-          spacing: { after: 20, line: 248 },
-        }),
-      );
-    } else {
-      const emphasized = isRoleLine || /^Re\s*:/i.test(line);
-      paragraphs.push(
-        new Paragraph({
-          children: [new TextRun({
-            text: line,
-            font: "Caladea",
-            size: emphasized ? 21 : 20,
-            bold: emphasized,
-            color: isRoleLine ? "1F4E79" : "000000",
-          })],
-          spacing: {
-            after: documentType === "cover_letter" ? 80 : 24,
-            line: 248,
-          },
-          alignment: AlignmentType.LEFT,
-        }),
-      );
-    }
-  }
-
-  const doc = new Document({
-    styles: {
-      default: {
-        document: {
-          run: { font: "Caladea", size: 20 },
-          paragraph: { spacing: { line: 248 } },
-        },
-      },
-    },
-    sections: [
-      {
-        properties: {
-          page: {
-            size: { width: 12240, height: 15840 },
-            margin: { top: 820, bottom: 840, left: 880, right: 880 },
-          },
-        },
-        children: paragraphs,
-      },
-    ],
-  });
-  const blob = await Packer.toBlob(doc);
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `${filename}.docx`;
-  a.click();
-  URL.revokeObjectURL(url);
-}
-
-// ---------------------------------------------------------------------------
 // MarkdownViewer — renders markdown as formatted HTML
 // ---------------------------------------------------------------------------
 
@@ -302,93 +164,6 @@ function MarkdownViewer({ content, isStreaming }: { content: string; isStreaming
   );
 }
 
-function PdfDocumentPreview({
-  content,
-  documentType,
-  title,
-  isGenerating,
-}: {
-  content: string;
-  documentType: "tailored_resume" | "cover_letter";
-  title: string;
-  isGenerating: boolean;
-}) {
-  const t = useTranslations("Workspace");
-  const [previewUrl, setPreviewUrl] = useState("");
-  const [previewError, setPreviewError] = useState(false);
-  const [previewLoading, setPreviewLoading] = useState(false);
-
-  useEffect(() => {
-    if (!content.trim() || isGenerating) {
-      setPreviewUrl("");
-      setPreviewError(false);
-      setPreviewLoading(false);
-      return;
-    }
-
-    let active = true;
-    let objectUrl = "";
-    setPreviewLoading(true);
-    setPreviewError(false);
-
-    void createApplicationPdf(content, documentType, title)
-      .then((blob) => {
-        if (!active) return;
-        objectUrl = URL.createObjectURL(blob);
-        setPreviewUrl(objectUrl);
-      })
-      .catch(() => {
-        if (active) setPreviewError(true);
-      })
-      .finally(() => {
-        if (active) setPreviewLoading(false);
-      });
-
-    return () => {
-      active = false;
-      if (objectUrl) URL.revokeObjectURL(objectUrl);
-    };
-  }, [content, documentType, isGenerating, title]);
-
-  if (isGenerating || previewLoading) {
-    return (
-      <div className="flex min-h-[40rem] items-center justify-center rounded-xl border border-border bg-muted/20">
-        <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-          <span className="h-4 w-4 animate-spin rounded-full border border-current border-t-transparent" />
-          {isGenerating ? t("generating") : t("pdfPreviewLoading")}
-        </div>
-      </div>
-    );
-  }
-
-  if (!content.trim()) {
-    return (
-      <div className="flex min-h-[40rem] items-center justify-center rounded-xl border border-dashed border-border bg-muted/20 px-6 text-center">
-        <p className="text-sm italic text-muted-foreground">{t("noContent")}</p>
-      </div>
-    );
-  }
-
-  if (previewError || !previewUrl) {
-    return (
-      <div className="flex min-h-[40rem] items-center justify-center rounded-xl border border-danger/30 bg-danger/5 px-6 text-center">
-        <p className="text-sm text-danger">{t("pdfPreviewUnavailable")}</p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="overflow-hidden rounded-xl border border-border bg-muted/30 shadow-[var(--shadow-sm)]">
-      <iframe
-        src={previewUrl}
-        title={`${title} ${t("pdfPreviewLabel")}`}
-        className="h-[75vh] min-h-[42rem] w-full bg-white"
-      />
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
 // EmailDraftView — parses the AI-formatted email into structured sections
 // (subject / body / signature / attachments) and renders them with the
 // HireMe postal aesthetic. Falls back to raw text if parsing fails.
@@ -802,6 +577,8 @@ function DocumentPanel({
   const [groundingWarnings, setGroundingWarnings] = useState<GroundingWarning[]>([]);
   const [evalResult, setEvalResult] = useState<{ ats: ATSResult; fabrication: FabricationResult } | null>(null);
   const [evalLoading, setEvalLoading] = useState(false);
+  const sourcePreviewRef = useRef<SourceDocumentPreviewHandle>(null);
+  const [sourceType, setSourceType] = useState<ResumeSourceType | null>(null);
 
   const styleOptions = documentType === "cover_letter" ? COVER_LETTER_STYLES : null;
 
@@ -934,20 +711,12 @@ function DocumentPanel({
   async function handleExport(format: "pdf" | "docx") {
     if (!content.trim()) return;
     setExporting(true);
+    setGenerateError("");
     try {
-      if (format === "pdf") {
-        const printableType = documentType === "cover_letter"
-          ? "cover_letter"
-          : "tailored_resume";
-        const blob = await createApplicationPdf(content, printableType, exportFilename);
-        downloadBlob(blob, `${exportFilename}.pdf`);
-      } else {
-        await exportDOCX(
-          content,
-          exportFilename,
-          documentType === "cover_letter" ? "cover_letter" : "tailored_resume",
-        );
-      }
+      if (!sourcePreviewRef.current) throw new Error(t("sourcePreviewUnavailable"));
+      await sourcePreviewRef.current.download(format, exportFilename);
+    } catch (error) {
+      setGenerateError(error instanceof Error ? error.message : t("exportFailed"));
     } finally {
       setExporting(false);
     }
@@ -1099,19 +868,21 @@ function DocumentPanel({
               <Button
                 variant="outline"
                 onClick={() => handleExport("pdf")}
-                disabled={exporting || !content.trim()}
+                disabled={exporting || !content.trim() || !sourceType}
                 title={t("downloadPDF")}
               >
                 {t("downloadPDF")}
               </Button>
-              <Button
-                variant="outline"
-                onClick={() => handleExport("docx")}
-                disabled={exporting || !content.trim()}
-                title={t("downloadDOCX")}
-              >
-                {t("downloadDOCX")}
-              </Button>
+              {sourceType === "docx" && (
+                <Button
+                  variant="outline"
+                  onClick={() => handleExport("docx")}
+                  disabled={exporting || !content.trim()}
+                  title={t("downloadDOCX")}
+                >
+                  {t("downloadDOCX")}
+                </Button>
+              )}
             </>
           )}
           {docId && (
@@ -1134,11 +905,14 @@ function DocumentPanel({
       <GroundingWarnings warnings={groundingWarnings} />
 
       <div className="relative">
-        <PdfDocumentPreview
+        <SourceDocumentPreview
+          ref={sourcePreviewRef}
+          applicationId={applicationId}
           content={content}
           documentType={documentType === "cover_letter" ? "cover_letter" : "tailored_resume"}
           title={exportFilename}
           isGenerating={generating}
+          onSourceTypeChange={setSourceType}
         />
       </div>
 

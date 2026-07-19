@@ -75,7 +75,7 @@ export async function generateDocumentAction(
 
   const { data: app } = await supabase
     .from("job_applications")
-    .select("parsed_job_json, raw_job_text")
+    .select("parsed_job_json, raw_job_text, base_resume_id")
     .eq("id", applicationId)
     .eq("user_id", user.id)
     .single();
@@ -85,12 +85,13 @@ export async function generateDocumentAction(
   const job = app.parsed_job_json as ParsedJob | null;
   if (!job) return { error: "Job not yet analyzed. Try re-creating the application." };
 
-  const { data: resume } = await supabase
+  const resumeQuery = supabase
     .from("base_resumes")
     .select("parsed_resume_json, raw_text")
-    .eq("user_id", user.id)
-    .eq("is_default", true)
-    .single();
+    .eq("user_id", user.id);
+  const { data: resume } = app.base_resume_id
+    ? await resumeQuery.eq("id", app.base_resume_id).single()
+    : await resumeQuery.eq("is_default", true).single();
 
   const parsedResume = (resume?.parsed_resume_json as ParsedResume | null) ?? {};
 
@@ -171,6 +172,69 @@ export async function generateDocumentAction(
   return { content, documentType };
 }
 
+export type ApplicationResumeSourceResult =
+  | {
+      ok: true;
+      sourceType: "pdf" | "docx" | "txt";
+      rawText: string;
+      url: string | null;
+    }
+  | { ok: false; error: string };
+
+export async function getApplicationResumeSourceAction(
+  applicationId: string,
+): Promise<ApplicationResumeSourceResult> {
+  const { supabase, user } = await requireUser();
+  if (!uuidSchema.safeParse(applicationId).success) {
+    return { ok: false, error: "Application not found." };
+  }
+
+  const { data: application } = await supabase
+    .from("job_applications")
+    .select("base_resume_id")
+    .eq("id", applicationId)
+    .eq("user_id", user.id)
+    .single();
+  if (!application) return { ok: false, error: "Application not found." };
+
+  const resumeQuery = supabase
+    .from("base_resumes")
+    .select("source_file_path, source_file_type, raw_text")
+    .eq("user_id", user.id);
+  const { data: resume } = application.base_resume_id
+    ? await resumeQuery.eq("id", application.base_resume_id).single()
+    : await resumeQuery.eq("is_default", true).single();
+  if (!resume) return { ok: false, error: "Source resume not found." };
+
+  const sourceType = resume.source_file_type;
+  if (sourceType !== "pdf" && sourceType !== "docx" && sourceType !== "txt") {
+    return { ok: false, error: "Unsupported source resume format." };
+  }
+
+  if (sourceType === "txt" || !resume.source_file_path) {
+    return {
+      ok: true,
+      sourceType: "txt",
+      rawText: resume.raw_text ?? "",
+      url: null,
+    };
+  }
+
+  const { data: signed, error } = await supabase.storage
+    .from("resumes")
+    .createSignedUrl(resume.source_file_path, 900);
+  if (error || !signed?.signedUrl) {
+    return { ok: false, error: "Could not load the source resume." };
+  }
+
+  return {
+    ok: true,
+    sourceType,
+    rawText: resume.raw_text ?? "",
+    url: signed.signedUrl,
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Save document
 // ---------------------------------------------------------------------------
@@ -200,22 +264,22 @@ export async function saveDocumentAction(
   }
   const documentType = documentTypeResult.data as DocumentType;
 
-  const [{ data: app }, { data: resume }] = await Promise.all([
-    supabase
-      .from("job_applications")
-      .select("id, parsed_job_json, raw_job_text")
-      .eq("id", applicationId)
-      .eq("user_id", user.id)
-      .single(),
-    supabase
-      .from("base_resumes")
-      .select("parsed_resume_json, raw_text")
-      .eq("user_id", user.id)
-      .eq("is_default", true)
-      .single(),
-  ]);
+  const { data: app } = await supabase
+    .from("job_applications")
+    .select("id, parsed_job_json, raw_job_text, base_resume_id")
+    .eq("id", applicationId)
+    .eq("user_id", user.id)
+    .single();
 
   if (!app) return { error: "Application not found." };
+
+  const resumeQuery = supabase
+    .from("base_resumes")
+    .select("parsed_resume_json, raw_text")
+    .eq("user_id", user.id);
+  const { data: resume } = app.base_resume_id
+    ? await resumeQuery.eq("id", app.base_resume_id).single()
+    : await resumeQuery.eq("is_default", true).single();
 
   const groundingWarnings = checkGeneratedDocumentGrounding({
     content,

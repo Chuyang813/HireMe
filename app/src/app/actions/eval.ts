@@ -18,22 +18,22 @@ export async function runResumeEvals(
 
   const { supabase, user } = await requireUser();
 
-  const [{ data: app }, { data: resumeRow }] = await Promise.all([
-    supabase
-      .from("job_applications")
-      .select("parsed_job_json, raw_job_text")
-      .eq("id", applicationId)
-      .eq("user_id", user.id)
-      .single(),
-    supabase
-      .from("base_resumes")
-      .select("parsed_resume_json")
-      .eq("user_id", user.id)
-      .eq("is_default", true)
-      .single(),
-  ]);
+  const { data: app } = await supabase
+    .from("job_applications")
+    .select("parsed_job_json, raw_job_text, base_resume_id")
+    .eq("id", applicationId)
+    .eq("user_id", user.id)
+    .single();
 
   if (!app) throw new Error("Application not found.");
+
+  const resumeQuery = supabase
+    .from("base_resumes")
+    .select("parsed_resume_json")
+    .eq("user_id", user.id);
+  const { data: resumeRow } = app.base_resume_id
+    ? await resumeQuery.eq("id", app.base_resume_id).single()
+    : await resumeQuery.eq("is_default", true).single();
 
   const parsedJob = app.parsed_job_json as ParsedJob | null;
   const parsedResume = (resumeRow?.parsed_resume_json as ParsedResume | null) ?? {};

@@ -46,6 +46,9 @@ const nextConfig: NextConfig = {
     "/api/document-font": [
       "./node_modules/@expo-google-fonts/caladea/**/*.ttf",
     ],
+    "/api/pdf-worker": [
+      "./node_modules/pdfjs-dist/legacy/build/pdf.worker.min.mjs",
+    ],
   },
   async headers() {
     return [

@@ -192,10 +192,20 @@ export default async function ApplicationPage({
   if (!app) notFound();
 
   const application = app as JobApplication;
+  let applicationResume = resume;
+  if (application.base_resume_id && resume?.id !== application.base_resume_id) {
+    const { data: pinnedResume } = await supabase
+      .from("base_resumes")
+      .select("id, parsed_resume_json")
+      .eq("id", application.base_resume_id)
+      .eq("user_id", user.id)
+      .single();
+    applicationResume = pinnedResume;
+  }
   const documents = (docs ?? []) as ApplicationDocument[];
   const events = (timeline ?? []) as ApplicationTimelineEvent[];
   const job = application.parsed_job_json as ParsedJob | null;
-  const parsedResume = (resume?.parsed_resume_json as ParsedResume | null) ?? null;
+  const parsedResume = (applicationResume?.parsed_resume_json as ParsedResume | null) ?? null;
   const profileData = profile as Pick<Profile, "full_name" | "display_name"> | null;
 
   const fullName = profileData?.full_name ?? profileData?.display_name ?? "";
@@ -269,7 +279,7 @@ export default async function ApplicationPage({
             <div className={job ? "mt-6" : undefined}>
               <WorkspaceTabs
                 applicationId={application.id}
-                hasResume={!!resume}
+                hasResume={!!applicationResume}
                 documents={{
                   tailored_resume: docMap.get("tailored_resume") ?? null,
                   cover_letter: docMap.get("cover_letter") ?? null,
