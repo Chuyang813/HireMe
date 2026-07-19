@@ -436,9 +436,9 @@ function EvalResultsPanel({
   if (!ats || !fabrication) return null;
 
   function scoreColor(n: number) {
-    if (n >= 75) return "#16a34a";
-    if (n >= 50) return "#d97706";
-    return "#dc2626";
+    if (n >= 75) return "#346538";
+    if (n >= 50) return "#956400";
+    return "#9f2f2d";
   }
 
   const atsColor = scoreColor(ats.overall);
@@ -489,7 +489,7 @@ function EvalResultsPanel({
 
         {ats.missingKeywords.length > 0 && (
           <p className="text-xs text-muted-foreground">
-            <span className="text-amber-600">⚠</span>{" "}
+            <span className="text-[var(--warning)]">⚠</span>{" "}
             Missing: {ats.missingKeywords.slice(0, 6).join(", ")}
           </p>
         )}
@@ -533,13 +533,13 @@ function EvalResultsPanel({
               {fabrication.fabricatedClaims.slice(0, 5).map((c, i) => (
                 <li
                   key={i}
-                  className="rounded border border-amber-200 bg-amber-50 px-2.5 py-1.5 text-xs"
+                  className="rounded border border-[var(--warning-border)] bg-[var(--warning-light)] px-2.5 py-1.5 text-xs"
                 >
-                  <span className="text-amber-700">⚠ </span>
-                  <span className="italic text-amber-900">
+                  <span className="text-[var(--warning)]">⚠ </span>
+                  <span className="italic text-[var(--warning)]">
                     &ldquo;{c.claim.length > 90 ? c.claim.slice(0, 90) + "…" : c.claim}&rdquo;
                   </span>
-                  <span className="text-amber-600"> — {c.reason}</span>
+                  <span className="text-[var(--warning)]/80"> — {c.reason}</span>
                 </li>
               ))}
             </ul>
@@ -943,7 +943,7 @@ function GroundingWarnings({ warnings }: { warnings: GroundingWarning[] }) {
   if (!warnings.length) return null;
 
   return (
-    <div className="rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+    <div className="rounded-md border border-[var(--warning-border)] bg-[var(--warning-light)] px-4 py-3 text-sm text-[var(--warning)]">
       <p className="font-medium">AI grounding review suggested</p>
       <ul className="mt-2 list-disc space-y-1 pl-5">
         {warnings.slice(0, 5).map((warning) => (

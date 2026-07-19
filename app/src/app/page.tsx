@@ -102,7 +102,7 @@ export default async function Home() {
                 <p className="font-display text-lg leading-tight">Prompt Engineer</p>
                 <p className="text-xs text-muted-foreground">Acme - Full-time</p>
               </div>
-              <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
+              <span className="rounded-full bg-muted px-3 py-1 text-xs font-medium text-muted-foreground">
                 Saved
               </span>
             </div>

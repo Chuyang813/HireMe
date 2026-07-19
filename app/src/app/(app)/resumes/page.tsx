@@ -42,9 +42,9 @@ export default async function ResumesPage({
           </div>
 
           {needsResume && (
-            <div className="surface-card mt-6 flex items-start gap-3 border-amber-300 px-4 py-3 rise-enter [transition-delay:40ms]">
-              <span className="mt-0.5 shrink-0 text-amber-500">⚠</span>
-              <p className="text-sm text-amber-800">{t("needResumeWarning")}</p>
+            <div className="surface-card mt-6 flex items-start gap-3 border-[var(--warning-border)] bg-[var(--warning-light)] px-4 py-3 rise-enter [transition-delay:40ms]">
+              <span className="mt-0.5 shrink-0 text-[var(--warning)]">⚠</span>
+              <p className="text-sm text-[var(--warning)]">{t("needResumeWarning")}</p>
             </div>
           )}
 
@@ -77,9 +77,9 @@ export default async function ResumesPage({
         </div>
 
       {showBanner && (
-        <div className="surface-card mt-6 flex items-start gap-3 border-green-300 px-4 py-3 rise-enter [transition-delay:40ms]">
-          <span className="mt-0.5 shrink-0 text-green-600">✓</span>
-          <p className="text-sm text-green-800">
+        <div className="surface-card mt-6 flex items-start gap-3 border-[var(--success-border)] bg-[var(--success-light)] px-4 py-3 rise-enter [transition-delay:40ms]">
+          <span className="mt-0.5 shrink-0 text-[var(--success)]">✓</span>
+          <p className="text-sm text-[var(--success)]">
             {isWelcome ? t("welcomeBanner") : t("needResumeBanner")}
           </p>
         </div>

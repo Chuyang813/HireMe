@@ -25,12 +25,12 @@ function FitBadge({ score }: { score: number | null }) {
   if (score === null) return null;
   const { label, cls } =
     score >= 85
-      ? { label: "Strong fit", cls: "bg-green-50 text-green-700 border-green-200" }
+      ? { label: "Strong fit", cls: "bg-[var(--success-light)] text-[var(--success)] border-[var(--success-border)]" }
       : score >= 70
-        ? { label: "Good fit", cls: "bg-blue-50 text-blue-700 border-blue-200" }
+        ? { label: "Good fit", cls: "bg-[var(--accent-light)] text-[var(--accent)] border-[var(--accent-border)]" }
         : score >= 50
-          ? { label: "Moderate", cls: "bg-yellow-50 text-yellow-700 border-yellow-200" }
-          : { label: "Low fit", cls: "bg-red-50 text-red-700 border-red-200" };
+          ? { label: "Moderate", cls: "bg-[var(--warning-light)] text-[var(--warning)] border-[var(--warning-border)]" }
+          : { label: "Low fit", cls: "bg-[var(--danger-light)] text-[var(--danger)] border-[var(--danger-border)]" };
   return (
     <span
       className={`inline-flex items-center gap-1 rounded border px-2 py-0.5 text-xs ${cls}`}

@@ -263,7 +263,7 @@ export default async function ApplicationPage({
         {isStaleSaved && (
           <div className="surface-card mt-6 flex items-start gap-3 border-[var(--warning)] bg-[var(--warning-light)] px-4 py-3 rise-enter [transition-delay:40ms]">
             <span className="mt-0.5 shrink-0 text-[var(--warning)]">⚠</span>
-            <p className="text-sm text-amber-900">
+            <p className="text-sm text-[var(--warning)]">
               <strong>{t("detailStaleReminder")}</strong> {t("detailStaleBody")}{" "}
               <span className="opacity-75">{t("detailStaleHint")}</span>
             </p>

@@ -13,8 +13,8 @@ type Step = "input" | "match";
 type InputTab = "paste" | "url";
 const MAX_JOB_TEXT_LENGTH = 30_000;
 
-// Linear-inspired light system (see DESIGN.md): white cards on #fafafa,
-// hairline borders, 12px card radius, 8px control radius, single lavender accent.
+// HireMe "Kraft & Rust" light system: white cards on warm bone canvas,
+// hairline borders, 12px card radius, 8px control radius, single rust-copper accent.
 const ACCENT = "var(--accent)";
 
 const cardPanel =
@@ -38,10 +38,10 @@ const lightInput =
   "focus:border-accent focus:shadow-[0_0_0_3px_var(--focus-ring)]";
 
 const FIT_STYLES: Record<SkillFit, string> = {
-  strong: "border-green-200 bg-green-50 text-green-700",
-  good: "border-accent/25 bg-[var(--accent-light)] text-[var(--accent-hover)]",
-  moderate: "border-amber-200 bg-amber-50 text-amber-700",
-  low: "border-red-200 bg-red-50 text-red-700",
+  strong: "border-[var(--success-border)] bg-[var(--success-light)] text-[var(--success)]",
+  good: "border-[var(--accent-border)] bg-[var(--accent-light)] text-[var(--accent-hover)]",
+  moderate: "border-[var(--warning-border)] bg-[var(--warning-light)] text-[var(--warning)]",
+  low: "border-[var(--danger-border)] bg-[var(--danger-light)] text-[var(--danger)]",
 };
 
 function useCountUp(target: number, durationMs = 800): number {
@@ -212,8 +212,8 @@ export function NewApplicationForm() {
           style={{ transitionDelay: "80ms" }}
         >
           <div className={`p-5 ${cardPanel}`}>
-            <p className="mb-3 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-green-700">
-              <span className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-green-100 text-[10px] text-green-700">
+            <p className="mb-3 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-[var(--success)]">
+              <span className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-[var(--success-light)] text-[10px] text-[var(--success)]">
                 ✓
               </span>
               {t("matchColumnHave")}
@@ -223,13 +223,13 @@ export function NewApplicationForm() {
                 {haveItems.map((item) => (
                   <li
                     key={item.skill}
-                    className={`flex items-start gap-2 rounded-lg border border-green-200 bg-green-50 px-3 py-1.5 text-[13px] text-green-800 ${item.required ? "" : "opacity-80"}`}
+                    className={`flex items-start gap-2 rounded-lg border border-[var(--success-border)] bg-[var(--success-light)] px-3 py-1.5 text-[13px] text-[var(--success)] ${item.required ? "" : "opacity-80"}`}
                   >
-                    <span className="mt-px shrink-0 text-green-600">✓</span>
+                    <span className="mt-px shrink-0 text-[var(--success)]">✓</span>
                     <span className="min-w-0">
                       {item.skill}
                       {!item.required && (
-                        <span className="ml-1.5 text-[10px] uppercase tracking-wide text-green-600/60">
+                        <span className="ml-1.5 text-[10px] uppercase tracking-wide text-[var(--success)]/60">
                           {t("matchNiceToHave")}
                         </span>
                       )}
@@ -243,8 +243,8 @@ export function NewApplicationForm() {
           </div>
 
           <div className={`p-5 ${cardPanel}`}>
-            <p className="mb-3 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-orange-700">
-              <span className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-orange-100 text-[10px] text-orange-700">
+            <p className="mb-3 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-[var(--warning)]">
+              <span className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-[var(--warning-light)] text-[10px] text-[var(--warning)]">
                 !
               </span>
               {t("matchColumnMissing")}
@@ -256,15 +256,15 @@ export function NewApplicationForm() {
                     key={item.skill}
                     className={`flex items-start gap-2 rounded-lg border px-3 py-1.5 text-[13px] ${
                       item.required
-                        ? "border-orange-200 bg-orange-50 text-orange-800"
-                        : "border-orange-100 bg-orange-50/50 text-orange-700/80"
+                        ? "border-[var(--warning-border)] bg-[var(--warning-light)] text-[var(--warning)]"
+                        : "border-[var(--warning-border)]/60 bg-[var(--warning-light)]/50 text-[var(--warning)]/80"
                     }`}
                   >
-                    <span className="mt-px shrink-0 text-orange-500">●</span>
+                    <span className="mt-px shrink-0 text-[var(--warning)]">●</span>
                     <span className="min-w-0">
                       {item.skill}
                       {!item.required && (
-                        <span className="ml-1.5 text-[10px] uppercase tracking-wide text-orange-600/60">
+                        <span className="ml-1.5 text-[10px] uppercase tracking-wide text-[var(--warning)]/60">
                           {t("matchNiceToHave")}
                         </span>
                       )}

@@ -22,7 +22,7 @@ const STATUS_TONES: Record<ApplicationStatus, string> = {
   saved: "border-border bg-muted text-muted-foreground",
   ready_to_apply: "border-[var(--warning)] bg-[var(--warning-light)] text-[var(--warning)]",
   applied: "border-[var(--accent)] bg-[var(--accent-light)] text-[var(--accent)]",
-  assessment: "border-[#7c3aed] bg-[#f3e8ff] text-[#7c3aed]",
+  assessment: "border-[var(--info)] bg-[var(--info-light)] text-[var(--info)]",
   interview: "border-[var(--warning)] bg-[var(--warning-light)] text-[var(--warning)]",
   rejected: "border-[var(--danger)] bg-[var(--danger-light)] text-[var(--danger)]",
   offer: "border-[var(--success)] bg-[var(--success-light)] text-[var(--success)]",

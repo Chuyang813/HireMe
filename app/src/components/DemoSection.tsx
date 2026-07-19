@@ -52,9 +52,9 @@ const INTERVIEW_CATEGORIES = [
 // ---------------------------------------------------------------------------
 
 function scoreColor(n: number) {
-  if (n >= 75) return "#16a34a";
-  if (n >= 50) return "#d97706";
-  return "#dc2626";
+  if (n >= 75) return "#346538";
+  if (n >= 50) return "#956400";
+  return "#9f2f2d";
 }
 
 function Step1() {
@@ -437,7 +437,7 @@ export function DemoSection({ heading, sub, stepLabels }: DemoSectionProps) {
               <p className="font-display text-sm leading-tight">Senior Product Designer</p>
               <p className="text-xs text-muted-foreground">Acme Corp · Full-time</p>
             </div>
-            <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
+            <span className="rounded-full bg-muted px-3 py-1 text-xs font-medium text-muted-foreground">
               Saved
             </span>
           </div>

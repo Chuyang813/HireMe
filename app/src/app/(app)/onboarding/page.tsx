@@ -62,7 +62,7 @@ export default function OnboardingPage() {
         </div>
 
         <div className="surface-card app-page-content p-6 rise-enter [transition-delay:40ms] sm:p-8">
-        <div className="mb-6 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-800">
+        <div className="mb-6 rounded-md border border-[var(--warning-border)] bg-[var(--warning-light)] px-4 py-3 text-sm leading-6 text-[var(--warning)]">
           {t("resumeRequiredNotice")}
         </div>
 

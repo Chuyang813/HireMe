@@ -121,14 +121,14 @@ function FunnelChart({ counts }: { counts: Record<string, number> }) {
 // ---------------------------------------------------------------------------
 
 const STATUS_COLORS: Partial<Record<ApplicationStatus, string>> = {
-  saved: "#6b7280",
-  ready_to_apply: "#9ca3af",
-  applied: "#60a5fa",
-  assessment: "#f59e0b",
-  interview: "#a78bfa",
-  rejected: "#f87171",
-  offer: "#34d399",
-  withdrawn: "#4b5563",
+  saved: "#8f887c",
+  ready_to_apply: "#c2bbac",
+  applied: "#a3512b",
+  assessment: "#5b83a6",
+  interview: "#b08a2e",
+  rejected: "#b04a44",
+  offer: "#4c7d51",
+  withdrawn: "#6b655c",
 };
 
 function StatusBreakdown({
@@ -152,7 +152,7 @@ function StatusBreakdown({
             key={status}
             style={{
               width: `${(count / total) * 100}%`,
-              backgroundColor: STATUS_COLORS[status] ?? "#6b7280",
+              backgroundColor: STATUS_COLORS[status] ?? "#8f887c",
             }}
             title={`${APPLICATION_STATUS_LABEL[status]}: ${count}`}
           />
@@ -163,7 +163,7 @@ function StatusBreakdown({
           <div key={status} className="flex items-center gap-1.5 text-xs">
             <span
               className="inline-block h-2.5 w-2.5 rounded-full"
-              style={{ backgroundColor: STATUS_COLORS[status] ?? "#6b7280" }}
+              style={{ backgroundColor: STATUS_COLORS[status] ?? "#8f887c" }}
             />
             <span className="text-muted-foreground">
               {APPLICATION_STATUS_LABEL[status]}

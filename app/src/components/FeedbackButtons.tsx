@@ -41,7 +41,7 @@ export function FeedbackButtons({
         onClick={() => handleRate(1)}
         aria-label="Thumbs up"
         className={`rounded p-1 transition duration-150 ease-out hover:bg-muted active:scale-95 disabled:opacity-50 ${
-          rating === 1 ? "text-green-600 dark:text-green-400" : "text-muted-foreground"
+          rating === 1 ? "text-[var(--success)]" : "text-muted-foreground"
         }`}
       >
         <svg
@@ -65,7 +65,7 @@ export function FeedbackButtons({
         onClick={() => handleRate(-1)}
         aria-label="Thumbs down"
         className={`rounded p-1 transition duration-150 ease-out hover:bg-muted active:scale-95 disabled:opacity-50 ${
-          rating === -1 ? "text-red-600 dark:text-red-400" : "text-muted-foreground"
+          rating === -1 ? "text-[var(--danger)]" : "text-muted-foreground"
         }`}
       >
         <svg

@@ -152,14 +152,14 @@ export default async function AiEventsPage() {
                       <span
                         className={`inline-block rounded px-1.5 py-0.5 text-xs font-semibold ${
                           e.success
-                            ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
-                            : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
+                            ? "bg-[var(--success-light)] text-[var(--success)]"
+                            : "bg-[var(--danger-light)] text-[var(--danger)]"
                         }`}
                       >
                         {e.success ? "ok" : "err"}
                       </span>
                     </td>
-                    <td className="max-w-[200px] truncate px-4 py-2 text-red-600 dark:text-red-400">
+                    <td className="max-w-[200px] truncate px-4 py-2 text-[var(--danger)]">
                       {e.error_message ?? ""}
                     </td>
                   </tr>

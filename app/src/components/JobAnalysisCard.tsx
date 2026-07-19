@@ -84,9 +84,9 @@ function getFitLabel({
 }
 
 function scoreColor(n: number): string {
-  if (n >= 75) return "#16a34a";
-  if (n >= 50) return "#d97706";
-  return "#dc2626";
+  if (n >= 75) return "#346538";
+  if (n >= 50) return "#956400";
+  return "#9f2f2d";
 }
 
 export async function JobAnalysisCard({
