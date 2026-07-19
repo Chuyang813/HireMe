@@ -830,6 +830,15 @@ export async function docxPreviewToPdf(container: HTMLElement, title: string): P
       doc.addPage([widthPt, heightPt], widthPt > heightPt ? "landscape" : "portrait");
     }
     doc.addImage(canvas.toDataURL("image/jpeg", 0.97), "JPEG", 0, 0, widthPt, heightPt);
+    const pageSearchLines = pdfSearchLines(page.innerText);
+    if (pageSearchLines.length) {
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(2);
+      doc.text(pageSearchLines, 2, 3, {
+        lineHeightFactor: 1,
+        renderingMode: "invisible",
+      });
+    }
   }
   if (!doc) throw new Error("The DOCX preview has no pages.");
   doc.setProperties({ title, creator: "HireMe" });
