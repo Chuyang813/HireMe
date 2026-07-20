@@ -1,4 +1,4 @@
-import { aiJson } from "./provider";
+import { aiJson, DEFAULT_DOCUMENT_TEXT_MODEL } from "./provider";
 import { selectResumeEvidenceSemantic, resumeToText, jobToText } from "./evidence";
 import {
   applyResumeReplacements,
@@ -45,9 +45,7 @@ export async function tailorResume({
       {
         role: "user",
         content: [
-          `Immutable source resume (verbatim):\n${sourceResume}`,
           `Editable source lines (JSON):\n${JSON.stringify(template.candidates, null, 2)}`,
-          `Candidate parsed resume for fact checking only (JSON):\n${JSON.stringify(resume, null, 2)}`,
           `Parsed job posting (JSON):\n${JSON.stringify(job, null, 2)}`,
           `Most relevant candidate evidence selected for this job:\n${matchedEvidence}`,
           extraInstructions
@@ -59,6 +57,7 @@ export async function tailorResume({
           .join("\n\n"),
       },
     ],
+    model: DEFAULT_DOCUMENT_TEXT_MODEL,
     maxTokens: 4096,
   });
 

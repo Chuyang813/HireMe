@@ -2,7 +2,12 @@ export const runtime = "edge";
 
 import { type NextRequest } from "next/server";
 import { getOptionalUser } from "@/lib/auth/current-user";
-import { aiText, extractJson, AI_PROVIDER, DEFAULT_MODEL } from "@/lib/ai/provider";
+import {
+  aiText,
+  extractJson,
+  AI_PROVIDER,
+  DEFAULT_DOCUMENT_TEXT_MODEL,
+} from "@/lib/ai/provider";
 import { PROMPT_VERSIONS, type PromptType } from "@/lib/ai/prompt-versions";
 import { selectResumeEvidenceSemantic, resumeToText, jobToText } from "@/lib/ai/evidence";
 import { INTERVIEW_PREP_SYSTEM } from "@/lib/ai/interview-prep";
@@ -22,8 +27,6 @@ import { getClientIpFromHeaders } from "@/lib/security/request";
 import type { DocumentType, ParsedJob, ParsedResume } from "@/lib/db/types";
 
 const AI_TIMEOUT_MS = 115_000;
-const DEEPSEEK_CHAT_MODEL = "deepseek-chat";
-
 function docTypeToPromptType(dt: DocumentType): PromptType {
   if (dt === 'tailored_resume') return 'resume-tailor';
   if (dt === 'cover_letter') return 'cover-letter';
@@ -32,22 +35,20 @@ function docTypeToPromptType(dt: DocumentType): PromptType {
   return 'resume-tailor';
 }
 
-function auditNote(promptType: PromptType, model: string = DEFAULT_MODEL) {
+function auditNote(
+  promptType: PromptType,
+  model: string = DEFAULT_DOCUMENT_TEXT_MODEL,
+) {
   return `provider=${AI_PROVIDER} model=${model} prompt_type=${promptType} prompt_version=${PROMPT_VERSIONS[promptType]}`;
 }
 
-function getDocTypeAiOptions(dt: DocumentType): {
+function getDocumentAiOptions(): {
   model?: string;
   thinkingMode?: "enabled" | "disabled";
 } {
-  if (dt === "cover_letter" || dt === "email_draft") {
-    return { model: DEEPSEEK_CHAT_MODEL, thinkingMode: "disabled" };
-  }
-  if (dt === "interview_prep") {
-    return { model: DEEPSEEK_CHAT_MODEL, thinkingMode: "disabled" };
-  }
-  // tailored_resume: use default model, thinking follows env
-  return {};
+  // Document output is constrained text/JSON. A reasoning model can spend the
+  // whole output budget on hidden reasoning and return an empty final answer.
+  return { model: DEFAULT_DOCUMENT_TEXT_MODEL, thinkingMode: "disabled" };
 }
 
 // ---------------------------------------------------------------------------
@@ -163,9 +164,7 @@ async function buildPrompt(
       system: RESUME_SYSTEM,
       maxTokens: 4096,
       userMessage: [
-        `Immutable source resume (verbatim):\n${sourceResume}`,
         `Editable source lines (JSON):\n${JSON.stringify(template.candidates, null, 2)}`,
-        `Candidate parsed resume for fact checking only (JSON):\n${resumeJson}`,
         `Parsed job posting (JSON):\n${jobJson}`,
         `Most relevant candidate evidence selected for this job:\n${matchedEvidence}`,
         "Return only the replacement-map JSON. Preserve the source format and structure exactly.",
@@ -325,42 +324,21 @@ export async function POST(req: NextRequest) {
         controller.close();
       }, AI_TIMEOUT_MS);
 
-      const aiOptions = getDocTypeAiOptions(documentType);
-      const usedModel = aiOptions.model ?? DEFAULT_MODEL;
+      const aiOptions = getDocumentAiOptions();
+      const usedModel = aiOptions.model ?? DEFAULT_DOCUMENT_TEXT_MODEL;
 
       try {
         console.log(`[generate-document] Starting ${AI_PROVIDER}:${usedModel} generation for ${documentType} (thinking=${aiOptions.thinkingMode ?? "env-default"})`);
         const aiStartedAt = Date.now();
 
-        let content!: string;
-        let actualModel = usedModel;
-        try {
-          content = await aiText({
-            system: prompt.system,
-            messages: [{ role: "user", content: prompt.userMessage }],
-            maxTokens: prompt.maxTokens,
-            model: aiOptions.model,
-            thinkingMode: aiOptions.thinkingMode,
-          });
-        } catch (primaryErr) {
-          if (
-            documentType === "tailored_resume" &&
-            primaryErr instanceof Error &&
-            primaryErr.message.includes("no text")
-          ) {
-            console.log(`[generate-document] [fallback to deepseek-chat] tailored_resume returned no text, retrying with ${DEEPSEEK_CHAT_MODEL}`);
-            actualModel = DEEPSEEK_CHAT_MODEL;
-            content = await aiText({
-              system: prompt.system,
-              messages: [{ role: "user", content: prompt.userMessage }],
-              maxTokens: prompt.maxTokens,
-              model: DEEPSEEK_CHAT_MODEL,
-              thinkingMode: "disabled",
-            });
-          } else {
-            throw primaryErr;
-          }
-        }
+        const contentFromModel = await aiText({
+          system: prompt.system,
+          messages: [{ role: "user", content: prompt.userMessage }],
+          maxTokens: prompt.maxTokens,
+          model: aiOptions.model,
+          thinkingMode: aiOptions.thinkingMode,
+        });
+        let content = contentFromModel;
 
         if (documentType === "tailored_resume") {
           try {
@@ -389,7 +367,7 @@ export async function POST(req: NextRequest) {
           application_id: applicationId,
           event_type: "document_generation_stream",
           provider: AI_PROVIDER,
-          model: actualModel,
+          model: usedModel,
           prompt_type: pt,
           prompt_version: PROMPT_VERSIONS[pt],
           document_type: documentType,
@@ -402,7 +380,7 @@ export async function POST(req: NextRequest) {
           user_id: user.id,
           event_type: "document_generated",
           new_value: documentType,
-          note: auditNote(pt, actualModel),
+          note: auditNote(pt, usedModel),
         });
       } catch (e) {
         clearTimeout(timer);

@@ -20,6 +20,18 @@ const DEFAULT_GEMINI_FALLBACK_MODELS = [
   "gemma-3-4b-it",
 ];
 
+type ProviderName = "deepseek" | "glm" | "gemini";
+
+export function resolveDocumentTextModel(
+  provider: ProviderName,
+  defaultModel: string,
+  configuredModel?: string,
+): string {
+  const configured = configuredModel?.trim();
+  if (configured) return configured;
+  return provider === "deepseek" ? "deepseek-chat" : defaultModel;
+}
+
 function getRequestedProvider(): ProviderName {
   if (process.env.AI_PROVIDER === "gemini" && process.env.GEMINI_API_KEY) {
     return "gemini";
@@ -46,13 +58,16 @@ export const DEFAULT_MODEL =
     : AI_PROVIDER === "glm"
       ? DEFAULT_GLM_MODEL
       : DEFAULT_GEMINI_MODEL;
+export const DEFAULT_DOCUMENT_TEXT_MODEL = resolveDocumentTextModel(
+  AI_PROVIDER,
+  DEFAULT_MODEL,
+  process.env.DOCUMENT_AI_MODEL,
+);
 
 export type AiTextMessage = {
   role: "user" | "assistant";
   content: string;
 };
-
-type ProviderName = "deepseek" | "glm" | "gemini";
 
 type ProviderModel = {
   provider: ProviderName;

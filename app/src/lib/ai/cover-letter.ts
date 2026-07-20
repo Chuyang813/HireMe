@@ -1,4 +1,4 @@
-import { aiJson } from "./provider";
+import { aiJson, DEFAULT_DOCUMENT_TEXT_MODEL } from "./provider";
 import { selectResumeEvidenceSemantic, resumeToText, jobToText } from "./evidence";
 import {
   extractResumeHeader,
@@ -57,6 +57,7 @@ export async function generateCoverLetter({
           .join("\n\n"),
       },
     ],
+    model: DEFAULT_DOCUMENT_TEXT_MODEL,
     maxTokens: 2048,
   });
 
