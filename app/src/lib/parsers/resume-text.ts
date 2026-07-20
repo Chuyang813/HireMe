@@ -5,6 +5,55 @@ export type ExtractedResume = {
   sourceType: "pdf" | "docx" | "txt";
 };
 
+type PdfTextItemLike = {
+  str: string;
+  transform?: number[];
+  width?: number;
+  height?: number;
+  hasEOL?: boolean;
+};
+
+export function joinPdfTextItems(items: PdfTextItemLike[]): string {
+  let text = "";
+  let previous: PdfTextItemLike | null = null;
+
+  for (const item of items) {
+    const value = item.str ?? "";
+    if (previous) {
+      const previousX = previous.transform?.[4] ?? 0;
+      const previousY = previous.transform?.[5] ?? 0;
+      const currentX = item.transform?.[4] ?? previousX;
+      const currentY = item.transform?.[5] ?? previousY;
+      const previousHeight = Math.max(
+        1,
+        previous.height ?? Math.abs(previous.transform?.[3] ?? 0),
+      );
+      const currentHeight = Math.max(1, item.height ?? Math.abs(item.transform?.[3] ?? 0));
+      const lineChanged = Boolean(previous.hasEOL)
+        || Math.abs(currentY - previousY) > Math.max(
+          1.5,
+          Math.min(previousHeight, currentHeight) * 0.35,
+        )
+        || currentX < previousX - 2;
+
+      if (lineChanged) {
+        text = `${text.trimEnd()}\n`;
+      } else if (value && !/\s$/.test(text) && !/^\s/.test(value)) {
+        const previousRight = previousX + Math.max(0, previous.width ?? 0);
+        const gap = currentX - previousRight;
+        if (gap > Math.max(0.5, Math.min(previousHeight, currentHeight) * 0.06)) {
+          text += " ";
+        }
+      }
+    }
+
+    text += value;
+    previous = item;
+  }
+
+  return text.trim();
+}
+
 export async function extractTextFromUpload(
   buffer: Buffer,
   mimeType: string,
@@ -36,21 +85,24 @@ export async function extractTextFromUpload(
       // otherwise the caller's bytes are zeroed and later uploads store empty files.
       const uint8 = new Uint8Array(buffer);
       const pdf = await getDocumentProxy(uint8);
-      // unpdf's extractText joins items with spaces and loses line breaks, which
-      // collapses the resume into one line and breaks every line-based consumer
-      // (header extraction, format-lock candidates). Walk the text items and
-      // honor pdf.js line-break markers instead.
+      // Preserve both PDF line geometry and horizontal gaps. pdf.js frequently
+      // emits adjacent words as separate items without an embedded space.
       const pageTexts: string[] = [];
       for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
         const page = await pdf.getPage(pageNumber);
         const { items } = await page.getTextContent();
-        let pageText = "";
-        for (const item of items) {
-          if (!("str" in item)) continue;
-          pageText += item.str;
-          if (item.hasEOL) pageText += "\n";
-        }
-        pageTexts.push(pageText);
+        const textItems = items.flatMap((item): PdfTextItemLike[] => (
+          "str" in item
+            ? [{
+                str: item.str,
+                transform: item.transform,
+                width: item.width,
+                height: item.height,
+                hasEOL: item.hasEOL,
+              }]
+            : []
+        ));
+        pageTexts.push(joinPdfTextItems(textItems));
       }
       const rawText = pageTexts.join("\n").trim();
       const normalized = rawText

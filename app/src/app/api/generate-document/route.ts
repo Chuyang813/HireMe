@@ -10,6 +10,7 @@ import {
   applyResumeReplacements,
   createResumeFormatTemplate,
   extractResumeHeader,
+  hasUsableResumeLineStructure,
   renderCoverLetterWithResumeFormat,
   type CoverLetterDraft,
 } from "@/lib/ai/resume-format";
@@ -282,7 +283,7 @@ export async function POST(req: NextRequest) {
 
   const resumeQuery = supabase
     .from("base_resumes")
-    .select("parsed_resume_json, raw_text")
+    .select("parsed_resume_json, raw_text, source_file_type")
     .eq("user_id", user.id);
   const { data: resumeRow } = app.base_resume_id
     ? await resumeQuery.eq("id", app.base_resume_id).single()
@@ -297,7 +298,11 @@ export async function POST(req: NextRequest) {
   }
 
   const parsedResume = (resumeRow?.parsed_resume_json as ParsedResume | null) ?? {};
-  const rawResumeText = resumeRow?.raw_text ?? "";
+  const storedResumeText = resumeRow?.raw_text ?? "";
+  const rawResumeText = resumeRow?.source_file_type === "txt"
+    || hasUsableResumeLineStructure(storedResumeText)
+    ? storedResumeText
+    : resumeToText(parsedResume);
   const prompt = await buildPrompt(
     documentType,
     parsedResume,

@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import {
   saveDocumentAction,
   analyzeAssessmentAction,
+  getApplicationResumeSourceAction,
   getDocumentVersionsAction,
   type DocumentVersion,
 } from "@/app/actions/ai";
@@ -604,6 +605,9 @@ function DocumentPanel({
     setContent("");
     setGenerating(true);
     try {
+      if (documentType === "tailored_resume" || documentType === "cover_letter") {
+        await getApplicationResumeSourceAction(applicationId);
+      }
       const res = await fetch("/api/generate-document", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -824,6 +828,16 @@ function DocumentPanel({
               >
                 {t("downloadPDF")}
               </Button>
+              {sourceType === "docx" && (
+                <Button
+                  variant="outline"
+                  onClick={() => handleExport("docx")}
+                  disabled={exporting || !content.trim()}
+                  title={t("downloadDOCX")}
+                >
+                  {t("downloadDOCX")}
+                </Button>
+              )}
             </>
           )}
           {docId && (

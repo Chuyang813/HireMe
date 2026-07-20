@@ -41,6 +41,45 @@ function newlineFor(value: string): string {
   return "\n";
 }
 
+export function hasUsableResumeLineStructure(rawResumeText: string): boolean {
+  const trimmed = rawResumeText.trim();
+  if (!trimmed) return false;
+  const lines = splitLines(trimmed).map((line) => line.trim()).filter(Boolean);
+  if (lines.length === 1) return trimmed.length <= MAX_HEADER_LINE_LENGTH;
+  return Math.max(...lines.map((line) => line.length)) <= 500;
+}
+
+function normalizedWords(value: string): string[] {
+  return value
+    .normalize("NFKC")
+    .toLocaleLowerCase()
+    .replace(/[^\p{L}\p{N}@.+]+/gu, " ")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+}
+
+export function stripAccidentalResumePrefixFromCoverLetter(
+  content: string,
+  rawResumeText: string,
+): string {
+  const lines = splitLines(content);
+  const coverStart = lines.findIndex((line) => (
+    /^(?:(?:january|february|march|april|may|june|july|august|september|october|november|december)\s+\d{1,2},\s+\d{4}|re\s*:|dear\b|to whom\b)/i.test(line.trim())
+  ));
+  if (coverStart <= 0) return content;
+
+  const prefix = lines.slice(0, coverStart).join(" ").trim();
+  if (prefix.length < 160) return content;
+  const prefixWords = normalizedWords(prefix).slice(0, 80);
+  const sourceWords = new Set(normalizedWords(rawResumeText).slice(0, 160));
+  if (!prefixWords.length || sourceWords.size < 8) return content;
+  const shared = prefixWords.filter((word) => sourceWords.has(word)).length;
+  if (shared / prefixWords.length < 0.65) return content;
+
+  return lines.slice(coverStart).join(newlineFor(content)).trimStart();
+}
+
 function contentWithoutPrefix(line: string): string {
   const bullet = line.match(BULLET_RE);
   if (bullet) return bullet[2];
@@ -147,6 +186,7 @@ export function diffResumeReplacements(
 const MAX_HEADER_LINE_LENGTH = 160;
 
 export function extractResumeHeader(rawResumeText: string): string[] {
+  if (!hasUsableResumeLineStructure(rawResumeText)) return [];
   const lines = splitLines(rawResumeText);
   const start = lines.findIndex((line) => line.trim());
   if (start < 0) return [];

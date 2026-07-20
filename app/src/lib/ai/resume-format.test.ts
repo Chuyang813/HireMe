@@ -4,7 +4,9 @@ import {
   createResumeFormatTemplate,
   diffResumeReplacements,
   extractResumeHeader,
+  hasUsableResumeLineStructure,
   renderCoverLetterWithResumeFormat,
+  stripAccidentalResumePrefixFromCoverLetter,
 } from "./resume-format";
 
 const source = [
@@ -72,6 +74,27 @@ describe("resume format preservation", () => {
       + "of experience shipping design systems, native apps, and web platforms across "
       + "four product teams and two continents.";
     expect(extractResumeHeader(collapsed)).toEqual([]);
+    expect(hasUsableResumeLineStructure(collapsed)).toBe(false);
+  });
+
+  it("removes a legacy collapsed-resume prefix from a cover letter", () => {
+    const collapsed = Array.from(
+      { length: 30 },
+      (_, index) => `Resume fact ${index + 1}`,
+    ).join(" ");
+    const brokenLetter = [
+      collapsed,
+      "",
+      "July 19, 2026",
+      "Acme Corp",
+      "",
+      "Dear Hiring Manager,",
+      "I am applying for the role.",
+    ].join("\n");
+
+    const repaired = stripAccidentalResumePrefixFromCoverLetter(brokenLetter, collapsed);
+    expect(repaired).toMatch(/^July 19, 2026/);
+    expect(repaired).not.toContain("Resume fact 1 Resume fact 2");
   });
 
   it("reuses the exact resume header for cover letters", () => {

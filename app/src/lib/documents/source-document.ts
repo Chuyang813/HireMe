@@ -1,5 +1,10 @@
 import { createApplicationPdf } from "./application-pdf";
-import { diffResumeReplacements, extractResumeHeader } from "@/lib/ai/resume-format";
+import {
+  diffResumeReplacements,
+  extractResumeHeader,
+  hasUsableResumeLineStructure,
+  stripAccidentalResumePrefixFromCoverLetter,
+} from "@/lib/ai/resume-format";
 
 export type ResumeSourceType = "pdf" | "docx" | "txt";
 export type PrintableDocumentType = "tailored_resume" | "cover_letter";
@@ -532,11 +537,11 @@ async function createCoverPdfFromSource(
     const size = bodyFontSize * (bold ? 1.02 : 1);
     drawContext.font = `${bold ? "bold " : ""}${size}px "${bodyFont}", "${bodyFamily}", serif`;
     const wrapped = lines.flatMap((line) => wrapCanvasText(drawContext, line, maxWidth));
-    const needed = wrapped.length * lineHeight + bodyFontSize * 0.72;
-    if (y + needed > bottom) pushPage();
-    drawContext.fillStyle = `rgb(${bodyColor.join(",")})`;
-    drawContext.textBaseline = "alphabetic";
     wrapped.forEach((line) => {
+      if (y + lineHeight > bottom) pushPage();
+      drawContext.font = `${bold ? "bold " : ""}${size}px "${bodyFont}", "${bodyFamily}", serif`;
+      drawContext.fillStyle = `rgb(${bodyColor.join(",")})`;
+      drawContext.textBaseline = "alphabetic";
       drawContext.fillText(line, left, y);
       y += lineHeight;
     });
@@ -754,11 +759,17 @@ export async function createSourceFormattedArtifact({
   documentType: PrintableDocumentType;
   title: string;
 }): Promise<SourceFormattedArtifact> {
+  const artifactContent = documentType === "cover_letter"
+    ? stripAccidentalResumePrefixFromCoverLetter(content, rawSourceText)
+    : !hasUsableResumeLineStructure(content) && hasUsableResumeLineStructure(rawSourceText)
+      ? rawSourceText
+      : content;
+
   if (sourceType === "txt" || !sourceUrl) {
     return {
       previewType: "pdf",
       sourceType: "txt",
-      pdfBlob: await createApplicationPdf(content, documentType, title),
+      pdfBlob: await createApplicationPdf(artifactContent, documentType, title),
     };
   }
 
@@ -774,8 +785,8 @@ export async function createSourceFormattedArtifact({
       previewType: "pdf",
       sourceType,
       pdfBlob: documentType === "tailored_resume"
-        ? await createTailoredPdfFromSource(sourceBytes, rawSourceText, content, title)
-        : await createCoverPdfFromSource(sourceBytes, rawSourceText, content, title),
+        ? await createTailoredPdfFromSource(sourceBytes, rawSourceText, artifactContent, title)
+        : await createCoverPdfFromSource(sourceBytes, rawSourceText, artifactContent, title),
     };
   }
 
@@ -783,8 +794,8 @@ export async function createSourceFormattedArtifact({
     previewType: "docx",
     sourceType,
     docxBlob: documentType === "tailored_resume"
-      ? await createTailoredDocxFromSource(sourceBytes, rawSourceText, content)
-      : await createCoverDocxFromSource(sourceBytes, rawSourceText, content),
+      ? await createTailoredDocxFromSource(sourceBytes, rawSourceText, artifactContent)
+      : await createCoverDocxFromSource(sourceBytes, rawSourceText, artifactContent),
   };
 }
 

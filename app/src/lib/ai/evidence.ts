@@ -130,26 +130,39 @@ function extractResumeEvidence(resume: ParsedResume): Omit<ResumeEvidence, "matc
 export function resumeToText(resume: ParsedResume): string {
   const parts: string[] = [];
 
-  for (const exp of (resume.experience ?? [])) {
+  const contact = [
+    resume.contact?.email,
+    resume.contact?.phone,
+    resume.contact?.location,
+    ...(resume.contact?.links ?? []),
+  ].filter(Boolean).join(' | ');
+  const resumeHeader = [resume.name, contact].filter(Boolean).join('\n');
+  if (resumeHeader) parts.push(resumeHeader);
+  if (resume.summary) parts.push(`PROFILE\n${resume.summary}`);
+
+  const experience = (resume.experience ?? []).flatMap((exp) => {
     const header = [exp.title, exp.company, exp.location, exp.start, exp.end]
       .filter(Boolean)
       .join(' | ');
     const lines = [header, ...(exp.bullets ?? [])].filter(Boolean);
-    if (lines.length) parts.push(lines.join('\n'));
-  }
+    return lines.length ? [lines.join('\n')] : [];
+  });
+  if (experience.length) parts.push(`EXPERIENCE\n${experience.join('\n\n')}`);
 
-  for (const proj of (resume.projects ?? [])) {
+  const projects = (resume.projects ?? []).flatMap((proj) => {
     const header = [proj.name, proj.description].filter(Boolean).join(': ');
     const lines = [header, ...(proj.bullets ?? [])].filter(Boolean);
-    if (lines.length) parts.push(lines.join('\n'));
-  }
+    return lines.length ? [lines.join('\n')] : [];
+  });
+  if (projects.length) parts.push(`PROJECTS\n${projects.join('\n\n')}`);
 
-  for (const edu of (resume.education ?? [])) {
+  const education = (resume.education ?? []).flatMap((edu) => {
     const line = [edu.degree, edu.field, edu.school, edu.start, edu.end, edu.notes]
       .filter(Boolean)
       .join(' | ');
-    if (line) parts.push(line);
-  }
+    return line ? [line] : [];
+  });
+  if (education.length) parts.push(`EDUCATION\n${education.join('\n')}`);
 
   if (resume.skills?.length) parts.push('Skills: ' + resume.skills.join(', '));
   if (resume.certifications?.length) parts.push('Certifications: ' + resume.certifications.join(', '));

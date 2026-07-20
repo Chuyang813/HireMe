@@ -12,6 +12,8 @@ import {
   type GroundingWarning,
 } from "@/lib/ai/grounding";
 import { extractTextFromUpload } from "@/lib/parsers/resume-text";
+import { hasUsableResumeLineStructure } from "@/lib/ai/resume-format";
+import { resumeToText } from "@/lib/ai/evidence";
 import { logTimelineEvent } from "@/lib/db/timeline";
 import { logAiEvent } from "@/lib/db/ai-events";
 import { AI_PROVIDER, DEFAULT_MODEL } from "@/lib/ai/provider";
@@ -87,13 +89,18 @@ export async function generateDocumentAction(
 
   const resumeQuery = supabase
     .from("base_resumes")
-    .select("parsed_resume_json, raw_text")
+    .select("parsed_resume_json, raw_text, source_file_type")
     .eq("user_id", user.id);
   const { data: resume } = app.base_resume_id
     ? await resumeQuery.eq("id", app.base_resume_id).single()
     : await resumeQuery.eq("is_default", true).single();
 
   const parsedResume = (resume?.parsed_resume_json as ParsedResume | null) ?? {};
+  const storedResumeText = resume?.raw_text ?? "";
+  const formattingResumeText = resume?.source_file_type === "txt"
+    || hasUsableResumeLineStructure(storedResumeText)
+    ? storedResumeText
+    : resumeToText(parsedResume);
 
   let content: string;
   const aiStartedAt = Date.now();
@@ -102,13 +109,13 @@ export async function generateDocumentAction(
       content = await tailorResume({
         resume: parsedResume,
         job,
-        rawResumeText: resume?.raw_text,
+        rawResumeText: formattingResumeText,
       });
     } else if (documentType === "cover_letter") {
       content = await generateCoverLetter({
         resume: parsedResume,
         job,
-        rawResumeText: resume?.raw_text,
+        rawResumeText: formattingResumeText,
       });
     } else if (documentType === "email_draft") {
       const draft = await generateEmailDraft({
@@ -199,7 +206,7 @@ export async function getApplicationResumeSourceAction(
 
   const resumeQuery = supabase
     .from("base_resumes")
-    .select("source_file_path, source_file_type, raw_text")
+    .select("id, source_file_path, source_file_type, raw_text, parsed_resume_json")
     .eq("user_id", user.id);
   const { data: resume } = application.base_resume_id
     ? await resumeQuery.eq("id", application.base_resume_id).single()
@@ -211,11 +218,48 @@ export async function getApplicationResumeSourceAction(
     return { ok: false, error: "Unsupported source resume format." };
   }
 
+  let rawText = resume.raw_text ?? "";
+  if (
+    sourceType !== "txt"
+    && resume.source_file_path
+    && !hasUsableResumeLineStructure(rawText)
+  ) {
+    const sourceFile = await supabase.storage
+      .from("resumes")
+      .download(resume.source_file_path);
+    if (!sourceFile.error && sourceFile.data?.size) {
+      try {
+        const bytes = Buffer.from(await sourceFile.data.arrayBuffer());
+        const extracted = await extractTextFromUpload(
+          bytes,
+          sourceType === "pdf"
+            ? "application/pdf"
+            : "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+          resume.source_file_path,
+        );
+        if (hasUsableResumeLineStructure(extracted.rawText)) {
+          rawText = extracted.rawText;
+          await supabase
+            .from("base_resumes")
+            .update({ raw_text: rawText })
+            .eq("id", resume.id)
+            .eq("user_id", user.id);
+        }
+      } catch {
+        // The preview can still use parsed-resume text as a safe recovery path.
+      }
+    }
+  }
+
+  if (sourceType !== "txt" && !hasUsableResumeLineStructure(rawText)) {
+    rawText = resumeToText((resume.parsed_resume_json as ParsedResume | null) ?? {});
+  }
+
   if (sourceType === "txt" || !resume.source_file_path) {
     return {
       ok: true,
       sourceType: "txt",
-      rawText: resume.raw_text ?? "",
+      rawText,
       url: null,
     };
   }
@@ -223,7 +267,7 @@ export async function getApplicationResumeSourceAction(
   return {
     ok: true,
     sourceType,
-    rawText: resume.raw_text ?? "",
+    rawText,
     url: `/api/applications/${applicationId}/resume-source`,
   };
 }
