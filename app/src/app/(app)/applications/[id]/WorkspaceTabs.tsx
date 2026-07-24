@@ -569,6 +569,9 @@ function DocumentPanel({
   const [evalLoading, setEvalLoading] = useState(false);
   const sourcePreviewRef = useRef<SourceDocumentPreviewHandle>(null);
   const [sourceType, setSourceType] = useState<ResumeSourceType | null>(null);
+  const [adjustText, setAdjustText] = useState("");
+  const [adjusting, setAdjusting] = useState(false);
+  const canAdjust = documentType === "tailored_resume" || documentType === "cover_letter";
 
   async function saveContent(nextContent: string) {
     if (!nextContent.trim() || nextContent.includes("[Error:")) return false;
@@ -599,6 +602,59 @@ function DocumentPanel({
     return false;
   }
 
+  async function streamGeneratedDocument(extraBody: Record<string, unknown>): Promise<string> {
+    const res = await fetch("/api/generate-document", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        application_id: applicationId,
+        document_type: documentType,
+        ...extraBody,
+      }),
+    });
+
+    if (!res.ok) {
+      const json = await res.json().catch(() => ({})) as { error?: string };
+      throw new Error(json.error ?? t("generationFailed"));
+    }
+
+    const reader = res.body?.getReader();
+    if (!reader) throw new Error(t("streamingUnsupported"));
+
+    const decoder = new TextDecoder();
+    let accumulated = "";
+    let rafId: ReturnType<typeof requestAnimationFrame> | null = null;
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      accumulated += decoder.decode(value, { stream: true });
+
+      // Throttle state updates with requestAnimationFrame
+      if (rafId) cancelAnimationFrame(rafId);
+      const snapshot = accumulated;
+      rafId = requestAnimationFrame(() => setContent(snapshot));
+    }
+    // Final flush
+    if (rafId) cancelAnimationFrame(rafId);
+    setContent(accumulated);
+    if (accumulated.includes("[Error:")) throw new Error(t("generationFailed"));
+    return accumulated;
+  }
+
+  async function runResumeEvalCheck(accumulated: string) {
+    if (documentType !== "tailored_resume") return;
+    setEvalLoading(true);
+    try {
+      const result = await runResumeEvals(applicationId, accumulated);
+      setEvalResult(result);
+    } catch {
+      // Eval failure is non-fatal; resume is still usable
+    } finally {
+      setEvalLoading(false);
+    }
+  }
+
   async function handleGenerate() {
     setGenerateError("");
     setSaveStatus("idle");
@@ -608,65 +664,31 @@ function DocumentPanel({
       if (documentType === "tailored_resume" || documentType === "cover_letter") {
         await getApplicationResumeSourceAction(applicationId);
       }
-      const res = await fetch("/api/generate-document", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          application_id: applicationId,
-          document_type: documentType,
-        }),
-      });
-
-      if (!res.ok) {
-        const json = await res.json().catch(() => ({})) as { error?: string };
-        setGenerateError(json.error ?? t("generationFailed"));
-        return;
-      }
-
-      const reader = res.body?.getReader();
-      if (!reader) {
-        setGenerateError(t("streamingUnsupported"));
-        return;
-      }
-
-      const decoder = new TextDecoder();
-      let accumulated = "";
-      let rafId: ReturnType<typeof requestAnimationFrame> | null = null;
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        accumulated += decoder.decode(value, { stream: true });
-
-        // Throttle state updates with requestAnimationFrame
-        if (rafId) cancelAnimationFrame(rafId);
-        const snapshot = accumulated;
-        rafId = requestAnimationFrame(() => setContent(snapshot));
-      }
-      // Final flush
-      if (rafId) cancelAnimationFrame(rafId);
-      setContent(accumulated);
-      if (accumulated.includes("[Error:")) {
-        setGenerateError(t("generationFailed"));
-        return;
-      }
+      const accumulated = await streamGeneratedDocument({});
       await saveContent(accumulated);
-
-      if (documentType === "tailored_resume") {
-        setEvalLoading(true);
-        try {
-          const result = await runResumeEvals(applicationId, accumulated);
-          setEvalResult(result);
-        } catch {
-          // Eval failure is non-fatal; resume is still usable
-        } finally {
-          setEvalLoading(false);
-        }
-      }
+      await runResumeEvalCheck(accumulated);
     } catch (e) {
       setGenerateError(e instanceof Error ? e.message : t("generationFailed"));
     } finally {
       setGenerating(false);
+    }
+  }
+
+  async function handleAdjust() {
+    const instruction = adjustText.trim();
+    if (!instruction || !content.trim()) return;
+    setGenerateError("");
+    setSaveStatus("idle");
+    setAdjusting(true);
+    try {
+      const accumulated = await streamGeneratedDocument({ adjust_instruction: instruction });
+      await saveContent(accumulated);
+      setAdjustText("");
+      await runResumeEvalCheck(accumulated);
+    } catch (e) {
+      setGenerateError(e instanceof Error ? e.message : t("generationFailed"));
+    } finally {
+      setAdjusting(false);
     }
   }
 
@@ -806,7 +828,7 @@ function DocumentPanel({
           <Button
             variant="outline"
             onClick={handleGenerate}
-            disabled={generating || !hasResume}
+            disabled={generating || adjusting || !hasResume}
           >
             {generating ? (
               <span className="flex items-center gap-1.5">
@@ -828,16 +850,14 @@ function DocumentPanel({
               >
                 {t("downloadPDF")}
               </Button>
-              {sourceType === "docx" && (
-                <Button
-                  variant="outline"
-                  onClick={() => handleExport("docx")}
-                  disabled={exporting || !content.trim()}
-                  title={t("downloadDOCX")}
-                >
-                  {t("downloadDOCX")}
-                </Button>
-              )}
+              <Button
+                variant="outline"
+                onClick={() => handleExport("docx")}
+                disabled={exporting || !content.trim() || !sourceType}
+                title={t("downloadDOCX")}
+              >
+                {t("downloadDOCX")}
+              </Button>
             </>
           )}
           {docId && (
@@ -866,10 +886,41 @@ function DocumentPanel({
           content={content}
           documentType={documentType === "cover_letter" ? "cover_letter" : "tailored_resume"}
           title={exportFilename}
-          isGenerating={generating}
+          isGenerating={generating || adjusting}
           onSourceTypeChange={setSourceType}
         />
       </div>
+
+      {canAdjust && docId && content && !generating && (
+        <div className="flex flex-wrap items-center gap-2">
+          <input
+            type="text"
+            value={adjustText}
+            onChange={(e) => setAdjustText(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !adjusting && adjustText.trim()) {
+                e.preventDefault();
+                void handleAdjust();
+              }
+            }}
+            placeholder={t("adjustPlaceholder")}
+            disabled={adjusting}
+            className="input min-w-0 flex-1"
+          />
+          <Button
+            variant="outline"
+            onClick={handleAdjust}
+            disabled={adjusting || !adjustText.trim()}
+          >
+            {adjusting ? (
+              <span className="flex items-center gap-1.5">
+                <span className="h-3.5 w-3.5 animate-spin rounded-full border border-current border-t-transparent" />
+                {t("adjusting")}
+              </span>
+            ) : t("adjustButton")}
+          </Button>
+        </div>
+      )}
 
       {documentType === "tailored_resume" && (evalLoading || evalResult) && (
         <EvalResultsPanel
@@ -879,7 +930,7 @@ function DocumentPanel({
         />
       )}
 
-      {docId && content && !generating && (
+      {docId && content && !generating && !adjusting && (
         <div className="flex justify-end">
           <FeedbackButtons
             documentId={docId}

@@ -6,6 +6,7 @@ export const MAX_NOTES_LENGTH = 10_000;
 export const MAX_TITLE_LENGTH = 120;
 export const MAX_URL_LENGTH = 2_000;
 export const MAX_REQUEST_BODY_LENGTH = 8_000;
+export const MAX_ADJUST_INSTRUCTION_LENGTH = 1_000;
 
 export const documentTypeSchema = z.enum([
   "tailored_resume",

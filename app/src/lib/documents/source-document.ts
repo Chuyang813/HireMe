@@ -744,6 +744,74 @@ async function createCoverDocxFromSource(
   return saveDocx(zip, xml);
 }
 
+const GENERIC_DOCX_BULLET_RE = /^\s*(?:[-*•●▪◦‣–—]|\d+[.)])\s+(.*)$/u;
+const GENERIC_DOCX_SECTION_RE = /^(?:summary|profile|objective|experience|work experience|professional experience|education|skills|technical skills|projects|certifications|languages|publications|research|awards|volunteer(?:ing)?|interests)$/i;
+
+function looksLikeGenericDocxHeading(line: string): boolean {
+  const trimmed = line.trim().replace(/[:|]$/, "");
+  if (!trimmed || trimmed.length > 64) return false;
+  if (GENERIC_DOCX_SECTION_RE.test(trimmed)) return true;
+  const letters = trimmed.replace(/[^\p{L}]/gu, "");
+  return letters.length >= 3 && letters === letters.toUpperCase();
+}
+
+// Fallback DOCX export for source resumes that were not themselves uploaded as
+// DOCX (PDF or plain text). It cannot reproduce the original file's exact
+// fonts/layout — that fidelity is only possible when the source is a DOCX —
+// but it lets users download an editable Word version of any tailored document.
+async function createGenericDocx(content: string, title: string): Promise<Blob> {
+  const { Document, Packer, Paragraph, TextRun, HeadingLevel } = await import("docx");
+
+  const paragraphs = content.replace(/\r\n?/g, "\n").split("\n").map((rawLine) => {
+    if (!rawLine.trim()) {
+      return new Paragraph({ text: "", spacing: { after: 100 } });
+    }
+
+    const bulletMatch = rawLine.match(GENERIC_DOCX_BULLET_RE);
+    if (bulletMatch) {
+      return new Paragraph({
+        children: [new TextRun({ text: bulletMatch[1].trim(), font: "Calibri", size: 22 })],
+        bullet: { level: 0 },
+        spacing: { after: 60 },
+      });
+    }
+
+    if (looksLikeGenericDocxHeading(rawLine)) {
+      return new Paragraph({
+        children: [new TextRun({ text: rawLine.trim(), font: "Calibri", size: 22, bold: true })],
+        heading: HeadingLevel.HEADING_2,
+        spacing: { before: 200, after: 80 },
+      });
+    }
+
+    const indentLevel = Math.min(rawLine.match(/^\s*/)?.[0].length ?? 0, 8);
+    return new Paragraph({
+      children: [new TextRun({ text: rawLine.trim(), font: "Calibri", size: 22 })],
+      indent: indentLevel ? { left: indentLevel * 120 } : undefined,
+      spacing: { after: 80 },
+    });
+  });
+
+  const doc = new Document({
+    title,
+    creator: "HireMe",
+    styles: {
+      default: {
+        document: { run: { font: "Calibri", size: 22 } },
+      },
+    },
+    sections: [
+      {
+        properties: {
+          page: { margin: { top: 1080, bottom: 1080, left: 1080, right: 1080 } },
+        },
+        children: paragraphs,
+      },
+    ],
+  });
+  return Packer.toBlob(doc);
+}
+
 export async function createSourceFormattedArtifact({
   sourceType,
   sourceUrl,
@@ -770,6 +838,7 @@ export async function createSourceFormattedArtifact({
       previewType: "pdf",
       sourceType: "txt",
       pdfBlob: await createApplicationPdf(artifactContent, documentType, title),
+      docxBlob: await createGenericDocx(artifactContent, title),
     };
   }
 
@@ -787,6 +856,7 @@ export async function createSourceFormattedArtifact({
       pdfBlob: documentType === "tailored_resume"
         ? await createTailoredPdfFromSource(sourceBytes, rawSourceText, artifactContent, title)
         : await createCoverPdfFromSource(sourceBytes, rawSourceText, artifactContent, title),
+      docxBlob: await createGenericDocx(artifactContent, title),
     };
   }
 

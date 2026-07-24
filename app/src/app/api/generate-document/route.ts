@@ -21,7 +21,13 @@ import {
 } from "@/lib/ai/resume-format";
 import { logTimelineEvent } from "@/lib/db/timeline";
 import { logAiEvent } from "@/lib/db/ai-events";
-import { documentTypeSchema, MAX_REQUEST_BODY_LENGTH, uuidSchema } from "@/lib/security/limits";
+import {
+  cleanText,
+  documentTypeSchema,
+  MAX_ADJUST_INSTRUCTION_LENGTH,
+  MAX_REQUEST_BODY_LENGTH,
+  uuidSchema,
+} from "@/lib/security/limits";
 import { checkRateLimit } from "@/lib/security/rate-limit";
 import { getClientIpFromHeaders } from "@/lib/security/request";
 import type { DocumentType, ParsedJob, ParsedResume } from "@/lib/db/types";
@@ -70,15 +76,30 @@ const RESUME_SYSTEM = `You are a resume tailoring assistant.
 
 You will receive immutable source-resume lines and a parsed job description. Return a JSON object containing replacement text only for the supplied editable line IDs.
 
-Absolute rules:
+============================================================
+STRUCTURE LOCK — the single most important rule in this prompt
+============================================================
+The source resume's structure is FROZEN. You may ONLY rewrite the wording of the specific editable line IDs supplied to you. Everything else about the document — its outline, its section headers, its ordering, its hierarchy — must stay byte-for-byte IDENTICAL to the source.
+
+- DO NOT change any section headers (e.g. "Experience", "Education", "Skills", "Projects", "Summary", "Certifications", etc). Their exact wording, capitalization, order, and nesting must remain exactly as in the source resume.
+- DO NOT add or remove sections. DO NOT add, remove, merge, split, or reorder any sub-section, job entry, project, degree, bullet, or line.
+- DO NOT rename or restructure anything, even if you believe it would better match the job description.
+- DO NOT invent new sections or subsections under any circumstances.
+- DO NOT change sub-heading formats, bullet-point styles, date formats, or indentation levels — those are inherited automatically from the source template; you never reproduce them yourself.
+- ONLY modify bullet/line content (the words) of the exact IDs supplied, to align with the job description. The structure surrounding that content must be IDENTICAL to the source resume.
+- If you are unsure whether a change affects structure, do not make it — omit that ID instead.
+============================================================
+
+Additional absolute rules:
 - Never invent employers, schools, dates, titles, degrees, certifications, tools, or accomplishments.
-- Never add, remove, merge, split, or reorder lines, bullets, jobs, projects, or sections.
 - Never return a replacement for an ID that was not supplied.
 - Keep every factual claim intact. Rephrase only when it improves alignment with the job.
 - Keep each replacement at or below the source line's approximate character length so it remains inside the original text box without changing font size, line spacing, or pagination.
 - Do not include bullet symbols, indentation, Markdown, headings, or line breaks inside replacement values; the application restores those from the source template.
 - If a source line should remain unchanged, omit its ID.
-- Output exactly this JSON shape and no commentary: {"replacements":{"L0001":"replacement text"}}.`;
+- Output exactly this JSON shape and no commentary: {"replacements":{"L0001":"replacement text"}}.
+
+REMINDER: The structure must be IDENTICAL to the source resume. You are rewriting words, not redesigning the document.`;
 
 const COVER_LETTER_SYSTEM = `You are a professional cover letter writing assistant.
 
@@ -93,7 +114,19 @@ Rules:
 - Do not add Markdown, bullets, or formatting instructions.
 - Do not assume Letter or A4 page size and do not request any visual style; the source file is the sole layout authority.
 - Use a concise subject in the form "Re: Position Title".
+- The candidate's name/contact header is inserted deterministically by the application from the source resume — never generate, alter, or repeat it yourself, and never copy the source resume's internal section headers (e.g. "Experience", "Education") into the letter body.
+- Do not add or remove top-level fields from the JSON contract below; only tailor the wording inside "opening", each section's "paragraph", and "finalParagraph" to the job description. The document's overall shape (opening → evidence sections → closing) must stay the same regardless of role.
 - Output exactly this JSON shape and no commentary: {"date":"...","recipient":["Company","Location"],"subject":"Re: Position Title","greeting":"Dear Hiring Manager,","opening":"...","sections":[{"heading":"Evidence Theme","paragraph":"..."}],"finalParagraph":"...","closing":"Sincerely,","signature":"Candidate Name"}.`;
+
+const ADJUST_MODE_ADDENDUM = `
+
+============================================================
+ADJUSTMENT MODE
+============================================================
+You are revising an EXISTING document based on specific user feedback, not writing from scratch.
+- Keep all existing wording and content exactly the same EXCEPT where the user's instruction below requires a change.
+- Apply ONLY the requested adjustment. Do not use this as an opportunity to rewrite unrelated parts.
+- Every rule above still applies in full, including the structure lock — the adjustment must not add, remove, or restructure sections.`;
 
 const EMAIL_SYSTEM = `You are an email drafting assistant for job applications submitted by email.
 
@@ -149,6 +182,7 @@ async function buildPrompt(
   rawJobText?: string | null,
   rawResumeText?: string | null,
   style?: string,
+  adjust?: { instruction: string; currentContent: string } | null,
 ): Promise<{ system: string; userMessage: string; maxTokens: number } | null> {
   const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
   const resumeJson = JSON.stringify(resume, null, 2);
@@ -158,17 +192,20 @@ async function buildPrompt(
   ).join('\n\n');
 
   if (documentType === "tailored_resume") {
-    const sourceResume = rawResumeText?.trim() ? rawResumeText : resumeToText(resume);
+    const sourceResume = adjust?.currentContent?.trim()
+      ? adjust.currentContent
+      : rawResumeText?.trim() ? rawResumeText : resumeToText(resume);
     const template = createResumeFormatTemplate(sourceResume);
     return {
-      system: RESUME_SYSTEM,
+      system: adjust ? `${RESUME_SYSTEM}${ADJUST_MODE_ADDENDUM}` : RESUME_SYSTEM,
       maxTokens: 4096,
       userMessage: [
         `Editable source lines (JSON):\n${JSON.stringify(template.candidates, null, 2)}`,
         `Parsed job posting (JSON):\n${jobJson}`,
         `Most relevant candidate evidence selected for this job:\n${matchedEvidence}`,
+        adjust ? `User's requested adjustment (apply this to the editable lines above, changing only what it asks for):\n${adjust.instruction}` : "",
         "Return only the replacement-map JSON. Preserve the source format and structure exactly.",
-      ].join("\n\n"),
+      ].filter(Boolean).join("\n\n"),
     };
   }
 
@@ -178,15 +215,16 @@ async function buildPrompt(
     const styleKey = style && style in COVER_LETTER_STYLE_INSTRUCTIONS ? style : 'professional';
     const styleInstruction = COVER_LETTER_STYLE_INSTRUCTIONS[styleKey];
     return {
-      system: `${COVER_LETTER_SYSTEM}\n\nToday's date is ${today}. Use this exact date.\n\nTone instruction: ${styleInstruction}`,
+      system: `${COVER_LETTER_SYSTEM}${adjust ? ADJUST_MODE_ADDENDUM : ""}\n\nToday's date is ${today}. Use this exact date.\n\nTone instruction: ${styleInstruction}`,
       maxTokens: 2048,
       userMessage: [
         `Exact source-resume header to be reused by the application (JSON):\n${JSON.stringify(resumeHeader)}`,
         `Candidate parsed resume (JSON):\n${resumeJson}`,
         `Parsed job posting (JSON):\n${jobJson}`,
         `Most relevant candidate evidence selected for this job:\n${matchedEvidence}`,
+        adjust ? `Current cover letter content (adjust this, do not regenerate from scratch):\n${adjust.currentContent}\n\nUser's requested adjustment:\n${adjust.instruction}` : "",
         "Return only the cover-letter content JSON. The application will apply the resume format.",
-      ].join("\n\n"),
+      ].filter(Boolean).join("\n\n"),
     };
   }
 
@@ -230,7 +268,7 @@ export async function POST(req: NextRequest) {
     return Response.json({ error: "Request body is too large." }, { status: 413 });
   }
 
-  let body: { application_id?: string; document_type?: string; style?: string };
+  let body: { application_id?: string; document_type?: string; style?: string; adjust_instruction?: string };
   try {
     const rawBody = await req.text();
     if (rawBody.length > MAX_REQUEST_BODY_LENGTH) {
@@ -244,11 +282,13 @@ export async function POST(req: NextRequest) {
   const applicationId = String(body.application_id || "");
   const documentTypeResult = documentTypeSchema.safeParse(body.document_type);
   const style = typeof body.style === 'string' ? body.style : 'professional';
+  const adjustInstruction = cleanText(body.adjust_instruction, MAX_ADJUST_INSTRUCTION_LENGTH);
 
   if (!uuidSchema.safeParse(applicationId).success || !documentTypeResult.success) {
     return Response.json({ error: "Missing application_id or document_type." }, { status: 400 });
   }
   const documentType = documentTypeResult.data as DocumentType;
+  const canAdjust = documentType === "tailored_resume" || documentType === "cover_letter";
 
   const { supabase, user } = await getOptionalUser();
   if (!user) {
@@ -302,6 +342,31 @@ export async function POST(req: NextRequest) {
     || hasUsableResumeLineStructure(storedResumeText)
     ? storedResumeText
     : resumeToText(parsedResume);
+
+  let adjust: { instruction: string; currentContent: string } | null = null;
+  if (adjustInstruction && canAdjust) {
+    const { data: existingDoc } = await supabase
+      .from("application_documents")
+      .select("text_content")
+      .eq("application_id", applicationId)
+      .eq("user_id", user.id)
+      .eq("document_type", documentType)
+      .order("version", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (!existingDoc?.text_content?.trim()) {
+      return Response.json(
+        { error: "Generate a document first, then request an adjustment." },
+        { status: 400 },
+      );
+    }
+    adjust = { instruction: adjustInstruction, currentContent: existingDoc.text_content };
+  }
+
+  const resumeBaseText = adjust?.currentContent?.trim() && documentType === "tailored_resume"
+    ? adjust.currentContent
+    : rawResumeText;
+
   const prompt = await buildPrompt(
     documentType,
     parsedResume,
@@ -309,6 +374,7 @@ export async function POST(req: NextRequest) {
     app.raw_job_text,
     rawResumeText,
     style,
+    adjust,
   );
   if (!prompt) {
     return Response.json({ error: `Unsupported document type: ${documentType}` }, { status: 400 });
@@ -343,11 +409,11 @@ export async function POST(req: NextRequest) {
         if (documentType === "tailored_resume") {
           try {
             const result = extractJson<{ replacements?: Record<string, unknown> }>(content);
-            content = applyResumeReplacements(rawResumeText || resumeToText(parsedResume), result.replacements);
+            content = applyResumeReplacements(resumeBaseText || resumeToText(parsedResume), result.replacements);
           } catch {
             // Formatting is a hard constraint. If the model ignores the JSON
             // contract, return the untouched source instead of a reformatted resume.
-            content = rawResumeText || resumeToText(parsedResume);
+            content = resumeBaseText || resumeToText(parsedResume);
           }
         } else if (documentType === "cover_letter") {
           const draft = extractJson<CoverLetterDraft>(content);
