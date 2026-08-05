@@ -15,5 +15,11 @@ describe("resume tailoring prompt", () => {
     expect(RESUME_TAILOR_SYSTEM_PROMPT).toContain(
       "do not redesign the document",
     );
+    expect(RESUME_TAILOR_SYSTEM_PROMPT).toContain(
+      "each education entry as separate program, school, and date lines",
+    );
+    expect(RESUME_TAILOR_SYSTEM_PROMPT).toContain(
+      "skills as compact labeled category rows",
+    );
   });
 });

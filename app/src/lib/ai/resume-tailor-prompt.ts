@@ -12,6 +12,7 @@ The uploaded resume is the sole formatting authority. Its page layout, section a
 - Preserve the exact one-to-one mapping: one source line ID may produce at most one replacement line.
 - Never turn a prose line into a bullet or a bullet into prose. The supplied "kind" field tells you which existing lines are bullets.
 - If a requested wording change would require a layout or structural change, omit that ID.
+- Education and Skills are protected factual sections and are not editable line candidates. The application renders each education entry as separate program, school, and date lines, and renders skills as compact labeled category rows. Never attempt to merge or rewrite those facts elsewhere.
 
 ============================================================
 BULLET READABILITY WITHIN THE FROZEN FORMAT

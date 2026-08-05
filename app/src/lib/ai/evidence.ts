@@ -13,6 +13,66 @@ export type ResumeEvidence = {
   score: number;
 };
 
+export type ResumeSkillGroup = {
+  label: string;
+  skills: string[];
+};
+
+const SKILL_GROUP_DEFINITIONS: Array<{
+  label: string;
+  pattern: RegExp;
+}> = [
+  {
+    label: "Languages & Fundamentals",
+    pattern: /(?:python|typescript|javascript|\bjava\b|kotlin|swift|c\+\+|c#|golang|\brust\b|object-oriented|algorithm|data structure|programming)/i,
+  },
+  {
+    label: "AI & Data",
+    pattern: /(?:machine learning|deep learning|artificial intelligence|\bai\b|\bnlp\b|natural language|prompt engineering|\bllm|jupyter|data analysis|data analytics|pandas|numpy|scikit|tensorflow|pytorch)/i,
+  },
+  {
+    label: "Testing & Architecture",
+    pattern: /(?:test|junit|pytest|jest|vitest|\btdd\b|debug|clean architecture|system design|design pattern|quality assurance|\bqa\b)/i,
+  },
+  {
+    label: "DevOps & Platforms",
+    pattern: /(?:docker|kubernetes|\bci\s*\/\s*cd\b|continuous integration|continuous deployment|linux|\baws\b|azure|\bgcp\b|cloud|digitalocean|prometheus|grafana|terraform|android|embedded|\bqnx\b)/i,
+  },
+  {
+    label: "Frameworks, APIs & Databases",
+    pattern: /(?:\bapi\b|apis|fastapi|restful|graphql|\bsql\b|postgres|mysql|mongodb|database|supabase|redis|react|next\.?js|node\.?js|spring|django|flask)/i,
+  },
+  {
+    label: "Tools & Collaboration",
+    pattern: /(?:\bgit\b|github|gitlab|jira|agile|scrum|excel|powerpoint|\bword\b|documentation|confluence|slack|notion)/i,
+  },
+];
+
+export function groupResumeSkills(skills: string[]): ResumeSkillGroup[] {
+  const grouped = new Map<string, string[]>();
+  const seen = new Set<string>();
+
+  for (const rawSkill of skills) {
+    const skill = rawSkill.trim();
+    const normalized = skill.toLocaleLowerCase();
+    if (!skill || seen.has(normalized)) continue;
+    seen.add(normalized);
+
+    const label = SKILL_GROUP_DEFINITIONS.find(({ pattern }) => pattern.test(skill))?.label
+      ?? "Additional Skills";
+    grouped.set(label, [...(grouped.get(label) ?? []), skill]);
+  }
+
+  const orderedLabels = [
+    ...SKILL_GROUP_DEFINITIONS.map(({ label }) => label),
+    "Additional Skills",
+  ];
+  return orderedLabels.flatMap((label) => {
+    const groupedSkills = grouped.get(label);
+    return groupedSkills?.length ? [{ label, skills: groupedSkills }] : [];
+  });
+}
+
 const STOPWORDS = new Set([
   "and",
   "for",
@@ -162,14 +222,19 @@ export function resumeToText(resume: ParsedResume): string {
   if (projects.length) parts.push(`PROJECTS\n${projects.join('\n\n')}`);
 
   const education = (resume.education ?? []).flatMap((edu) => {
-    const line = [edu.degree, edu.field, edu.school, edu.start, edu.end, edu.notes]
-      .filter(Boolean)
-      .join(' | ');
-    return line ? [line] : [];
+    const program = [edu.degree, edu.field].filter(Boolean).join(' | ');
+    const dates = [edu.start, edu.end].filter(Boolean).join(' - ');
+    const lines = [program, edu.school, dates, edu.notes].filter(Boolean);
+    return lines.length ? [lines.join('\n')] : [];
   });
-  if (education.length) parts.push(`EDUCATION\n${education.join('\n')}`);
+  if (education.length) parts.push(`EDUCATION\n${education.join('\n\n')}`);
 
-  if (resume.skills?.length) parts.push('Skills: ' + resume.skills.join(', '));
+  const skillGroups = groupResumeSkills(resume.skills ?? []);
+  if (skillGroups.length) {
+    parts.push(`SKILLS\n${skillGroups
+      .map(({ label, skills }) => `${label}: ${skills.join(', ')}`)
+      .join('\n')}`);
+  }
   if (resume.certifications?.length) parts.push('Certifications: ' + resume.certifications.join(', '));
 
   return parts.join('\n\n');

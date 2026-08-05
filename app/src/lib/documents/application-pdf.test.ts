@@ -4,6 +4,7 @@ import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import {
   createApplicationPdf,
   isResumeSectionHeading,
+  splitSkillRow,
   splitDocumentHeader,
 } from "./application-pdf";
 
@@ -57,6 +58,15 @@ describe("application PDF layout", () => {
     });
     expect(isResumeSectionHeading("PROFESSIONAL EXPERIENCE")).toBe(true);
     expect(isResumeSectionHeading("IT Support Analyst | Example Company | 2023 - Present")).toBe(false);
+  });
+
+  it("recognizes labeled skill category rows", () => {
+    expect(splitSkillRow(
+      "Frameworks, APIs & Databases: FastAPI, PostgreSQL, Supabase",
+    )).toEqual([
+      "Frameworks, APIs & Databases:",
+      "FastAPI, PostgreSQL, Supabase",
+    ]);
   });
 
   it("creates an embedded-font Letter PDF for the on-page preview", async () => {

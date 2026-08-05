@@ -31,6 +31,7 @@ const BULLET_RE = /^(\s*(?:(?:[-*\u2022\u25cf\u25aa\u25e6\u2023\u2013\u2014\uf0b
 const CONTACT_RE = /(?:@|https?:\/\/|www\.|linkedin\.com|github\.com|\+?\d[\d\s().-]{7,})/i;
 const DATE_RE = /\b(?:19|20)\d{2}\b|\b(?:present|current)\b/i;
 const SECTION_RE = /^(?:summary|profile|objective|experience|work experience|professional experience|education|skills|technical skills|projects|certifications|languages|publications|research|awards|volunteer(?:ing)?|interests)$/i;
+const PROTECTED_DETAIL_SECTIONS = new Set(["education", "skills", "technical skills"]);
 
 function splitLines(value: string): string[] {
   return value.split(/\r\n|\n|\r/);
@@ -96,6 +97,13 @@ function looksLikeHeading(line: string): boolean {
   return letters.length >= 3 && letters === letters.toUpperCase();
 }
 
+function sectionNameFromLine(line: string): string | null {
+  const trimmed = line.trim().replace(/[:|]$/, "");
+  if (SECTION_RE.test(trimmed)) return trimmed.toLocaleLowerCase();
+  const inlineSkills = line.trim().match(/^(technical skills|skills)\s*:/i);
+  return inlineSkills?.[1].toLocaleLowerCase() ?? null;
+}
+
 function isEditableLine(line: string, lineIndex: number, nonEmptyIndex: number): boolean {
   const trimmed = line.trim();
   if (!trimmed || nonEmptyIndex < 3 || looksLikeHeading(trimmed)) return false;
@@ -113,9 +121,12 @@ export function createResumeFormatTemplate(rawResumeText: string): ResumeFormatT
   const lines = splitLines(rawResumeText);
   const candidates: ResumeReplacementCandidate[] = [];
   let nonEmptyIndex = 0;
+  let currentSection = "";
 
   lines.forEach((line, lineIndex) => {
     if (line.trim()) nonEmptyIndex += 1;
+    currentSection = sectionNameFromLine(line) ?? currentSection;
+    if (PROTECTED_DETAIL_SECTIONS.has(currentSection)) return;
     if (!isEditableLine(line, lineIndex, nonEmptyIndex)) return;
     candidates.push({
       id: `L${String(lineIndex + 1).padStart(4, "0")}`,

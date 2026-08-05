@@ -80,7 +80,7 @@ export function splitDocumentHeader(content: string): {
   bodyLines: string[];
 } {
   const lines = content.replace(/\r\n?|\n/g, "\n").split("\n");
-  let start = lines.findIndex((line) => line.trim());
+  const start = lines.findIndex((line) => line.trim());
   if (start < 0) return { headerLines: [], bodyLines: [] };
 
   const headerLines: string[] = [];
@@ -205,7 +205,15 @@ function looksLikeRoleLine(line: string, next: string): boolean {
   return DATE_RE.test(clean) && /(?:\||\s[-–—]\s)/.test(clean);
 }
 
-function splitSkillRow(line: string): [string, string] | null {
+export function splitSkillRow(line: string): [string, string] | null {
+  const labeledRow = line.trim().match(/^([^:]{3,40}):\s+(.{2,})$/);
+  if (labeledRow) {
+    return [
+      `${stripInlineMarkdown(labeledRow[1]).trim()}:`,
+      stripInlineMarkdown(labeledRow[2]).trim(),
+    ];
+  }
+
   const match = line.trim().match(/^(.{3,34}?)(?:\t+|\s{2,})(.{8,})$/);
   if (match) {
     return [stripInlineMarkdown(match[1]).trim(), stripInlineMarkdown(match[2]).trim()];
@@ -225,6 +233,7 @@ function drawResume(doc: jsPDF, content: string) {
   const { headerLines, bodyLines } = splitDocumentHeader(content);
   let y = drawHeader(doc, headerLines);
   let section = "";
+  let educationLineIndex = 0;
 
   const newPage = () => {
     doc.addPage("letter", "portrait");
@@ -269,6 +278,7 @@ function drawResume(doc: jsPDF, content: string) {
     const trimmed = raw.trim();
     if (!trimmed) {
       y += 3.5;
+      if (section === "EDUCATION") educationLineIndex = 0;
       continue;
     }
 
@@ -290,6 +300,7 @@ function drawResume(doc: jsPDF, content: string) {
 
     if (isResumeSectionHeading(trimmed)) {
       section = normalizedHeading(trimmed);
+      educationLineIndex = 0;
       if (y > 86) y += 6;
       ensure(26);
       drawWrapped(trimmed, {
@@ -299,6 +310,26 @@ function drawResume(doc: jsPDF, content: string) {
         lineHeight: 13,
         after: 1,
       });
+      continue;
+    }
+
+    if (section === "EDUCATION") {
+      if (DATE_RE.test(trimmed)) {
+        drawWrapped(raw, { style: "italic", after: 0.25 });
+      } else if (educationLineIndex === 0) {
+        drawWrapped(raw, {
+          style: "bold",
+          size: 10.5,
+          color: BLUE,
+          lineHeight: 12.8,
+          after: 0.25,
+        });
+      } else if (educationLineIndex === 1) {
+        drawWrapped(raw, { style: "bold", after: 0.25 });
+      } else {
+        drawWrapped(raw, { after: 0.25 });
+      }
+      educationLineIndex += 1;
       continue;
     }
 
@@ -360,7 +391,7 @@ function drawResume(doc: jsPDF, content: string) {
         index += 1;
       }
 
-      const labelWidth = 126;
+      const labelWidth = 168;
       setFont(doc, "bold", 10.5);
       const labelLines = doc.splitTextToSize(label, labelWidth - 6) as string[];
       setFont(doc, "normal", BODY_SIZE);

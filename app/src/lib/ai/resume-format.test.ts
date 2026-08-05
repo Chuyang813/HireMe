@@ -65,6 +65,30 @@ describe("resume format preservation", () => {
     );
   });
 
+  it("keeps education and categorized skill facts out of AI replacements", () => {
+    const protectedSource = [
+      "Alex Chen",
+      "alex@example.com | Toronto, ON",
+      "",
+      "EXPERIENCE",
+      "  • Built a reusable design system used across four product teams.",
+      "",
+      "EDUCATION",
+      "Master of Engineering | Electrical & Computer Engineering",
+      "University of Toronto with a specialization in machine learning systems",
+      "2024 - Mar 2026",
+      "",
+      "SKILLS",
+      "Languages & Fundamentals: TypeScript, JavaScript, Python, algorithms and data structures",
+    ].join("\n");
+
+    expect(createResumeFormatTemplate(protectedSource).candidates).toEqual([{
+      id: "L0005",
+      text: "Built a reusable design system used across four product teams.",
+      kind: "bullet",
+    }]);
+  });
+
   it("derives only the changed source lines for format-preserving document edits", () => {
     const tailored = applyResumeReplacements(source, {
       L0006: "Built a role-specific design system without changing the document layout.",

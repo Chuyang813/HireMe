@@ -4,7 +4,7 @@ export const PROMPT_VERSIONS = {
   'assessment':     '1.0',
   'evidence':       '2.0',
   'cover-letter':   '5.1',
-  'resume-tailor':  '4.2',
+  'resume-tailor':  '4.3',
   'email-draft':    '2.1',
   'interview-prep': '2.0',
   'resume-score':   '1.0',
