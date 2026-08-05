@@ -64,7 +64,8 @@ type RenderedPdfPage = {
 
 const WORD_NS = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
 const XML_NS = "http://www.w3.org/XML/1998/namespace";
-const BULLET_ONLY_RE = /^[\s\u2022\u25cf\u25aa\u25e6\u2023\u2013\u2014\uf0b7-]+$/u;
+const BULLET_ONLY_RE = /^\s*(?:(?:[-*\u2022\u25cf\u25aa\u25e6\u2023\u2013\u2014\uf0b7])|(?:\d+[.)]))\s*$/u;
+const INLINE_BULLET_RE = /^(\s*(?:(?:[-*\u2022\u25cf\u25aa\u25e6\u2023\u2013\u2014\uf0b7])|(?:\d+[.)]))\s+)/u;
 const COVER_STOP_WORDS = /^(?:and|or|of|the|for|to|in|with)$/i;
 
 function normalizeMatchText(value: string): string {
@@ -310,6 +311,15 @@ function wrapCanvasText(
   return lines;
 }
 
+export function restoreInlineBulletPrefix(
+  sourceLine: string,
+  replacementText: string,
+): string {
+  const sourcePrefix = sourceLine.match(INLINE_BULLET_RE)?.[1];
+  if (!sourcePrefix || INLINE_BULLET_RE.test(replacementText)) return replacementText;
+  return `${sourcePrefix}${replacementText}`;
+}
+
 function paintReplacement(
   page: RenderedPdfPage,
   lines: PdfTextLine[],
@@ -331,6 +341,9 @@ function paintReplacement(
   const height = Math.max(lines[0].height, bottom - top);
   const background = sampleBackground(context, x, top, width, height);
   const foreground = sampleForeground(context, { x, top, right, bottom }, background);
+  const drawableText = markerItems.length
+    ? replacementText
+    : restoreInlineBulletPrefix(lines[0].text, replacementText);
 
   context.save();
   context.fillStyle = `rgb(${background.join(",")})`;
@@ -341,7 +354,7 @@ function paintReplacement(
   let wrapped: string[] = [];
   while (fontSize >= 6 * page.scale) {
     context.font = `${fontSize}px "${fontName}", "${lines[0].fontFamily}", serif`;
-    wrapped = wrapCanvasText(context, replacementText, width);
+    wrapped = wrapCanvasText(context, drawableText, width);
     const lineHeight = fontSize * 1.18;
     if (wrapped.length * lineHeight <= Math.max(height, lines.length * lineHeight) + 2) break;
     fontSize -= 0.5;

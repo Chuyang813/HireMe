@@ -26,8 +26,16 @@ describe("resume format preservation", () => {
   it("only exposes content lines while protecting the header and section structure", () => {
     const template = createResumeFormatTemplate(source);
     expect(template.candidates).toEqual([
-      { id: "L0006", text: "Built a reusable design system used across four product teams." },
-      { id: "L0007", text: "Led user research and shipped a faster onboarding experience." },
+      {
+        id: "L0006",
+        text: "Built a reusable design system used across four product teams.",
+        kind: "bullet",
+      },
+      {
+        id: "L0007",
+        text: "Led user research and shipped a faster onboarding experience.",
+        kind: "bullet",
+      },
     ]);
   });
 

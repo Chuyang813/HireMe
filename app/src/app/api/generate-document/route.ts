@@ -11,6 +11,7 @@ import {
 import { PROMPT_VERSIONS, type PromptType } from "@/lib/ai/prompt-versions";
 import { selectResumeEvidenceSemantic, resumeToText, jobToText } from "@/lib/ai/evidence";
 import { INTERVIEW_PREP_SYSTEM } from "@/lib/ai/interview-prep";
+import { RESUME_TAILOR_SYSTEM_PROMPT } from "@/lib/ai/resume-tailor-prompt";
 import {
   applyResumeReplacements,
   createResumeFormatTemplate,
@@ -71,35 +72,6 @@ const COVER_LETTER_STYLE_INSTRUCTIONS: Record<string, string> = {
 // ---------------------------------------------------------------------------
 // System prompts
 // ---------------------------------------------------------------------------
-
-const RESUME_SYSTEM = `You are a resume tailoring assistant.
-
-You will receive immutable source-resume lines and a parsed job description. Return a JSON object containing replacement text only for the supplied editable line IDs.
-
-============================================================
-STRUCTURE LOCK — the single most important rule in this prompt
-============================================================
-The source resume's structure is FROZEN. You may ONLY rewrite the wording of the specific editable line IDs supplied to you. Everything else about the document — its outline, its section headers, its ordering, its hierarchy — must stay byte-for-byte IDENTICAL to the source.
-
-- DO NOT change any section headers (e.g. "Experience", "Education", "Skills", "Projects", "Summary", "Certifications", etc). Their exact wording, capitalization, order, and nesting must remain exactly as in the source resume.
-- DO NOT add or remove sections. DO NOT add, remove, merge, split, or reorder any sub-section, job entry, project, degree, bullet, or line.
-- DO NOT rename or restructure anything, even if you believe it would better match the job description.
-- DO NOT invent new sections or subsections under any circumstances.
-- DO NOT change sub-heading formats, bullet-point styles, date formats, or indentation levels — those are inherited automatically from the source template; you never reproduce them yourself.
-- ONLY modify bullet/line content (the words) of the exact IDs supplied, to align with the job description. The structure surrounding that content must be IDENTICAL to the source resume.
-- If you are unsure whether a change affects structure, do not make it — omit that ID instead.
-============================================================
-
-Additional absolute rules:
-- Never invent employers, schools, dates, titles, degrees, certifications, tools, or accomplishments.
-- Never return a replacement for an ID that was not supplied.
-- Keep every factual claim intact. Rephrase only when it improves alignment with the job.
-- Keep each replacement at or below the source line's approximate character length so it remains inside the original text box without changing font size, line spacing, or pagination.
-- Do not include bullet symbols, indentation, Markdown, headings, or line breaks inside replacement values; the application restores those from the source template.
-- If a source line should remain unchanged, omit its ID.
-- Output exactly this JSON shape and no commentary: {"replacements":{"L0001":"replacement text"}}.
-
-REMINDER: The structure must be IDENTICAL to the source resume. You are rewriting words, not redesigning the document.`;
 
 const COVER_LETTER_SYSTEM = `You are a professional cover letter writing assistant.
 
@@ -197,7 +169,9 @@ async function buildPrompt(
       : rawResumeText?.trim() ? rawResumeText : resumeToText(resume);
     const template = createResumeFormatTemplate(sourceResume);
     return {
-      system: adjust ? `${RESUME_SYSTEM}${ADJUST_MODE_ADDENDUM}` : RESUME_SYSTEM,
+      system: adjust
+        ? `${RESUME_TAILOR_SYSTEM_PROMPT}${ADJUST_MODE_ADDENDUM}`
+        : RESUME_TAILOR_SYSTEM_PROMPT,
       maxTokens: 4096,
       userMessage: [
         `Editable source lines (JSON):\n${JSON.stringify(template.candidates, null, 2)}`,

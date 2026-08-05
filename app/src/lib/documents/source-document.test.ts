@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { sourceDocumentHasBytes, sourceTextMatchScore } from "./source-document";
+import {
+  restoreInlineBulletPrefix,
+  sourceDocumentHasBytes,
+  sourceTextMatchScore,
+} from "./source-document";
 
 describe("source-format matching", () => {
   it("matches PDF and DOCX text despite bullets and whitespace differences", () => {
@@ -19,5 +23,16 @@ describe("source-format matching", () => {
   it("rejects an empty source file before PDF or DOCX parsing", () => {
     expect(sourceDocumentHasBytes(new ArrayBuffer(0))).toBe(false);
     expect(sourceDocumentHasBytes(new ArrayBuffer(1))).toBe(true);
+  });
+
+  it("restores a bullet that shares a PDF text item with replaced content", () => {
+    expect(restoreInlineBulletPrefix(
+      "• Built a reusable design system.",
+      "Built a role-specific design system.",
+    )).toBe("• Built a role-specific design system.");
+    expect(restoreInlineBulletPrefix(
+      "1. Led product research.",
+      "Led role-specific product research.",
+    )).toBe("1. Led role-specific product research.");
   });
 });

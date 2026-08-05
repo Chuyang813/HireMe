@@ -4,21 +4,8 @@ import {
   applyResumeReplacements,
   createResumeFormatTemplate,
 } from "./resume-format";
+import { RESUME_TAILOR_SYSTEM_PROMPT } from "./resume-tailor-prompt";
 import type { ParsedJob, ParsedResume } from "@/lib/db/types";
-
-const SYSTEM = `You are a resume tailoring assistant.
-
-You will receive immutable source-resume lines and a parsed job description. Return a JSON object containing replacement text only for the supplied editable line IDs.
-
-Absolute rules:
-- Never invent employers, schools, dates, titles, degrees, certifications, tools, or accomplishments.
-- Never add, remove, merge, split, or reorder lines, bullets, jobs, projects, or sections.
-- Never return a replacement for an ID that was not supplied.
-- Keep every factual claim intact. Rephrase only when it improves alignment with the job.
-- Keep each replacement at or below the source line's approximate character length so it remains inside the original text box without changing font size, line spacing, or pagination.
-- Do not include bullet symbols, indentation, Markdown, headings, or line breaks inside replacement values; the application restores those from the source template.
-- If a source line should remain unchanged, omit its ID.
-- Output exactly this JSON shape and no commentary: {"replacements":{"L0001":"replacement text"}}.`;
 
 export async function tailorResume({
   resume,
@@ -40,7 +27,7 @@ export async function tailorResume({
   ).join("\n\n");
 
   const result = await aiJson<{ replacements?: Record<string, unknown> }>({
-    system: SYSTEM,
+    system: RESUME_TAILOR_SYSTEM_PROMPT,
     messages: [
       {
         role: "user",

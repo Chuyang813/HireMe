@@ -1,6 +1,7 @@
 export interface ResumeReplacementCandidate {
   id: string;
   text: string;
+  kind: "bullet" | "prose";
 }
 
 export interface AppliedResumeReplacement {
@@ -119,6 +120,7 @@ export function createResumeFormatTemplate(rawResumeText: string): ResumeFormatT
     candidates.push({
       id: `L${String(lineIndex + 1).padStart(4, "0")}`,
       text: contentWithoutPrefix(line),
+      kind: BULLET_RE.test(line) ? "bullet" : "prose",
     });
   });
 

@@ -129,6 +129,11 @@ function extractResumeEvidence(resume: ParsedResume): Omit<ResumeEvidence, "matc
 
 export function resumeToText(resume: ParsedResume): string {
   const parts: string[] = [];
+  const asBullet = (value: string) => (
+    /^\s*(?:[-*\u2022\u25cf\u25aa\u25e6\u2023\u2013\u2014\uf0b7]|\d+[.)])\s+/u.test(value)
+      ? value
+      : `- ${value}`
+  );
 
   const contact = [
     resume.contact?.email,
@@ -144,14 +149,14 @@ export function resumeToText(resume: ParsedResume): string {
     const header = [exp.title, exp.company, exp.location, exp.start, exp.end]
       .filter(Boolean)
       .join(' | ');
-    const lines = [header, ...(exp.bullets ?? [])].filter(Boolean);
+    const lines = [header, ...(exp.bullets ?? []).map(asBullet)].filter(Boolean);
     return lines.length ? [lines.join('\n')] : [];
   });
   if (experience.length) parts.push(`EXPERIENCE\n${experience.join('\n\n')}`);
 
   const projects = (resume.projects ?? []).flatMap((proj) => {
     const header = [proj.name, proj.description].filter(Boolean).join(': ');
-    const lines = [header, ...(proj.bullets ?? [])].filter(Boolean);
+    const lines = [header, ...(proj.bullets ?? []).map(asBullet)].filter(Boolean);
     return lines.length ? [lines.join('\n')] : [];
   });
   if (projects.length) parts.push(`PROJECTS\n${projects.join('\n\n')}`);

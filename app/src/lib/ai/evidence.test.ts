@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatResumeEvidence, selectResumeEvidence } from "./evidence";
+import { formatResumeEvidence, resumeToText, selectResumeEvidence } from "./evidence";
 import type { ParsedJob, ParsedResume } from "@/lib/db/types";
 
 const resume: ParsedResume = {
@@ -51,5 +51,16 @@ describe("selectResumeEvidence", () => {
     const evidence = selectResumeEvidence({ resume, job, limit: 1 });
     expect(formatResumeEvidence(evidence)).toContain("[experience]");
     expect(formatResumeEvidence([])).toContain("No high-confidence");
+  });
+
+  it("renders parsed experience and project content as separate bullet lines", () => {
+    const text = resumeToText(resume);
+
+    expect(text).toContain(
+      "AI Product Intern | BrightApps\n- Built a prompt evaluation dashboard for support-ticket summarization.\n- Added Zod validation for LLM JSON outputs.",
+    );
+    expect(text).toContain(
+      "HireFlow Assistant\n- Built a Next.js and Supabase app for resume parsing.",
+    );
   });
 });
