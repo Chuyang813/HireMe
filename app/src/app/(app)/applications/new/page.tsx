@@ -2,6 +2,12 @@ import { getTranslations } from "next-intl/server";
 import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/auth/current-user";
 import { NewApplicationForm } from "./NewApplicationForm";
+import {
+  DEMO_APPLICATION_LIMIT,
+  getDemoUsage,
+  isDemoUser,
+} from "@/lib/demo";
+import { DemoUsageBanner } from "@/components/DemoNotices";
 
 export const metadata = { title: "New application" };
 
@@ -20,6 +26,10 @@ export default async function NewApplicationPage() {
     redirect("/onboarding");
   }
 
+  const demoUsage = isDemoUser(user) ? await getDemoUsage(supabase, user.id) : null;
+  const demoLimitReached =
+    demoUsage != null && demoUsage.applications >= DEMO_APPLICATION_LIMIT;
+
   return (
     <div className="min-h-[calc(100vh-3.5rem)] bg-canvas">
       <div className="mx-auto w-full max-w-3xl px-6 py-12">
@@ -32,8 +42,13 @@ export default async function NewApplicationPage() {
             {t("newPageSub")}
           </p>
         </div>
+        {demoUsage ? (
+          <div className="mt-8 rise-enter [transition-delay:20ms]">
+            <DemoUsageBanner usage={demoUsage} />
+          </div>
+        ) : null}
         <div className="mt-10">
-          <NewApplicationForm />
+          <NewApplicationForm demoLimitReached={demoLimitReached} />
         </div>
       </div>
     </div>

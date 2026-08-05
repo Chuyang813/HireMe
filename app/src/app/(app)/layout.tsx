@@ -5,6 +5,7 @@ import { signoutAction } from "@/lib/auth/actions";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { AppNavLink } from "@/components/AppNavLink";
 import { MobileNav } from "@/components/MobileNav";
+import { isDemoUser } from "@/lib/demo";
 
 export default async function AppLayout({
   children,
@@ -13,6 +14,8 @@ export default async function AppLayout({
 }) {
   const { supabase, user } = await requireUser();
   const t = await getTranslations("Nav");
+  const demoT = await getTranslations("Demo");
+  const isDemo = isDemoUser(user);
   const { data: defaultResume } = await supabase
     .from("base_resumes")
     .select("id")
@@ -54,8 +57,9 @@ export default async function AppLayout({
           <div className="flex items-center gap-3 text-sm">
             <LanguageSwitcher />
             <div className="hidden h-5 w-px bg-border sm:block" />
+            {isDemo ? <span className="badge badge-saved">{demoT("badge")}</span> : null}
             <span className="hidden max-w-48 truncate text-xs text-muted-foreground sm:inline">
-              {user.email}
+              {isDemo ? demoT("sessionLabel") : user.email}
             </span>
             <form action={signoutAction}>
               <button

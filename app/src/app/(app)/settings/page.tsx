@@ -2,6 +2,7 @@ import { requireUser } from "@/lib/auth/current-user";
 import { getTranslations } from "next-intl/server";
 import type { Profile } from "@/lib/db/types";
 import { SettingsClient } from "./SettingsClient";
+import { isDemoUser } from "@/lib/demo";
 
 export const metadata = { title: "Settings" };
 
@@ -26,7 +27,11 @@ export default async function SettingsPage() {
           <p className="app-page-subtitle">{t("headingSub")}</p>
         </div>
         <div className="rise-enter [transition-delay:40ms]">
-          <SettingsClient user={{ email: user.email ?? "" }} profile={profile} />
+          <SettingsClient
+            user={{ email: user.email ?? "" }}
+            profile={profile}
+            isDemo={isDemoUser(user)}
+          />
         </div>
       </div>
     </div>

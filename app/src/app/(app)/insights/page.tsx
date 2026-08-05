@@ -2,6 +2,8 @@ import { getTranslations } from "next-intl/server";
 import { requireUser } from "@/lib/auth/current-user";
 import type { JobApplication, ApplicationStatus } from "@/lib/db/types";
 import { APPLICATION_STATUS_LABEL } from "@/lib/db/types";
+import { isDemoUser } from "@/lib/demo";
+import { DemoExampleNotice } from "@/components/DemoNotices";
 
 export const metadata = { title: "Insights" };
 
@@ -252,6 +254,8 @@ function SparkLine({
 export default async function InsightsPage() {
   const { supabase, user } = await requireUser();
   const t = await getTranslations("Insights");
+  const demoT = await getTranslations("Demo");
+  const isDemo = isDemoUser(user);
 
   const { data } = await supabase
     .from("job_applications")
@@ -259,7 +263,19 @@ export default async function InsightsPage() {
     .eq("user_id", user.id)
     .order("created_at", { ascending: true });
 
-  const apps = (data ?? []) as Pick<JobApplication, "company_name" | "current_status" | "created_at">[];
+  const userApps = (data ?? []) as Pick<JobApplication, "company_name" | "current_status" | "created_at">[];
+  const sampleApps: Pick<JobApplication, "company_name" | "current_status" | "created_at">[] = isDemo
+    ? [
+        { company_name: "Northstar Labs", current_status: "applied", created_at: "2026-07-01T12:00:00.000Z" },
+        { company_name: "Cedar Health", current_status: "assessment", created_at: "2026-07-08T12:00:00.000Z" },
+        { company_name: "Atlas Cloud", current_status: "interview", created_at: "2026-07-15T12:00:00.000Z" },
+        { company_name: "Brightworks", current_status: "rejected", created_at: "2026-07-22T12:00:00.000Z" },
+        { company_name: "Atlas Cloud", current_status: "offer", created_at: "2026-07-29T12:00:00.000Z" },
+      ]
+    : [];
+  const apps = [...sampleApps, ...userApps].sort(
+    (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
+  );
 
   const total = apps.length;
   const activeStatuses = new Set<ApplicationStatus>(["applied", "assessment", "interview"]);
@@ -306,6 +322,14 @@ export default async function InsightsPage() {
           <h1 className="app-page-title">{t("heading")}</h1>
           <p className="app-page-subtitle">{t("headingSub")}</p>
         </div>
+
+        {isDemo ? (
+          <div className="mt-6 rise-enter [transition-delay:20ms]">
+            <DemoExampleNotice title={demoT("insightsTitle")}>
+              {demoT("insightsBody")}
+            </DemoExampleNotice>
+          </div>
+        ) : null}
 
       <div className="app-page-content grid grid-cols-2 gap-4 rise-enter [transition-delay:40ms] sm:grid-cols-4">
         <StatCard label={t("totalApplied")} value={total} />

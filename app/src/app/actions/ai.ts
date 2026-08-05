@@ -31,6 +31,7 @@ import type {
   ParsedJob,
   ParsedResume,
 } from "@/lib/db/types";
+import { assertDemoDocumentAvailable, isDemoUser } from "@/lib/demo";
 
 function auditNote(promptType: PromptType) {
   return `provider=${AI_PROVIDER} model=${DEFAULT_MODEL} prompt_type=${promptType} prompt_version=${PROMPT_VERSIONS[promptType]}`;
@@ -66,6 +67,9 @@ export async function generateDocumentAction(
     return { error: "Missing required fields." };
   }
   const documentType = documentTypeResult.data as DocumentType;
+
+  const demoLimitError = await assertDemoDocumentAvailable(supabase, user, documentType);
+  if (demoLimitError) return { error: demoLimitError };
 
   const limit = checkRateLimit(`generate-document-action:${user.id}`, {
     max: 20,
@@ -398,6 +402,9 @@ export async function analyzeAssessmentAction(
   formData: FormData,
 ): Promise<AnalyzeAssessmentState> {
   const { supabase, user } = await requireUser();
+  if (isDemoUser(user)) {
+    return { error: "Assessment analysis is available as a read-only example in the demo." };
+  }
 
   const applicationId = String(formData.get("application_id") || "");
   const file = formData.get("file");
@@ -478,6 +485,13 @@ export async function generateInterviewPrepAction(
   const applicationId = String(formData.get("application_id") || "");
   if (!uuidSchema.safeParse(applicationId).success) return { error: "Missing application ID." };
 
+  const demoLimitError = await assertDemoDocumentAvailable(
+    supabase,
+    user,
+    "interview_prep",
+  );
+  if (demoLimitError) return { error: demoLimitError };
+
   const limit = checkRateLimit(`interview-prep:${user.id}`, { max: 20, windowMs: 60 * 60_000 });
   if (!limit.allowed) {
     return { error: `Too many interview prep generations. Try again in ${limit.retryAfterSec}s.` };
@@ -512,6 +526,18 @@ export async function generateInterviewPrepAction(
     console.error("[generateInterviewPrepAction] AI error:", e);
     return { error: "Generation failed. Please try again." };
   }
+
+  await logAiEvent(supabase, {
+    user_id: user.id,
+    application_id: applicationId,
+    event_type: "document_generation",
+    provider: AI_PROVIDER,
+    model: DEFAULT_MODEL,
+    prompt_type: "interview-prep",
+    prompt_version: PROMPT_VERSIONS["interview-prep"],
+    document_type: "interview_prep",
+    success: true,
+  });
 
   await logTimelineEvent(supabase, {
     application_id: applicationId,

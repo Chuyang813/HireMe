@@ -20,6 +20,7 @@ import {
 import { checkRateLimit } from "@/lib/security/rate-limit";
 import { getClientIp } from "@/lib/security/request";
 import type { ApplicationStatus, ParsedJob } from "@/lib/db/types";
+import { assertDemoApplicationAvailable } from "@/lib/demo";
 
 export type CreateApplicationState = { error?: string } | undefined;
 export type AnalyzeJobState =
@@ -140,6 +141,8 @@ export async function analyzeJobAction(
   formData: FormData,
 ): Promise<AnalyzeJobState> {
   const { supabase, user } = await requireUser();
+  const demoLimitError = await assertDemoApplicationAvailable(supabase, user);
+  if (demoLimitError) return { error: demoLimitError };
   const { data: defaultResume } = await supabase
     .from("base_resumes")
     .select("id, parsed_resume_json, raw_text")
@@ -207,6 +210,8 @@ export async function createApplicationAction(
   formData: FormData,
 ): Promise<CreateApplicationState> {
   const { supabase, user } = await requireUser();
+  const demoLimitError = await assertDemoApplicationAvailable(supabase, user);
+  if (demoLimitError) return { error: demoLimitError };
 
   const { data: defaultResume } = await supabase
     .from("base_resumes")

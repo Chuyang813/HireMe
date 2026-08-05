@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/auth/current-user";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { isDemoUser } from "@/lib/demo";
 
 export type SettingsActionState = { error?: string; ok?: boolean } | undefined;
 
@@ -12,6 +13,7 @@ export async function updateProfileAction(
   formData: FormData,
 ): Promise<SettingsActionState> {
   const { supabase, user } = await requireUser();
+  if (isDemoUser(user)) return { error: "Demo profile details cannot be changed." };
   const full_name = String(formData.get("full_name") || "").trim();
   if (!full_name) return { error: "Name is required." };
 
@@ -34,6 +36,7 @@ export async function updatePasswordAction(
   formData: FormData,
 ): Promise<SettingsActionState> {
   const { supabase, user } = await requireUser();
+  if (isDemoUser(user)) return { error: "Demo sessions do not use passwords." };
 
   const currentPassword = String(formData.get("current_password") || "");
   const newPassword = String(formData.get("new_password") || "");

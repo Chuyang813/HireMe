@@ -32,6 +32,7 @@ import {
 import { checkRateLimit } from "@/lib/security/rate-limit";
 import { getClientIpFromHeaders } from "@/lib/security/request";
 import type { DocumentType, ParsedJob, ParsedResume } from "@/lib/db/types";
+import { assertDemoDocumentAvailable } from "@/lib/demo";
 
 const AI_TIMEOUT_MS = 115_000;
 function docTypeToPromptType(dt: DocumentType): PromptType {
@@ -267,6 +268,11 @@ export async function POST(req: NextRequest) {
   const { supabase, user } = await getOptionalUser();
   if (!user) {
     return Response.json({ error: "Unauthorized." }, { status: 401 });
+  }
+
+  const demoLimitError = await assertDemoDocumentAvailable(supabase, user, documentType);
+  if (demoLimitError) {
+    return Response.json({ error: demoLimitError }, { status: 403 });
   }
 
   const ip = getClientIpFromHeaders(req.headers);

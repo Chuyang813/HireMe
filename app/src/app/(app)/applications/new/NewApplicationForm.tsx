@@ -86,7 +86,21 @@ function ScoreHero({ match, summary }: { match: SkillMatch; summary: string }) {
   );
 }
 
-export function NewApplicationForm() {
+export function NewApplicationForm({ demoLimitReached = false }: { demoLimitReached?: boolean }) {
+  const demoT = useTranslations("Demo");
+
+  if (demoLimitReached) {
+    return (
+      <div className="surface-card border-[var(--warning-border)] bg-[var(--warning-light)] p-5 text-sm text-[var(--warning)]">
+        {demoT("applicationLimitReached")}
+      </div>
+    );
+  }
+
+  return <NewApplicationFormContent />;
+}
+
+function NewApplicationFormContent() {
   const t = useTranslations("Applications");
 
   const [step, setStep] = useState<Step>("input");

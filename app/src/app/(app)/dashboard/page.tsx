@@ -9,6 +9,8 @@ import type {
   JobApplication,
   Profile,
 } from "@/lib/db/types";
+import { DEMO_APPLICATION_LIMIT, getDemoUsage, isDemoUser } from "@/lib/demo";
+import { DemoUsageBanner } from "@/components/DemoNotices";
 
 export const metadata = { title: "Dashboard" };
 
@@ -170,6 +172,7 @@ function SmallIcon({ kind }: { kind: "trend" | "send" | "doc" | "calendar" | "ge
 export default async function DashboardPage() {
   const { supabase, user } = await requireUser();
   const t = await getTranslations("Dashboard");
+  const isDemo = isDemoUser(user);
 
   const [{ data: profile }, { data: defaultResume }] = await Promise.all([
     supabase
@@ -221,6 +224,9 @@ export default async function DashboardPage() {
   const hasApplications = allApps.length > 0;
   const hasGeneratedDocument = (docEventCount ?? 0) > 0;
   const firstApplicationId = allApps[0]?.id ?? null;
+  const demoUsage = isDemo ? await getDemoUsage(supabase, user.id) : null;
+  const applicationLimitReached =
+    demoUsage != null && demoUsage.applications >= DEMO_APPLICATION_LIMIT;
 
   const activeCount = allApps.filter(
     (a) => !INACTIVE_STATUSES.includes(a.current_status),
@@ -279,11 +285,24 @@ export default async function DashboardPage() {
                 : t("emptySummary")}
             </p>
           </div>
-          <Link href="/applications/new" className="btn btn-primary mt-6">
-            <span className="text-base leading-none">+</span>
-            {t("newApplication")}
-          </Link>
+          {applicationLimitReached ? (
+            <span className="btn btn-primary mt-6 cursor-not-allowed opacity-50">
+              <span className="text-base leading-none">+</span>
+              {t("newApplication")}
+            </span>
+          ) : (
+            <Link href="/applications/new" className="btn btn-primary mt-6">
+              <span className="text-base leading-none">+</span>
+              {t("newApplication")}
+            </Link>
+          )}
         </section>
+
+        {demoUsage ? (
+          <div className="mt-6 rise-enter [transition-delay:20ms]">
+            <DemoUsageBanner usage={demoUsage} />
+          </div>
+        ) : null}
 
         {(!hasApplications || !hasGeneratedDocument) && (
           <div className="app-page-content rise-enter [transition-delay:40ms]">

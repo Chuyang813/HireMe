@@ -4,6 +4,8 @@ import { UploadForm } from "./UploadForm";
 import { deleteResumeAction, setDefaultResumeAction } from "./actions";
 import type { BaseResume } from "@/lib/db/types";
 import { ResumePreviewButton } from "@/components/ResumePreviewButton";
+import { DEMO_RESUME_TITLE, isDemoUser } from "@/lib/demo";
+import { DemoExampleNotice } from "@/components/DemoNotices";
 
 export const metadata = { title: "Resumes" };
 
@@ -14,6 +16,8 @@ export default async function ResumesPage({
 }) {
   const { supabase, user } = await requireUser();
   const t = await getTranslations("Resumes");
+  const demoT = await getTranslations("Demo");
+  const isDemo = isDemoUser(user);
   const params = await searchParams;
   const { data } = await supabase
     .from("base_resumes")
@@ -76,6 +80,14 @@ export default async function ResumesPage({
           <p className="app-page-subtitle">{t("headingSub")}</p>
         </div>
 
+        {isDemo ? (
+          <div className="mt-6 rise-enter [transition-delay:20ms]">
+            <DemoExampleNotice title={demoT("resumesTitle")}>
+              {demoT("resumesBody")}
+            </DemoExampleNotice>
+          </div>
+        ) : null}
+
       {showBanner && (
         <div className="surface-card mt-6 flex items-start gap-3 border-[var(--success-border)] bg-[var(--success-light)] px-4 py-3 rise-enter [transition-delay:40ms]">
           <span className="mt-0.5 shrink-0 text-[var(--success)]">✓</span>
@@ -106,6 +118,11 @@ export default async function ResumesPage({
                       {r.is_default ? (
                         <span className="label-caps rounded-md border border-accent/20 bg-[var(--accent-light)] px-2 py-0.5 text-accent">
                           {t("defaultBadge")}
+                        </span>
+                      ) : null}
+                      {isDemo && r.title === DEMO_RESUME_TITLE ? (
+                        <span className="label-caps rounded-md border border-border bg-background px-2 py-0.5 text-muted-foreground">
+                          {demoT("exampleBadge")}
                         </span>
                       ) : null}
                     </div>

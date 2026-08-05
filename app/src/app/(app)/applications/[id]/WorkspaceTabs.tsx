@@ -25,6 +25,15 @@ import {
   type SourceDocumentPreviewHandle,
 } from "@/components/SourceDocumentPreview";
 import type { ResumeSourceType } from "@/lib/documents/source-document";
+import {
+  DEMO_ASSESSMENT_EXAMPLE,
+  type DemoDocumentType,
+  type DemoUsage,
+} from "@/lib/demo";
+import {
+  DemoDocumentLimitNotice,
+  DemoExampleNotice,
+} from "@/components/DemoNotices";
 
 // ---------------------------------------------------------------------------
 // Tab config — Notes tab removed
@@ -547,6 +556,7 @@ function DocumentPanel({
   hasResume,
   exportFilename,
   showEmail,
+  demoUsed,
 }: {
   applicationId: string;
   documentType: DocumentType;
@@ -554,6 +564,7 @@ function DocumentPanel({
   hasResume: boolean;
   exportFilename: string;
   showEmail?: boolean;
+  demoUsed?: number;
 }) {
   const t = useTranslations("Workspace");
   const [content, setContent] = useState(existingDoc?.text_content ?? "");
@@ -571,7 +582,9 @@ function DocumentPanel({
   const [sourceType, setSourceType] = useState<ResumeSourceType | null>(null);
   const [adjustText, setAdjustText] = useState("");
   const [adjusting, setAdjusting] = useState(false);
+  const [quotaConsumed, setQuotaConsumed] = useState((demoUsed ?? 0) >= 1);
   const canAdjust = documentType === "tailored_resume" || documentType === "cover_letter";
+  const isDemoLimited = demoUsed != null;
 
   async function saveContent(nextContent: string) {
     if (!nextContent.trim() || nextContent.includes("[Error:")) return false;
@@ -656,6 +669,7 @@ function DocumentPanel({
   }
 
   async function handleGenerate() {
+    if (isDemoLimited && quotaConsumed) return;
     setGenerateError("");
     setSaveStatus("idle");
     setContent("");
@@ -665,6 +679,7 @@ function DocumentPanel({
         await getApplicationResumeSourceAction(applicationId);
       }
       const accumulated = await streamGeneratedDocument({});
+      if (isDemoLimited) setQuotaConsumed(true);
       await saveContent(accumulated);
       await runResumeEvalCheck(accumulated);
     } catch (e) {
@@ -676,12 +691,13 @@ function DocumentPanel({
 
   async function handleAdjust() {
     const instruction = adjustText.trim();
-    if (!instruction || !content.trim()) return;
+    if (!instruction || !content.trim() || (isDemoLimited && quotaConsumed)) return;
     setGenerateError("");
     setSaveStatus("idle");
     setAdjusting(true);
     try {
       const accumulated = await streamGeneratedDocument({ adjust_instruction: instruction });
+      if (isDemoLimited) setQuotaConsumed(true);
       await saveContent(accumulated);
       setAdjustText("");
       await runResumeEvalCheck(accumulated);
@@ -721,6 +737,12 @@ function DocumentPanel({
     // Email draft — styled copyable card, no download
     return (
       <div className="flex flex-col gap-4">
+        {isDemoLimited ? (
+          <DemoDocumentLimitNotice
+            documentType={documentType as DemoDocumentType}
+            used={quotaConsumed ? 1 : 0}
+          />
+        ) : null}
         <div className="flex flex-wrap items-center justify-between gap-3">
           {!hasResume && (
             <p className="text-sm text-muted-foreground">
@@ -737,7 +759,7 @@ function DocumentPanel({
             <Button
               variant="outline"
               onClick={handleGenerate}
-              disabled={generating || !hasResume}
+              disabled={generating || !hasResume || (isDemoLimited && quotaConsumed)}
             >
               {generating ? t("generating") : t("generate")}
             </Button>
@@ -806,6 +828,12 @@ function DocumentPanel({
 
   return (
     <div className="flex flex-col gap-4">
+      {isDemoLimited ? (
+        <DemoDocumentLimitNotice
+          documentType={documentType as DemoDocumentType}
+          used={quotaConsumed ? 1 : 0}
+        />
+      ) : null}
       {(documentType === "tailored_resume" || documentType === "cover_letter") && (
         <div className="flex items-start gap-2 rounded-lg border border-accent/20 bg-[var(--accent-light)] px-3.5 py-3 text-xs leading-5 text-[var(--accent-hover)]">
           <span aria-hidden="true">◆</span>
@@ -828,7 +856,7 @@ function DocumentPanel({
           <Button
             variant="outline"
             onClick={handleGenerate}
-            disabled={generating || adjusting || !hasResume}
+            disabled={generating || adjusting || !hasResume || (isDemoLimited && quotaConsumed)}
           >
             {generating ? (
               <span className="flex items-center gap-1.5">
@@ -904,13 +932,13 @@ function DocumentPanel({
               }
             }}
             placeholder={t("adjustPlaceholder")}
-            disabled={adjusting}
+            disabled={adjusting || (isDemoLimited && quotaConsumed)}
             className="input min-w-0 flex-1"
           />
           <Button
             variant="outline"
             onClick={handleAdjust}
-            disabled={adjusting || !adjustText.trim()}
+            disabled={adjusting || !adjustText.trim() || (isDemoLimited && quotaConsumed)}
           >
             {adjusting ? (
               <span className="flex items-center gap-1.5">
@@ -1035,8 +1063,9 @@ function AssessmentResults({ result }: { result: AssessmentAnalysis }) {
   );
 }
 
-function AssessmentPanel({ applicationId }: { applicationId: string }) {
+function AssessmentPanel({ applicationId, isDemo }: { applicationId: string; isDemo?: boolean }) {
   const t = useTranslations("Workspace");
+  const demoT = useTranslations("Demo");
   const [file, setFile] = useState<File | null>(null);
   const [result, setResult] = useState<AssessmentAnalysis | null>(null);
   const [error, setError] = useState("");
@@ -1060,6 +1089,17 @@ function AssessmentPanel({ applicationId }: { applicationId: string }) {
         setError("Analysis failed. Please try again.");
       }
     });
+  }
+
+  if (isDemo) {
+    return (
+      <div className="flex flex-col gap-4">
+        <DemoExampleNotice title={demoT("assessmentTitle")}>
+          {demoT("assessmentBody")}
+        </DemoExampleNotice>
+        <AssessmentResults result={DEMO_ASSESSMENT_EXAMPLE} />
+      </div>
+    );
   }
 
   return (
@@ -1264,10 +1304,12 @@ function InterviewPrepPanel({
   applicationId,
   hasResume,
   existingDoc,
+  demoUsed,
 }: {
   applicationId: string;
   hasResume: boolean;
   existingDoc: ApplicationDocument | null;
+  demoUsed?: number;
 }) {
   const t = useTranslations("Workspace");
   const [content, setContent] = useState(existingDoc?.text_content ?? "");
@@ -1276,6 +1318,8 @@ function InterviewPrepPanel({
   const [saveStatus, setSaveStatus] = useState<"idle" | "saved" | "error">("idle");
   const [autoSaving, setAutoSaving] = useState(false);
   const [generating, setGenerating] = useState(false);
+  const [quotaConsumed, setQuotaConsumed] = useState((demoUsed ?? 0) >= 1);
+  const isDemoLimited = demoUsed != null;
 
   async function saveContent(markdown: string) {
     setSaveStatus("idle");
@@ -1301,6 +1345,7 @@ function InterviewPrepPanel({
   }
 
   async function handleGenerate() {
+    if (isDemoLimited && quotaConsumed) return;
     setError("");
     setSaveStatus("idle");
     setContent("");
@@ -1346,6 +1391,7 @@ function InterviewPrepPanel({
         setError(t("generationFailed"));
         return;
       }
+      if (isDemoLimited) setQuotaConsumed(true);
       await saveContent(accumulated);
     } catch (e) {
       setError(e instanceof Error ? e.message : t("generationFailed"));
@@ -1356,6 +1402,12 @@ function InterviewPrepPanel({
 
   return (
     <div className="flex flex-col gap-4">
+      {isDemoLimited ? (
+        <DemoDocumentLimitNotice
+          documentType="interview_prep"
+          used={quotaConsumed ? 1 : 0}
+        />
+      ) : null}
       <div className="flex flex-wrap items-center justify-between gap-3">
         {!hasResume && (
           <p className="text-sm text-muted-foreground">
@@ -1370,7 +1422,7 @@ function InterviewPrepPanel({
         )}
         <Button
           onClick={handleGenerate}
-          disabled={generating || !hasResume}
+          disabled={generating || !hasResume || (isDemoLimited && quotaConsumed)}
           className="ml-auto"
         >
           {generating ? (
@@ -1423,6 +1475,8 @@ export function WorkspaceTabs({
   userFirstName,
   companyName,
   statusLabel,
+  isDemo = false,
+  demoDocumentUsage,
 }: {
   applicationId: string;
   hasResume: boolean;
@@ -1436,6 +1490,8 @@ export function WorkspaceTabs({
   userFirstName?: string;
   companyName?: string;
   statusLabel?: string;
+  isDemo?: boolean;
+  demoDocumentUsage?: DemoUsage["documents"];
 }) {
   const t = useTranslations("Workspace");
   const [activeTab, setActiveTabState] = useState<TabId>("resume");
@@ -1523,6 +1579,7 @@ export function WorkspaceTabs({
                 existingDoc={documents.tailored_resume}
                 hasResume={hasResume}
                 exportFilename={resumeFilename}
+                demoUsed={demoDocumentUsage?.tailored_resume}
               />
             </>
           )}
@@ -1533,6 +1590,7 @@ export function WorkspaceTabs({
               existingDoc={documents.cover_letter}
               hasResume={hasResume}
               exportFilename={coverFilename}
+              demoUsed={demoDocumentUsage?.cover_letter}
             />
           )}
           {activeTab === "email" && (
@@ -1543,16 +1601,18 @@ export function WorkspaceTabs({
               hasResume={hasResume}
               exportFilename=""
               showEmail
+              demoUsed={demoDocumentUsage?.email_draft}
             />
           )}
           {activeTab === "assessment" && (
-            <AssessmentPanel applicationId={applicationId} />
+            <AssessmentPanel applicationId={applicationId} isDemo={isDemo} />
           )}
           {activeTab === "interview_prep" && (
             <InterviewPrepPanel
               applicationId={applicationId}
               hasResume={hasResume}
               existingDoc={documents.interview_prep}
+              demoUsed={demoDocumentUsage?.interview_prep}
             />
           )}
         </section>

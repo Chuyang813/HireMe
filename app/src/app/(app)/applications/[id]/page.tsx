@@ -18,6 +18,7 @@ import { StatusSelect } from "@/components/StatusSelect";
 import { WorkspaceTabs } from "./WorkspaceTabs";
 import { DeleteApplicationButton } from "@/components/DeleteApplicationButton";
 import { JobAnalysisCard } from "@/components/JobAnalysisCard";
+import { getDemoUsage, isDemoUser } from "@/lib/demo";
 
 export async function generateMetadata({
   params,
@@ -149,6 +150,7 @@ export default async function ApplicationPage({
   const { supabase, user } = await requireUser();
   const t = await getTranslations("Applications");
   const locale = await getLocale();
+  const isDemo = isDemoUser(user);
 
   const [
     { data: app },
@@ -190,6 +192,8 @@ export default async function ApplicationPage({
   ]);
 
   if (!app) notFound();
+
+  const demoUsage = isDemo ? await getDemoUsage(supabase, user.id) : null;
 
   const application = app as JobApplication;
   let applicationResume = resume;
@@ -290,6 +294,8 @@ export default async function ApplicationPage({
                 userFirstName={userFirstName}
                 companyName={application.company_name ?? undefined}
                 statusLabel={statusLabel(t, application.current_status)}
+                isDemo={isDemo}
+                demoDocumentUsage={demoUsage?.documents}
               />
             </div>
           </main>

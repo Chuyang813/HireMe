@@ -10,10 +10,12 @@ import {
   deleteAccountAction,
   type SettingsActionState,
 } from "@/app/actions/settings";
+import { signoutAction } from "@/lib/auth/actions";
 
 interface Props {
   user: { email: string };
   profile: { full_name: string | null; display_name: string | null } | null;
+  isDemo?: boolean;
 }
 
 function inputClass(extra?: string) {
@@ -24,8 +26,9 @@ function labelClass() {
   return "label-caps text-muted-foreground";
 }
 
-export function SettingsClient({ user, profile }: Props) {
+export function SettingsClient({ user, profile, isDemo = false }: Props) {
   const t = useTranslations("Settings");
+  const demoT = useTranslations("Demo");
   const displayName = profile?.full_name ?? profile?.display_name ?? "";
   const initials = (displayName || user.email)
     .split(/[\s@]/)
@@ -47,6 +50,39 @@ export function SettingsClient({ user, profile }: Props) {
     deleteAccountAction,
     undefined,
   );
+
+  if (isDemo) {
+    return (
+      <div className="app-page-content flex flex-col gap-6">
+        <section className="surface-card border-accent/25 bg-[var(--accent-light)] p-5 sm:p-6">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="max-w-xl">
+              <div className="mb-2 flex items-center gap-2">
+                <h2 className="label-caps text-accent">{demoT("settingsTitle")}</h2>
+                <span className="badge badge-saved">{demoT("badge")}</span>
+              </div>
+              <p className="text-sm leading-relaxed text-muted-foreground">
+                {demoT("settingsBody")}
+              </p>
+            </div>
+            <form action={signoutAction}>
+              <button type="submit" className="btn btn-primary">
+                {demoT("signOutClear")}
+              </button>
+            </form>
+          </div>
+        </section>
+
+        <section className="surface-card p-5 sm:p-6">
+          <h2 className="label-caps mb-4">{t("languageHeading")}</h2>
+          <div className="flex items-center gap-3">
+            <span className="text-sm text-muted-foreground">{t("languageSub")}</span>
+            <LanguageSwitcher />
+          </div>
+        </section>
+      </div>
+    );
+  }
 
   return (
     <div className="app-page-content flex flex-col gap-6">

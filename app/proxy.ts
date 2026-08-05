@@ -66,6 +66,7 @@ export async function proxy(request: NextRequest) {
     pathname.startsWith("/dashboard") ||
     pathname.startsWith("/applications") ||
     pathname.startsWith("/resumes") ||
+    pathname.startsWith("/insights") ||
     pathname.startsWith("/tracker") ||
     pathname.startsWith("/settings");
 
