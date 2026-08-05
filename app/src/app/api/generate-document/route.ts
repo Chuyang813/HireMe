@@ -270,7 +270,12 @@ export async function POST(req: NextRequest) {
     return Response.json({ error: "Unauthorized." }, { status: 401 });
   }
 
-  const demoLimitError = await assertDemoDocumentAvailable(supabase, user, documentType);
+  const demoLimitError = await assertDemoDocumentAvailable(
+    supabase,
+    user,
+    documentType,
+    applicationId,
+  );
   if (demoLimitError) {
     return Response.json({ error: demoLimitError }, { status: 403 });
   }

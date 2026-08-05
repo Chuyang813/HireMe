@@ -1,4 +1,4 @@
-import { aiJson } from "./provider";
+import { aiJson, DEFAULT_DOCUMENT_TEXT_MODEL } from "./provider";
 import { parsedJobSchema } from "./schemas";
 import type { ParsedJob } from "@/lib/db/types";
 
@@ -42,6 +42,7 @@ export async function parseJobPosting(rawText: string): Promise<ParsedJob> {
         content: `Job posting:\n\n${rawText}\n\nReturn the ParsedJob JSON.`,
       },
     ],
+    model: DEFAULT_DOCUMENT_TEXT_MODEL,
     maxTokens: 2048,
   });
   const validated = parsedJobSchema.safeParse(stripNulls(raw));

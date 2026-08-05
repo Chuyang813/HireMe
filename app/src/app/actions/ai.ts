@@ -68,7 +68,12 @@ export async function generateDocumentAction(
   }
   const documentType = documentTypeResult.data as DocumentType;
 
-  const demoLimitError = await assertDemoDocumentAvailable(supabase, user, documentType);
+  const demoLimitError = await assertDemoDocumentAvailable(
+    supabase,
+    user,
+    documentType,
+    applicationId,
+  );
   if (demoLimitError) return { error: demoLimitError };
 
   const limit = checkRateLimit(`generate-document-action:${user.id}`, {
@@ -489,6 +494,7 @@ export async function generateInterviewPrepAction(
     supabase,
     user,
     "interview_prep",
+    applicationId,
   );
   if (demoLimitError) return { error: demoLimitError };
 

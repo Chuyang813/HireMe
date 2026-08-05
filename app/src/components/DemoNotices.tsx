@@ -3,7 +3,6 @@
 import { useTranslations } from "next-intl";
 import {
   DEMO_APPLICATION_LIMIT,
-  demoDocumentRemaining,
   type DemoDocumentType,
   type DemoUsage,
 } from "@/lib/demo";
@@ -32,9 +31,8 @@ export function DemoUsageBanner({ usage }: { usage: DemoUsage }) {
         </span>
         {DEMO_DOCUMENT_TYPES_FOR_DISPLAY.map((type) => (
           <span key={type} className="rounded-md border border-border bg-background px-2.5 py-1.5">
-            {t("generationRemaining", {
+            {t("generationPerApplication", {
               label: t(DOCUMENT_KEYS[type]),
-              remaining: demoDocumentRemaining(usage, type),
             })}
           </span>
         ))}

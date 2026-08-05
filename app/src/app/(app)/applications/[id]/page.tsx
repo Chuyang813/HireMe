@@ -193,7 +193,7 @@ export default async function ApplicationPage({
 
   if (!app) notFound();
 
-  const demoUsage = isDemo ? await getDemoUsage(supabase, user.id) : null;
+  const demoUsage = isDemo ? await getDemoUsage(supabase, user.id, id) : null;
 
   const application = app as JobApplication;
   let applicationResume = resume;

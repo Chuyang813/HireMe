@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { DemoSection } from "@/components/DemoSection";
+import { StartDemoButton } from "@/components/StartDemoButton";
 
 export default async function Home() {
   const t = await getTranslations("Landing");
@@ -56,6 +57,7 @@ export default async function Home() {
             >
               {nav("logIn")}
             </Link>
+            <StartDemoButton className="btn btn-secondary btn-sm whitespace-nowrap" />
             <Link
               href="/signup"
               className="inline-flex h-10 items-center justify-center whitespace-nowrap rounded-lg bg-accent px-3 font-medium text-accent-foreground transition duration-150 ease-out hover:bg-[var(--accent-hover)] active:scale-[0.97] sm:px-5"
@@ -93,6 +95,7 @@ export default async function Home() {
               >
                 {t("ctaSecondary")}
               </Link>
+              <StartDemoButton showError />
             </div>
           </div>
 

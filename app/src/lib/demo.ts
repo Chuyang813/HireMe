@@ -2,7 +2,7 @@ import type { SupabaseClient, User } from "@supabase/supabase-js";
 import type { AssessmentAnalysis, DocumentType, ParsedResume } from "@/lib/db/types";
 
 export const DEMO_APPLICATION_LIMIT = 2;
-export const DEMO_RESUME_TITLE = "Example software engineer resume";
+export const DEMO_RESUME_TITLE = "Example product operations resume";
 
 export const DEMO_DOCUMENT_TYPES = [
   "tailored_resume",
@@ -42,20 +42,24 @@ export function demoDocumentRemaining(
 export async function getDemoUsage(
   supabase: SupabaseClient,
   userId: string,
+  applicationId?: string,
 ): Promise<DemoUsage> {
+  let eventQuery = supabase
+    .from("ai_events")
+    .select("document_type")
+    .eq("user_id", userId)
+    .eq("success", true)
+    .in("event_type", ["document_generation", "document_generation_stream"])
+    .in("document_type", [...DEMO_DOCUMENT_TYPES]);
+  if (applicationId) eventQuery = eventQuery.eq("application_id", applicationId);
+
   const [{ count, error: applicationError }, { data: events, error: eventError }] =
     await Promise.all([
       supabase
         .from("job_applications")
         .select("id", { count: "exact", head: true })
         .eq("user_id", userId),
-      supabase
-        .from("ai_events")
-        .select("document_type")
-        .eq("user_id", userId)
-        .eq("success", true)
-        .in("event_type", ["document_generation", "document_generation_stream"])
-        .in("document_type", [...DEMO_DOCUMENT_TYPES]),
+      eventQuery,
     ]);
 
   if (applicationError || eventError) {
@@ -96,129 +100,130 @@ export async function assertDemoDocumentAvailable(
   supabase: SupabaseClient,
   user: Pick<User, "id" | "is_anonymous" | "user_metadata" | "app_metadata">,
   documentType: DocumentType,
+  applicationId: string,
 ): Promise<string | null> {
   if (!isDemoUser(user) || !DEMO_DOCUMENT_TYPES.includes(documentType as DemoDocumentType)) {
     return null;
   }
   try {
-    const usage = await getDemoUsage(supabase, user.id);
+    const usage = await getDemoUsage(supabase, user.id, applicationId);
     return demoDocumentRemaining(usage, documentType as DemoDocumentType) > 0
       ? null
-      : "The single demo generation for this document type has already been used.";
+      : "The single demo generation for this document type has already been used for this application.";
   } catch {
     return "We could not verify the demo generation limit. Please try again.";
   }
 }
 
 export const DEMO_RESUME_PARSED: ParsedResume = {
-  name: "Jordan Lee",
+  name: "Maya Patel",
   contact: {
-    email: "jordan.lee@example.com",
-    phone: "+1 416 555 0142",
-    location: "Toronto, ON",
-    links: ["linkedin.com/in/jordanlee", "github.com/jordanlee"],
+    email: "maya.patel@example.com",
+    phone: "+1 604 555 0186",
+    location: "Vancouver, BC",
+    links: ["linkedin.com/in/mayapatel-example"],
   },
   summary:
-    "Software engineer with experience building reliable web products, data workflows, and cloud services.",
+    "Product operations analyst experienced in customer research, reporting, and cross-functional process improvement.",
   experience: [
     {
-      company: "Northstar Labs",
-      title: "Software Engineering Intern",
-      location: "Toronto, ON",
-      start: "May 2025",
-      end: "Aug 2025",
+      company: "Meridian Market Co.",
+      title: "Operations Analyst",
+      location: "Vancouver, BC",
+      start: "Mar 2023",
+      end: "Present",
       bullets: [
-        "Built reusable React and TypeScript components for a customer operations dashboard used by three internal teams.",
-        "Improved API response times by 32% by profiling PostgreSQL queries and adding targeted indexes.",
-        "Added automated tests and CI checks that reduced regressions during weekly releases.",
+        "Built weekly Excel and Tableau reports that gave sales and service leaders a shared view of customer trends.",
+        "Mapped order-support workflows and coordinated changes that reduced average resolution time by 18%.",
+        "Synthesized survey responses and interview notes into quarterly recommendations for product and marketing teams.",
       ],
     },
     {
-      company: "University Technology Centre",
-      title: "Software Developer",
-      location: "Toronto, ON",
-      start: "Sep 2024",
-      end: "Apr 2025",
+      company: "CivicWorks Foundation",
+      title: "Program Coordinator",
+      location: "Burnaby, BC",
+      start: "Jun 2021",
+      end: "Feb 2023",
       bullets: [
-        "Developed Python data pipelines that validated and transformed research datasets for downstream analysis.",
-        "Documented deployment and support workflows, shortening onboarding time for new team members.",
+        "Coordinated schedules, budgets, and communications for six community programs serving more than 400 participants.",
+        "Created standardized intake forms and status trackers that improved handoffs between staff and volunteers.",
       ],
     },
   ],
   projects: [
     {
-      name: "Collaborative Job Tracker",
-      description: "Full-stack application for organizing job-search activity.",
+      name: "Customer Feedback Taxonomy",
+      description: "Independent research and reporting project for a local retailer.",
       bullets: [
-        "Implemented a Next.js interface, Supabase authentication, and row-level data access controls.",
-        "Deployed the application with automated preview builds and production monitoring.",
+        "Coded 600 customer comments into a reusable taxonomy covering delivery, pricing, and service themes.",
+        "Presented a prioritized action plan and dashboard mock-up to the store leadership team.",
       ],
     },
   ],
   education: [
     {
-      degree: "Master of Engineering",
-      field: "Electrical and Computer Engineering",
-      school: "University of Toronto",
-      start: "2024",
-      end: "2026",
+      degree: "Bachelor of Business Administration",
+      field: "Operations Management",
+      school: "Simon Fraser University",
+      start: "2017",
+      end: "2021",
     },
     {
-      degree: "Bachelor of Computing (Honours)",
-      field: "Computer Science",
-      school: "Queen's University",
-      start: "2020",
-      end: "2024",
+      degree: "Certificate",
+      field: "User Experience Research",
+      school: "British Columbia Institute of Technology",
+      start: "2022",
+      end: "2022",
     },
   ],
   skills: [
-    "Languages: TypeScript, Python, Java, SQL",
-    "Frontend: React, Next.js, Tailwind CSS",
-    "Backend & Data: REST APIs, PostgreSQL, Supabase",
-    "Cloud & Tools: Docker, GitHub Actions, Linux, Vercel",
-    "Practices: Testing, CI/CD, Agile delivery, technical documentation",
+    "Analytics: Excel, Tableau, SQL basics, survey analysis",
+    "Operations: Process mapping, KPI reporting, workflow documentation",
+    "Research: Customer interviews, thematic analysis, questionnaire design",
+    "Tools: Airtable, Notion, Google Workspace, Microsoft PowerPoint",
+    "Collaboration: Stakeholder facilitation, project coordination, executive summaries",
   ],
 };
 
-export const DEMO_RESUME_TEXT = `Jordan Lee
-Toronto, ON | +1 416 555 0142 | jordan.lee@example.com
-linkedin.com/in/jordanlee | github.com/jordanlee
+export const DEMO_RESUME_TEXT = `Maya Patel
+Vancouver, BC | +1 604 555 0186 | maya.patel@example.com
+linkedin.com/in/mayapatel-example
 
 SUMMARY
-Software engineer with experience building reliable web products, data workflows, and cloud services.
+Product operations analyst experienced in customer research, reporting, and cross-functional process improvement.
 
 EXPERIENCE
-Software Engineering Intern | Northstar Labs | Toronto, ON | May 2025 - Aug 2025
-- Built reusable React and TypeScript components for a customer operations dashboard used by three internal teams.
-- Improved API response times by 32% by profiling PostgreSQL queries and adding targeted indexes.
-- Added automated tests and CI checks that reduced regressions during weekly releases.
+Operations Analyst | Meridian Market Co. | Vancouver, BC | Mar 2023 - Present
+- Built weekly Excel and Tableau reports that gave sales and service leaders a shared view of customer trends.
+- Mapped order-support workflows and coordinated changes that reduced average resolution time by 18%.
+- Synthesized survey responses and interview notes into quarterly recommendations for product and marketing teams.
 
-Software Developer | University Technology Centre | Toronto, ON | Sep 2024 - Apr 2025
-- Developed Python data pipelines that validated and transformed research datasets for downstream analysis.
-- Documented deployment and support workflows, shortening onboarding time for new team members.
+Program Coordinator | CivicWorks Foundation | Burnaby, BC | Jun 2021 - Feb 2023
+- Coordinated schedules, budgets, and communications for six community programs serving more than 400 participants.
+- Created standardized intake forms and status trackers that improved handoffs between staff and volunteers.
 
 PROJECTS
-Collaborative Job Tracker
-- Implemented a Next.js interface, Supabase authentication, and row-level data access controls.
-- Deployed the application with automated preview builds and production monitoring.
+Customer Feedback Taxonomy
+- Coded 600 customer comments into a reusable taxonomy covering delivery, pricing, and service themes.
+- Presented a prioritized action plan and dashboard mock-up to the store leadership team.
 
 EDUCATION
-Master of Engineering
-Electrical and Computer Engineering
-University of Toronto
-2024 - 2026
+Bachelor of Business Administration
+Operations Management
+Simon Fraser University
+2017 - 2021
 
-Bachelor of Computing (Honours)
-Computer Science
-Queen's University
-2020 - 2024
+Certificate
+User Experience Research
+British Columbia Institute of Technology
+2022
 
 SKILLS
-- Languages: TypeScript, Python, Java, SQL
-- Frontend: React, Next.js, Tailwind CSS
-- Backend & Data: REST APIs, PostgreSQL, Supabase
-- Cloud & Tools: Docker, GitHub Actions, Linux, Vercel
-- Practices: Testing, CI/CD, Agile delivery, technical documentation`;
+- Analytics: Excel, Tableau, SQL basics, survey analysis
+- Operations: Process mapping, KPI reporting, workflow documentation
+- Research: Customer interviews, thematic analysis, questionnaire design
+- Tools: Airtable, Notion, Google Workspace, Microsoft PowerPoint
+- Collaboration: Stakeholder facilitation, project coordination, executive summaries`;
 
 export const DEMO_ASSESSMENT_EXAMPLE: AssessmentAnalysis = {
   summary:

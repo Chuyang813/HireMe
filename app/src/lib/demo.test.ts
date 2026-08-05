@@ -46,9 +46,13 @@ describe("demo session rules", () => {
   });
 
   it("ships a structured example resume with readable section breaks", () => {
+    expect(DEMO_RESUME_PARSED.name).toBe("Maya Patel");
     expect(DEMO_RESUME_PARSED.education).toHaveLength(2);
     expect(DEMO_RESUME_PARSED.skills?.every((line) => line.includes(":"))).toBe(true);
     expect(DEMO_RESUME_TEXT).toContain("\nEDUCATION\n");
     expect(DEMO_RESUME_TEXT).toContain("\nSKILLS\n-");
+    expect(DEMO_RESUME_TEXT).not.toContain("University of Toronto");
+    expect(DEMO_RESUME_TEXT).not.toContain("Queen's University");
+    expect(DEMO_RESUME_TEXT).not.toContain("Electrical and Computer Engineering");
   });
 });
