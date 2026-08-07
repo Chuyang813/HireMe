@@ -15,6 +15,7 @@ import { INTERVIEW_PREP_SYSTEM } from "@/lib/ai/interview-prep";
 import { RESUME_TAILOR_SYSTEM_PROMPT } from "@/lib/ai/resume-tailor-prompt";
 import { encodeGenerationStreamEvent } from "@/lib/ai/generation-stream";
 import {
+  COVER_LETTER_MAX_OUTPUT_TOKENS,
   createDocumentAiOptions,
   documentGenerationErrorMessage,
 } from "@/lib/ai/document-generation-config";
@@ -38,7 +39,7 @@ import {
 import { checkRateLimit } from "@/lib/security/rate-limit";
 import { getClientIpFromHeaders } from "@/lib/security/request";
 import type { DocumentType, ParsedJob, ParsedResume } from "@/lib/db/types";
-import { assertDemoDocumentAvailable } from "@/lib/demo";
+import { assertDemoDocumentAvailable, isDemoUser } from "@/lib/demo";
 
 const AI_TIMEOUT_MS = 145_000;
 function docTypeToPromptType(dt: DocumentType): PromptType {
@@ -187,7 +188,7 @@ async function buildPrompt(
     const styleInstruction = COVER_LETTER_STYLE_INSTRUCTIONS[styleKey];
     return {
       system: `${COVER_LETTER_SYSTEM}${adjust ? ADJUST_MODE_ADDENDUM : ""}\n\nToday's date is ${today}. Use this exact date.\n\nTone instruction: ${styleInstruction}`,
-      maxTokens: 2048,
+      maxTokens: COVER_LETTER_MAX_OUTPUT_TOKENS,
       userMessage: [
         `Exact source-resume header to be reused by the application (JSON):\n${JSON.stringify(resumeHeader)}`,
         `Candidate parsed resume (JSON):\n${resumeJson}`,
@@ -265,6 +266,7 @@ export async function POST(req: NextRequest) {
   if (!user) {
     return Response.json({ error: "Unauthorized." }, { status: 401 });
   }
+  const isDemo = isDemoUser(user);
 
   const demoLimitError = await assertDemoDocumentAvailable(
     supabase,
@@ -505,7 +507,10 @@ export async function POST(req: NextRequest) {
           success: false,
           error_message: msg,
         });
-        send({ type: "error", message: documentGenerationErrorMessage(e) });
+        send({
+          type: "error",
+          message: documentGenerationErrorMessage(e, { isDemo }),
+        });
       } finally {
         if (heartbeat) clearInterval(heartbeat);
         clearTimeout(timer);

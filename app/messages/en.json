@@ -511,7 +511,6 @@
     "styleAcademic": "Academic",
     "styleStory": "Story-driven",
     "styleEnthusiastic": "Enthusiastic",
-    "formatLocked": "Source format lock is on. This application edits its own uploaded resume in place and preserves that file's page size, layout, fonts, colors, spacing, headers, and pagination. The cover letter inherits the same source design.",
     "pdfPreviewLoading": "Preparing the formatted PDF preview…",
     "pdfPreviewUnavailable": "The PDF preview could not be displayed. Please try downloading the PDF.",
     "pdfPreviewLabel": "PDF preview",

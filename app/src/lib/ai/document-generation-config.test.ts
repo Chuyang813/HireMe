@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  COVER_LETTER_MAX_OUTPUT_TOKENS,
   createDocumentAiOptions,
   documentGenerationErrorMessage,
 } from "./document-generation-config";
@@ -12,20 +13,27 @@ describe("document generation configuration", () => {
     });
   });
 
-  it("explains output-budget failures without consuming the allowance", () => {
-    expect(
-      documentGenerationErrorMessage(
-        new Error("DeepSeek returned no text. Finish reason: length."),
-      ),
-    ).toContain("ran out of output space");
+  it("mentions allowances only for demo users", () => {
+    const error = new Error("DeepSeek returned no text. Finish reason: length.");
+
+    expect(documentGenerationErrorMessage(error)).toBe(
+      "The document could not be completed. Please try again.",
+    );
+    expect(documentGenerationErrorMessage(error, { isDemo: true })).toContain(
+      "Your demo allowance was not used.",
+    );
   });
 
   it("distinguishes provider load from generic failures", () => {
     expect(documentGenerationErrorMessage(new Error("status 429"))).toContain(
       "busy right now",
     );
-    expect(documentGenerationErrorMessage(new Error("unexpected"))).toContain(
-      "allowance was not used",
+    expect(documentGenerationErrorMessage(new Error("unexpected"))).not.toContain(
+      "allowance",
     );
+  });
+
+  it("gives cover letters enough output room while the prompt controls length", () => {
+    expect(COVER_LETTER_MAX_OUTPUT_TOKENS).toBe(8_192);
   });
 });

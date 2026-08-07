@@ -23,10 +23,10 @@ export default async function Home() {
       body: "Checked fixtures measure JSON validity, schema shape, and expected-field accuracy without calling a live model.",
     },
     {
-      label: "Grounding",
-      metric: "12",
-      title: "Warnings capped",
-      body: "Generated drafts are scanned for unsupported emails, links, metrics, dates, and named entities before users export.",
+      label: "Format fidelity",
+      metric: "1:1",
+      title: "Source layout",
+      body: "Tailored resumes are rendered against the uploaded source so the original document remains the layout authority.",
     },
     {
       label: "Context",

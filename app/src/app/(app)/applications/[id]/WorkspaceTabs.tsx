@@ -19,7 +19,6 @@ import type {
   AssessmentAnalysis,
   DocumentType,
 } from "@/lib/db/types";
-import type { GroundingWarning } from "@/lib/ai/grounding";
 import type {
   GenerationStage,
   GenerationStreamEvent,
@@ -669,7 +668,6 @@ function DocumentPanel({
   const [copied, setCopied] = useState(false);
   const [autoSaving, setAutoSaving] = useState(false);
   const [exporting, setExporting] = useState(false);
-  const [groundingWarnings, setGroundingWarnings] = useState<GroundingWarning[]>([]);
   const [evalResult, setEvalResult] = useState<{ ats: ATSResult; fabrication: FabricationResult } | null>(null);
   const [evalLoading, setEvalLoading] = useState(false);
   const sourcePreviewRef = useRef<SourceDocumentPreviewHandle>(null);
@@ -696,7 +694,6 @@ function DocumentPanel({
       const result = await saveDocumentAction(undefined, fd);
       if (result && "ok" in result && result.ok) {
         setDocId(result.documentId);
-        setGroundingWarnings(result.groundingWarnings ?? []);
         setSaveStatus("saved");
         return true;
       }
@@ -871,7 +868,6 @@ function DocumentPanel({
             {generateError}
           </p>
         )}
-        <GroundingWarnings warnings={groundingWarnings} />
         {generationProgress ? <GenerationProgressCard progress={generationProgress} /> : null}
 
         <div className="relative">
@@ -909,12 +905,6 @@ function DocumentPanel({
           used={quotaConsumed ? 1 : 0}
         />
       ) : null}
-      {(documentType === "tailored_resume" || documentType === "cover_letter") && (
-        <div className="flex items-start gap-2 rounded-lg border border-accent/20 bg-[var(--accent-light)] px-3.5 py-3 text-xs leading-5 text-[var(--accent-hover)]">
-          <span aria-hidden="true">◆</span>
-          <p>{t("formatLocked")}</p>
-        </div>
-      )}
       <div className="flex flex-wrap items-center justify-between gap-3">
         {!hasResume && (
           <p className="text-sm text-muted-foreground">
@@ -980,7 +970,6 @@ function DocumentPanel({
           {generateError}
         </p>
       )}
-      <GroundingWarnings warnings={groundingWarnings} />
       {generationProgress ? <GenerationProgressCard progress={generationProgress} /> : null}
 
       <div className="relative">
@@ -1045,23 +1034,6 @@ function DocumentPanel({
       {autoSaving && <p className="text-xs text-muted-foreground">{t("saving")}</p>}
       {saveStatus === "saved" && <p className="text-xs text-success">{t("saved")}</p>}
       {saveStatus === "error" && <p className="text-xs text-danger">{t("saveFailed")}</p>}
-    </div>
-  );
-}
-
-function GroundingWarnings({ warnings }: { warnings: GroundingWarning[] }) {
-  if (!warnings.length) return null;
-
-  return (
-    <div className="rounded-md border border-[var(--warning-border)] bg-[var(--warning-light)] px-4 py-3 text-sm text-[var(--warning)]">
-      <p className="font-medium">AI grounding review suggested</p>
-      <ul className="mt-2 list-disc space-y-1 pl-5">
-        {warnings.slice(0, 5).map((warning) => (
-          <li key={`${warning.kind}:${warning.value}`}>
-            {warning.message}
-          </li>
-        ))}
-      </ul>
     </div>
   );
 }
