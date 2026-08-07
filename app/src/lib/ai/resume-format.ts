@@ -306,6 +306,20 @@ export function applyValidatedResumeReplacements(
   return tailored;
 }
 
+export function bestResumeTailoring(
+  sourceResume: string,
+  replacementMaps: Array<Record<string, unknown>>,
+): { content: string; appliedChanges: number } {
+  return replacementMaps.reduce<{ content: string; appliedChanges: number }>(
+    (best, replacements) => {
+      const content = applyResumeReplacements(sourceResume, replacements);
+      const appliedChanges = diffResumeReplacements(sourceResume, content).length;
+      return appliedChanges > best.appliedChanges ? { content, appliedChanges } : best;
+    },
+    { content: sourceResume, appliedChanges: 0 },
+  );
+}
+
 // Real contact-header lines are short; anything longer is unsegmented body text
 // (e.g. legacy extractions that collapsed the whole resume into one line).
 const MAX_HEADER_LINE_LENGTH = 160;

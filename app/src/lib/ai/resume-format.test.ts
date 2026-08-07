@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   applyResumeReplacements,
   applyValidatedResumeReplacements,
+  bestResumeTailoring,
   createResumeFormatTemplate,
   diffResumeReplacements,
   extractResumeHeader,
@@ -166,6 +167,20 @@ describe("resume format preservation", () => {
     expect(applyValidatedResumeReplacements(source, {
       L0006: "Built reusable design patterns for product operations teams.",
     }, 1)).not.toBe(source);
+  });
+
+  it("selects the candidate replacement map with the most accepted changes", () => {
+    const best = bestResumeTailoring(source, [
+      {},
+      { L0006: "Built reusable design patterns for product operations teams." },
+      {
+        L0006: "Built reusable design patterns for product operations teams.",
+        L0007: "Led research that improved role-specific onboarding flows.",
+      },
+    ]);
+
+    expect(best.appliedChanges).toBe(2);
+    expect(best.content).toContain("role-specific onboarding flows");
   });
 
   it("labels custom sections and rejects replacements that cannot fit the source line", () => {

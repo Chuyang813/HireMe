@@ -21,7 +21,7 @@ import {
   documentGenerationErrorMessage,
 } from "@/lib/ai/document-generation-config";
 import {
-  applyValidatedResumeReplacements,
+  bestResumeTailoring,
   createResumeFormatTemplate,
   extractResumeHeader,
   hasUsableResumeLineStructure,
@@ -56,6 +56,17 @@ function auditNote(
   model: string = DEFAULT_DOCUMENT_TEXT_MODEL,
 ) {
   return `provider=${AI_PROVIDER} model=${model} prompt_type=${promptType} prompt_version=${PROMPT_VERSIONS[promptType]}`;
+}
+
+function resumeReplacementMapFromOutput(output: string): Record<string, unknown> {
+  try {
+    const result = extractJson<{ replacements?: unknown }>(output);
+    return result.replacements && typeof result.replacements === "object"
+      ? result.replacements as Record<string, unknown>
+      : {};
+  } catch {
+    return {};
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -453,15 +464,54 @@ export async function POST(req: NextRequest) {
         if (documentType === "tailored_resume") {
           const sourceResume = resumeBaseText || resumeToText(parsedResume);
           const template = createResumeFormatTemplate(sourceResume);
-          const minimumChanges = adjust
+          const targetChanges = adjust
             ? 1
             : minimumResumeTailoringChanges(template.candidates.length);
-          const result = extractJson<{ replacements?: Record<string, unknown> }>(content);
-          content = applyValidatedResumeReplacements(
-            sourceResume,
-            result.replacements,
-            minimumChanges,
-          );
+          const firstMap = resumeReplacementMapFromOutput(content);
+          let best = bestResumeTailoring(sourceResume, [firstMap]);
+
+          if (best.appliedChanges < targetChanges) {
+            send({
+              type: "progress",
+              stage: "generating",
+              percent: 84,
+              elapsedMs: Date.now() - startedAt,
+            });
+            try {
+              const repairedOutput = await aiText({
+                system: prompt.system,
+                messages: [{
+                  role: "user",
+                  content: [
+                    prompt.userMessage,
+                    `The previous replacement map produced only ${best.appliedChanges} accepted change(s); the target is ${targetChanges}. Return a corrected COMPLETE replacement map.`,
+                    "Validator requirements: use only supplied IDs; keep every value on one line and at or below its maxCharacters; omit bullet glyphs; keep each Skills category label exact and only reorder or omit skills already in that same row; never add a named tool, acronym, metric, or fact to an Experience/Project line unless that exact line supports it.",
+                    `Previous model output:\n${contentFromModel}`,
+                    "Return only the corrected replacement-map JSON.",
+                  ].join("\n\n"),
+                }],
+                maxTokens: prompt.maxTokens,
+                model: aiOptions.model,
+                thinkingMode: "disabled",
+                allowFallback: false,
+              });
+              if (closed) return;
+              const repairedMap = resumeReplacementMapFromOutput(repairedOutput);
+              best = bestResumeTailoring(sourceResume, [
+                firstMap,
+                repairedMap,
+                { ...firstMap, ...repairedMap },
+                { ...repairedMap, ...firstMap },
+              ]);
+            } catch (repairError) {
+              if (best.appliedChanges < 1) throw repairError;
+            }
+          }
+
+          if (best.appliedChanges < 1) {
+            throw new Error("Resume tailoring did not produce enough supported changes.");
+          }
+          content = best.content;
         } else if (documentType === "cover_letter") {
           const draft = extractJson<CoverLetterDraft>(content);
           content = renderCoverLetterWithResumeFormat(
