@@ -1,6 +1,6 @@
 export type DocumentAiOptions = {
   model: string;
-  thinkingMode: "disabled";
+  thinkingMode: "enabled" | "disabled";
 };
 
 export const DOCUMENT_MAX_OUTPUT_TOKENS = 8_192;
@@ -14,13 +14,15 @@ export const DOCUMENT_OUTPUT_TOKEN_LIMITS = {
   interview_prep: DOCUMENT_MAX_OUTPUT_TOKENS,
 } as const;
 
-export function createDocumentAiOptions(model: string): DocumentAiOptions {
+export function createDocumentAiOptions(
+  model: string,
+  thinkingMode: DocumentAiOptions["thinkingMode"] = "disabled",
+): DocumentAiOptions {
   return {
     model,
-    // Keep the high-quality model, but reserve its output budget for the
-    // document body. Long resumes can otherwise spend the budget on hidden
-    // reasoning and return no usable text.
-    thinkingMode: "disabled",
+    // Resume tailoring can opt into reasoning; other document types reserve
+    // the full output budget for the visible document body.
+    thinkingMode,
   };
 }
 
@@ -36,6 +38,16 @@ export function documentGenerationErrorMessage(
   const message = error instanceof Error ? error.message : String(error);
   const normalized = message.toLocaleLowerCase();
   const isDemo = options.isDemo === true;
+
+  if (
+    normalized.includes("enough supported changes")
+    || normalized.includes("does not contain editable lines")
+  ) {
+    return retryMessage(
+      "The resume could not be tailored with verified JD-matched changes.",
+      isDemo,
+    );
+  }
 
   if (normalized.includes("timed out") || normalized.includes("aborterror")) {
     return retryMessage("High-quality generation took too long.", isDemo);

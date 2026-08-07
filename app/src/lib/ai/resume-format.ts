@@ -34,7 +34,8 @@ const BULLET_RE = /^(\s*(?:(?:[-*\u2022\u25cf\u25aa\u25e6\u2023\u2013\u2014\uf0b
 const CONTACT_RE = /(?:@|https?:\/\/|www\.|linkedin\.com|github\.com|\+?\d[\d\s().-]{7,})/i;
 const DATE_RE = /\b(?:19|20)\d{2}\b|\b(?:present|current)\b/i;
 const SECTION_RE = /^(?:summary|profile|objective|experience|work experience|professional experience|education|skills|technical skills|projects|certifications|languages|publications|research|awards|volunteer(?:ing)?|interests)$/i;
-const PROTECTED_DETAIL_SECTIONS = new Set(["education", "skills", "technical skills"]);
+const PROTECTED_DETAIL_SECTIONS = new Set(["education"]);
+const SKILLS_SECTIONS = new Set(["skills", "technical skills"]);
 
 function splitLines(value: string): string[] {
   return value.split(/\r\n|\n|\r/);
@@ -97,11 +98,37 @@ function factualAnchors(value: string): string[] {
   ) ?? [];
 }
 
-function introducesUnsupportedFactualAnchor(original: string, replacement: string): boolean {
-  const originalAnchors = new Set(factualAnchors(original).map((value) => value.toLocaleLowerCase()));
+function introducesUnsupportedFactualAnchor(evidence: string, replacement: string): boolean {
+  const originalAnchors = new Set(factualAnchors(evidence).map((value) => value.toLocaleLowerCase()));
   return factualAnchors(replacement).some(
     (value) => !originalAnchors.has(value.toLocaleLowerCase()),
   );
+}
+
+function canUseResumeWideEvidence(section: string): boolean {
+  return section === "summary"
+    || section === "profile"
+    || section === "objective"
+    || section.includes("summary of qualifications");
+}
+
+function isEditableSkillsLine(line: string): boolean {
+  const trimmed = line.trim();
+  if (!trimmed) return false;
+  const detail = trimmed.includes(":") ? trimmed.slice(trimmed.indexOf(":") + 1) : trimmed;
+  return detail.split(/[,;|]/).filter((item) => item.trim()).length >= 2;
+}
+
+function skillCategoryPrefix(value: string): string | null {
+  return value.trim().match(/^([^:]{1,64}:)/)?.[1] ?? null;
+}
+
+function normalizedSkillItems(value: string): string[] {
+  const detail = value.includes(":") ? value.slice(value.indexOf(":") + 1) : value;
+  return detail
+    .split(/[,;|]/)
+    .map((item) => item.normalize("NFKC").toLocaleLowerCase().replace(/\s+/g, " ").trim())
+    .filter(Boolean);
 }
 
 function looksLikeHeading(line: string): boolean {
@@ -148,6 +175,19 @@ export function createResumeFormatTemplate(rawResumeText: string): ResumeFormatT
       return;
     }
     nonEmptyIndex += 1;
+    const inlineSkills = trimmed.match(/^(technical skills|skills)\s*:\s*\S/i);
+    if (inlineSkills?.[1]) {
+      currentSection = inlineSkills[1].toLocaleLowerCase();
+      currentContext = "";
+      candidates.push({
+        id: `L${String(lineIndex + 1).padStart(4, "0")}`,
+        text: trimmed,
+        kind: "prose",
+        section: currentSection,
+        maxCharacters: trimmed.length,
+      });
+      return;
+    }
     const nextSection = sectionNameFromLine(line);
     if (nextSection) {
       currentSection = nextSection;
@@ -155,7 +195,8 @@ export function createResumeFormatTemplate(rawResumeText: string): ResumeFormatT
       return;
     }
     if (PROTECTED_DETAIL_SECTIONS.has(currentSection)) return;
-    if (!isEditableLine(line, lineIndex, nonEmptyIndex)) {
+    const editableSkillsLine = SKILLS_SECTIONS.has(currentSection) && isEditableSkillsLine(line);
+    if (!editableSkillsLine && !isEditableLine(line, lineIndex, nonEmptyIndex)) {
       if (!CONTACT_RE.test(trimmed) && trimmed.length <= 180) currentContext = trimmed;
       return;
     }
@@ -193,7 +234,17 @@ export function applyResumeReplacements(
     const lineIndex = Number(id.slice(1)) - 1;
     const original = lines[lineIndex];
     if (original === undefined) continue;
-    if (introducesUnsupportedFactualAnchor(candidate.text, replacement)) continue;
+    const factualEvidence = canUseResumeWideEvidence(candidate.section)
+      ? rawResumeText
+      : candidate.text;
+    if (introducesUnsupportedFactualAnchor(factualEvidence, replacement)) continue;
+
+    if (SKILLS_SECTIONS.has(candidate.section)) {
+      const originalCategory = skillCategoryPrefix(candidate.text);
+      if (originalCategory && skillCategoryPrefix(replacement) !== originalCategory) continue;
+      const originalSkills = new Set(normalizedSkillItems(candidate.text));
+      if (normalizedSkillItems(replacement).some((skill) => !originalSkills.has(skill))) continue;
+    }
 
     const bullet = original.match(BULLET_RE);
     if (bullet) {
@@ -211,6 +262,13 @@ export function applyResumeReplacements(
   }
 
   return lines.join(newlineFor(rawResumeText));
+}
+
+export function minimumResumeTailoringChanges(candidateCount: number): number {
+  if (candidateCount <= 0) return 0;
+  if (candidateCount >= 10) return 3;
+  if (candidateCount >= 4) return 2;
+  return 1;
 }
 
 export function diffResumeReplacements(
@@ -233,6 +291,19 @@ export function diffResumeReplacements(
       replacementText,
     }];
   });
+}
+
+export function applyValidatedResumeReplacements(
+  rawResumeText: string,
+  replacements: Record<string, unknown> | null | undefined,
+  minimumChanges: number,
+): string {
+  const tailored = applyResumeReplacements(rawResumeText, replacements);
+  const appliedChanges = diffResumeReplacements(rawResumeText, tailored).length;
+  if (appliedChanges < minimumChanges) {
+    throw new Error("Resume tailoring did not produce enough supported changes.");
+  }
+  return tailored;
 }
 
 // Real contact-header lines are short; anything longer is unsegmented body text

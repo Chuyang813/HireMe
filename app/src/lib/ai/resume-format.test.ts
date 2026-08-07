@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
   applyResumeReplacements,
+  applyValidatedResumeReplacements,
   createResumeFormatTemplate,
   diffResumeReplacements,
   extractResumeHeader,
   hasUsableResumeLineStructure,
+  minimumResumeTailoringChanges,
   renderCoverLetterWithResumeFormat,
   stripAccidentalResumePrefixFromCoverLetter,
 } from "./resume-format";
@@ -42,6 +44,13 @@ describe("resume format preservation", () => {
         context: "Senior Designer | Acme | 2022 - Present",
         maxCharacters: 61,
       },
+      {
+        id: "L0010",
+        text: "Figma, prototyping, user research",
+        kind: "prose",
+        section: "skills",
+        maxCharacters: 33,
+      },
     ]);
   });
 
@@ -65,13 +74,13 @@ describe("resume format preservation", () => {
   it("recognizes the LibreOffice private-use bullet found in uploaded PDFs", () => {
     const libreOfficeSource = source.replaceAll("•", "\uf0b7");
     const candidates = createResumeFormatTemplate(libreOfficeSource).candidates;
-    expect(candidates).toHaveLength(2);
+    expect(candidates).toHaveLength(3);
     expect(candidates[0].text).toBe(
       "Built a reusable design system used across four product teams.",
     );
   });
 
-  it("keeps education and categorized skill facts out of AI replacements", () => {
+  it("keeps education immutable while exposing categorized skills for JD prioritization", () => {
     const protectedSource = [
       "Alex Chen",
       "alex@example.com | Toronto, ON",
@@ -88,13 +97,75 @@ describe("resume format preservation", () => {
       "Languages & Fundamentals: TypeScript, JavaScript, Python, algorithms and data structures",
     ].join("\n");
 
-    expect(createResumeFormatTemplate(protectedSource).candidates).toEqual([{
-      id: "L0005",
-      text: "Built a reusable design system used across four product teams.",
-      kind: "bullet",
-      section: "experience",
-      maxCharacters: 62,
-    }]);
+    expect(createResumeFormatTemplate(protectedSource).candidates).toEqual([
+      {
+        id: "L0005",
+        text: "Built a reusable design system used across four product teams.",
+        kind: "bullet",
+        section: "experience",
+        maxCharacters: 62,
+      },
+      {
+        id: "L0013",
+        text: "Languages & Fundamentals: TypeScript, JavaScript, Python, algorithms and data structures",
+        kind: "prose",
+        section: "skills",
+        maxCharacters: 88,
+      },
+    ]);
+  });
+
+  it("reorders verified skills while preserving the exact category label", () => {
+    const categorized = [
+      "Alex Chen",
+      "alex@example.com | Toronto, ON",
+      "",
+      "SKILLS",
+      "Tools: Python, SQL, Docker",
+    ].join("\n");
+
+    expect(applyResumeReplacements(categorized, {
+      L0005: "Tools: SQL, Docker, Python",
+    })).toContain("Tools: SQL, Docker, Python");
+    expect(applyResumeReplacements(categorized, {
+      L0005: "Platforms: SQL, Docker",
+    })).toBe(categorized);
+    expect(applyResumeReplacements(categorized, {
+      L0005: "Tools: Kubernetes, SQL",
+    })).toBe(categorized);
+  });
+
+  it("allows a summary to foreground a skill verified elsewhere in the resume", () => {
+    const withVerifiedSkill = [
+      "Alex Chen",
+      "alex@example.com | Toronto, ON",
+      "",
+      "SUMMARY",
+      "Civil engineer experienced in municipal drainage design and detailed field reporting.",
+      "",
+      "SKILLS",
+      "Engineering Tools: PCSWMM, AutoCAD, Excel",
+    ].join("\n");
+
+    expect(applyResumeReplacements(withVerifiedSkill, {
+      L0005: "Civil engineer experienced in PCSWMM drainage design and detailed field reporting.",
+    })).toContain("experienced in PCSWMM drainage design");
+  });
+
+  it("requires material changes in proportion to the available editable lines", () => {
+    expect(minimumResumeTailoringChanges(0)).toBe(0);
+    expect(minimumResumeTailoringChanges(3)).toBe(1);
+    expect(minimumResumeTailoringChanges(4)).toBe(2);
+    expect(minimumResumeTailoringChanges(10)).toBe(3);
+  });
+
+  it("never reports an unchanged source resume as successful tailoring", () => {
+    expect(() => applyValidatedResumeReplacements(source, {}, 1)).toThrow(
+      "did not produce enough supported changes",
+    );
+    expect(applyValidatedResumeReplacements(source, {
+      L0006: "Built reusable design patterns for product operations teams.",
+    }, 1)).not.toBe(source);
   });
 
   it("labels custom sections and rejects replacements that cannot fit the source line", () => {

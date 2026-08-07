@@ -14,6 +14,10 @@ describe("document generation configuration", () => {
       model: "deepseek-v4-pro",
       thinkingMode: "disabled",
     });
+    expect(createDocumentAiOptions("deepseek-v4-pro", "enabled")).toEqual({
+      model: "deepseek-v4-pro",
+      thinkingMode: "enabled",
+    });
   });
 
   it("mentions allowances only for demo users", () => {
@@ -34,6 +38,9 @@ describe("document generation configuration", () => {
     expect(documentGenerationErrorMessage(new Error("unexpected"))).not.toContain(
       "allowance",
     );
+    expect(documentGenerationErrorMessage(
+      new Error("Resume tailoring did not produce enough supported changes."),
+    )).toContain("verified JD-matched changes");
   });
 
   it("gives every generated document the provider's full output allowance", () => {

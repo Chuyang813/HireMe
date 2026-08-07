@@ -398,8 +398,8 @@ async function generateDeepSeek({
             ...messages,
           ],
           max_tokens: maxTokens,
-          // V4 thinking defaults to enabled, so generated documents must send
-          // the disabled mode explicitly to reserve the full output budget.
+          // V4 thinking defaults to enabled. Send the selected mode explicitly
+          // so each generation workflow controls its latency and output budget.
           ...resolveDeepSeekThinkingPayload(model, thinkingMode),
           response_format:
             responseMimeType === "application/json"
@@ -616,12 +616,14 @@ export async function aiJson<T>({
   messages,
   model = DEFAULT_MODEL,
   maxTokens = 4096,
+  thinkingMode,
   allowFallback = true,
 }: {
   system: string;
   messages: AiTextMessage[];
   model?: string;
   maxTokens?: number;
+  thinkingMode?: "enabled" | "disabled";
   allowFallback?: boolean;
 }): Promise<T> {
   let lastError: Error | null = null;
@@ -643,7 +645,7 @@ export async function aiJson<T>({
               // response_format:json_object. The system prompt enforces JSON output and
               // extractJson() parses it from the text response.
               responseMimeType: "text/plain",
-              thinkingMode: getDeepSeekJsonThinkingMode(),
+              thinkingMode: thinkingMode ?? getDeepSeekJsonThinkingMode(),
             })
           : candidate.provider === "glm"
           ? await generateGlm({

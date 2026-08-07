@@ -19,16 +19,22 @@ describe("resume tailoring prompt", () => {
       "each education entry as separate program, school, and date lines",
     );
     expect(RESUME_TAILOR_SYSTEM_PROMPT).toContain(
-      "skills as compact labeled category rows",
+      "Skills rows are editable only to prioritize JD-relevant skills",
     );
     expect(RESUME_TAILOR_SYSTEM_PROMPT).toContain(
-      '"section" and optional "context" as a hard semantic boundary',
+      'each experience or project line\'s "section" and optional "context" as a hard semantic boundary',
     );
     expect(RESUME_TAILOR_SYSTEM_PROMPT).toContain(
       '"maxCharacters" value is a hard output limit',
     );
     expect(RESUME_TAILOR_SYSTEM_PROMPT).toContain(
-      "unless it is already present in that exact source line",
+      "JOB MATCHING",
+    );
+    expect(RESUME_TAILOR_SYSTEM_PROMPT).toContain(
+      "Do not return an empty replacement map",
+    );
+    expect(RESUME_TAILOR_SYSTEM_PROMPT).toContain(
+      "A named skill may be used in Summary or Skills only when it is present",
     );
   });
 });

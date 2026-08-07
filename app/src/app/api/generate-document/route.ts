@@ -21,10 +21,11 @@ import {
   documentGenerationErrorMessage,
 } from "@/lib/ai/document-generation-config";
 import {
-  applyResumeReplacements,
+  applyValidatedResumeReplacements,
   createResumeFormatTemplate,
   extractResumeHeader,
   hasUsableResumeLineStructure,
+  minimumResumeTailoringChanges,
   renderCoverLetterWithResumeFormat,
   type CoverLetterDraft,
 } from "@/lib/ai/resume-format";
@@ -158,11 +159,23 @@ async function buildPrompt(
   const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
   const resumeJson = JSON.stringify(resume, null, 2);
   const jobJson = JSON.stringify(job, null, 2);
+  const jobSkillTargets = Array.from(new Set([
+    ...(job.key_skills ?? []),
+    ...(job.required_skills ?? []),
+    ...(job.desired_skills ?? []),
+    ...(job.keywords ?? []),
+  ].filter((value): value is string => typeof value === "string" && Boolean(value.trim()))));
   if (documentType === "tailored_resume") {
     const sourceResume = adjust?.currentContent?.trim()
       ? adjust.currentContent
       : rawResumeText?.trim() ? rawResumeText : resumeToText(resume);
     const template = createResumeFormatTemplate(sourceResume);
+    if (template.candidates.length === 0) {
+      throw new Error("The source resume does not contain editable lines.");
+    }
+    const minimumChanges = adjust
+      ? 1
+      : minimumResumeTailoringChanges(template.candidates.length);
     return {
       system: adjust
         ? `${RESUME_TAILOR_SYSTEM_PROMPT}${ADJUST_MODE_ADDENDUM}`
@@ -170,9 +183,12 @@ async function buildPrompt(
       maxTokens: DOCUMENT_OUTPUT_TOKEN_LIMITS.tailored_resume,
       userMessage: [
         `Editable source lines (JSON):\n${JSON.stringify(template.candidates, null, 2)}`,
+        `Verified candidate resume evidence (JSON):\n${resumeJson}`,
         `Parsed job posting (JSON):\n${jobJson}`,
+        `Ranked JD skill targets (JSON):\n${JSON.stringify(jobSkillTargets)}`,
+        rawJobText ? `Raw job posting text:\n${rawJobText}` : "",
         adjust ? `User's requested adjustment (apply this to the editable lines above, changing only what it asks for):\n${adjust.instruction}` : "",
-        "Return only the replacement-map JSON. Preserve the source format and structure exactly.",
+        `Return at least ${minimumChanges} truthful, material replacements. Preserve the source format and structure exactly.`,
       ].filter(Boolean).join("\n\n"),
     };
   }
@@ -379,7 +395,10 @@ export async function POST(req: NextRequest) {
         close();
       }, DOCUMENT_STREAM_TIMEOUT_MS);
 
-      const aiOptions = createDocumentAiOptions(DEFAULT_DOCUMENT_TEXT_MODEL);
+      const aiOptions = createDocumentAiOptions(
+        DEFAULT_DOCUMENT_TEXT_MODEL,
+        documentType === "tailored_resume" ? "enabled" : "disabled",
+      );
       const usedModel = aiOptions.model;
       let aiStartedAt = startedAt;
 
@@ -435,14 +454,17 @@ export async function POST(req: NextRequest) {
         let content = contentFromModel;
 
         if (documentType === "tailored_resume") {
-          try {
-            const result = extractJson<{ replacements?: Record<string, unknown> }>(content);
-            content = applyResumeReplacements(resumeBaseText || resumeToText(parsedResume), result.replacements);
-          } catch {
-            // Formatting is a hard constraint. If the model ignores the JSON
-            // contract, return the untouched source instead of a reformatted resume.
-            content = resumeBaseText || resumeToText(parsedResume);
-          }
+          const sourceResume = resumeBaseText || resumeToText(parsedResume);
+          const template = createResumeFormatTemplate(sourceResume);
+          const minimumChanges = adjust
+            ? 1
+            : minimumResumeTailoringChanges(template.candidates.length);
+          const result = extractJson<{ replacements?: Record<string, unknown> }>(content);
+          content = applyValidatedResumeReplacements(
+            sourceResume,
+            result.replacements,
+            minimumChanges,
+          );
         } else if (documentType === "cover_letter") {
           const draft = extractJson<CoverLetterDraft>(content);
           content = renderCoverLetterWithResumeFormat(
