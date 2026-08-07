@@ -15,6 +15,10 @@ import { INTERVIEW_PREP_SYSTEM } from "@/lib/ai/interview-prep";
 import { RESUME_TAILOR_SYSTEM_PROMPT } from "@/lib/ai/resume-tailor-prompt";
 import { encodeGenerationStreamEvent } from "@/lib/ai/generation-stream";
 import {
+  createDocumentAiOptions,
+  documentGenerationErrorMessage,
+} from "@/lib/ai/document-generation-config";
+import {
   applyResumeReplacements,
   createResumeFormatTemplate,
   extractResumeHeader,
@@ -50,13 +54,6 @@ function auditNote(
   model: string = DEFAULT_DOCUMENT_TEXT_MODEL,
 ) {
   return `provider=${AI_PROVIDER} model=${model} prompt_type=${promptType} prompt_version=${PROMPT_VERSIONS[promptType]}`;
-}
-
-function getDocumentAiOptions(): {
-  model?: string;
-  thinkingMode?: "enabled" | "disabled";
-} {
-  return { model: DEFAULT_DOCUMENT_TEXT_MODEL, thinkingMode: "enabled" };
 }
 
 // ---------------------------------------------------------------------------
@@ -380,8 +377,8 @@ export async function POST(req: NextRequest) {
         close();
       }, AI_TIMEOUT_MS);
 
-      const aiOptions = getDocumentAiOptions();
-      const usedModel = aiOptions.model ?? DEFAULT_DOCUMENT_TEXT_MODEL;
+      const aiOptions = createDocumentAiOptions(DEFAULT_DOCUMENT_TEXT_MODEL);
+      const usedModel = aiOptions.model;
       let aiStartedAt = startedAt;
 
       try {
@@ -508,7 +505,7 @@ export async function POST(req: NextRequest) {
           success: false,
           error_message: msg,
         });
-        send({ type: "error", message: "High-quality generation failed. Please try again." });
+        send({ type: "error", message: documentGenerationErrorMessage(e) });
       } finally {
         if (heartbeat) clearInterval(heartbeat);
         clearTimeout(timer);
