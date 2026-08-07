@@ -48,44 +48,59 @@ export async function GET(
     );
   }
 
-  let sourceFile = await supabase.storage
+  const requestScopedFile = await supabase.storage
     .from("resumes")
     .download(resume.source_file_path);
+  let sourceBytes = await readNonEmptySourceBytes(requestScopedFile.data);
+  let receivedEmptyFile = Boolean(requestScopedFile.data) && !sourceBytes;
 
   // Ownership was verified above. If the request-scoped storage token cannot
-  // read an older object, retry server-side without exposing the private path.
-  if (sourceFile.error || !sourceFile.data) {
+  // read a complete older object, retry server-side without exposing its path.
+  if (requestScopedFile.error || !sourceBytes) {
     try {
-      sourceFile = await getSupabaseAdmin().storage
+      const adminFile = await getSupabaseAdmin().storage
         .from("resumes")
         .download(resume.source_file_path);
+      const adminBytes = await readNonEmptySourceBytes(adminFile.data);
+      receivedEmptyFile = receivedEmptyFile || (Boolean(adminFile.data) && !adminBytes);
+      if (adminBytes) sourceBytes = adminBytes;
     } catch {
       // Return the same safe, user-facing error below.
     }
   }
 
-  if (sourceFile.error || !sourceFile.data) {
+  if (!sourceBytes && !receivedEmptyFile) {
     return Response.json(
       { error: "Could not load the uploaded document/PDF." },
       { status: 404 },
     );
   }
 
-  if (sourceFile.data.size === 0) {
+  if (!sourceBytes) {
     return Response.json(
       { error: "The uploaded document/PDF is empty." },
       { status: 422 },
     );
   }
 
-  return new Response(sourceFile.data.stream(), {
+  return new Response(sourceBytes, {
     headers: {
       "Cache-Control": "private, no-store",
-      "Content-Length": String(sourceFile.data.size),
+      "Content-Length": String(sourceBytes.byteLength),
       "Content-Type": sourceType === "pdf"
         ? "application/pdf"
         : "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
       "X-Content-Type-Options": "nosniff",
     },
   });
+}
+
+async function readNonEmptySourceBytes(file: Blob | null): Promise<ArrayBuffer | null> {
+  if (!file) return null;
+  try {
+    const bytes = await file.arrayBuffer();
+    return bytes.byteLength > 0 ? bytes : null;
+  } catch {
+    return null;
+  }
 }
