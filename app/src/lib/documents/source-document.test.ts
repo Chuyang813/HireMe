@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   restoreInlineBulletPrefix,
   sourceDocumentHasBytes,
+  sourceDocumentLoadErrorMessage,
   sourceTextMatchScore,
 } from "./source-document";
 
@@ -23,6 +24,18 @@ describe("source-format matching", () => {
   it("rejects an empty source file before PDF or DOCX parsing", () => {
     expect(sourceDocumentHasBytes(new ArrayBuffer(0))).toBe(false);
     expect(sourceDocumentHasBytes(new ArrayBuffer(1))).toBe(true);
+  });
+
+  it("surfaces a document/PDF error returned by the protected source route", async () => {
+    await expect(sourceDocumentLoadErrorMessage(Response.json(
+      { error: "Could not load the uploaded document/PDF." },
+      { status: 404 },
+    ))).resolves.toBe("Could not load the uploaded document/PDF.");
+  });
+
+  it("uses a document/PDF fallback for non-JSON platform errors", async () => {
+    await expect(sourceDocumentLoadErrorMessage(new Response("Not found", { status: 404 })))
+      .resolves.toBe("Could not load the uploaded document/PDF.");
   });
 
   it("restores a bullet that shares a PDF text item with replaced content", () => {

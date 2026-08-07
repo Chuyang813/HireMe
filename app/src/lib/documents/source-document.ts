@@ -9,6 +9,8 @@ import {
 export type ResumeSourceType = "pdf" | "docx" | "txt";
 export type PrintableDocumentType = "tailored_resume" | "cover_letter";
 
+export const SOURCE_DOCUMENT_LOAD_ERROR = "Could not load the uploaded document/PDF.";
+
 export interface SourceFormattedArtifact {
   previewType: "pdf" | "docx";
   sourceType: ResumeSourceType;
@@ -846,10 +848,12 @@ export async function createSourceFormattedArtifact({
   }
 
   const response = await fetch(sourceUrl);
-  if (!response.ok) throw new Error("Could not load the source resume.");
+  if (!response.ok) {
+    throw new Error(await sourceDocumentLoadErrorMessage(response));
+  }
   const sourceBytes = await response.arrayBuffer();
   if (!sourceDocumentHasBytes(sourceBytes)) {
-    throw new Error("The uploaded source resume is empty.");
+    throw new Error("The uploaded document/PDF is empty.");
   }
 
   if (sourceType === "pdf") {
@@ -874,6 +878,18 @@ export async function createSourceFormattedArtifact({
 
 export function sourceDocumentHasBytes(sourceBytes: { byteLength: number }): boolean {
   return sourceBytes.byteLength > 0;
+}
+
+export async function sourceDocumentLoadErrorMessage(response: Response): Promise<string> {
+  try {
+    const payload = await response.json() as { error?: unknown };
+    if (typeof payload.error === "string" && payload.error.trim()) {
+      return payload.error.trim();
+    }
+  } catch {
+    // The endpoint may return a generic platform error instead of JSON.
+  }
+  return SOURCE_DOCUMENT_LOAD_ERROR;
 }
 
 export async function renderDocxPreview(blob: Blob, container: HTMLElement): Promise<void> {

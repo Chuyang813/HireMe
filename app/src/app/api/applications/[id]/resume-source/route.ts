@@ -1,5 +1,6 @@
 import { getOptionalUser } from "@/lib/auth/current-user";
 import { uuidSchema } from "@/lib/security/limits";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -41,19 +42,38 @@ export async function GET(
     !resume?.source_file_path
     || (sourceType !== "pdf" && sourceType !== "docx")
   ) {
-    return Response.json({ error: "Source resume file not found." }, { status: 404 });
+    return Response.json(
+      { error: "The uploaded document/PDF could not be found." },
+      { status: 404 },
+    );
   }
 
-  const sourceFile = await supabase.storage
+  let sourceFile = await supabase.storage
     .from("resumes")
     .download(resume.source_file_path);
+
+  // Ownership was verified above. If the request-scoped storage token cannot
+  // read an older object, retry server-side without exposing the private path.
   if (sourceFile.error || !sourceFile.data) {
-    return Response.json({ error: "Could not load the source resume." }, { status: 404 });
+    try {
+      sourceFile = await getSupabaseAdmin().storage
+        .from("resumes")
+        .download(resume.source_file_path);
+    } catch {
+      // Return the same safe, user-facing error below.
+    }
+  }
+
+  if (sourceFile.error || !sourceFile.data) {
+    return Response.json(
+      { error: "Could not load the uploaded document/PDF." },
+      { status: 404 },
+    );
   }
 
   if (sourceFile.data.size === 0) {
     return Response.json(
-      { error: "The uploaded source resume is empty." },
+      { error: "The uploaded document/PDF is empty." },
       { status: 422 },
     );
   }

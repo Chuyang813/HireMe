@@ -216,11 +216,11 @@ export async function getApplicationResumeSourceAction(
   const { data: resume } = application.base_resume_id
     ? await resumeQuery.eq("id", application.base_resume_id).single()
     : await resumeQuery.eq("is_default", true).single();
-  if (!resume) return { ok: false, error: "Source resume not found." };
+  if (!resume) return { ok: false, error: "Source document/PDF not found." };
 
   const sourceType = resume.source_file_type;
   if (sourceType !== "pdf" && sourceType !== "docx" && sourceType !== "txt") {
-    return { ok: false, error: "Unsupported source resume format." };
+    return { ok: false, error: "Unsupported source document/PDF format." };
   }
 
   let rawText = resume.raw_text ?? "";
