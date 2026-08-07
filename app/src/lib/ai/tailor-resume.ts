@@ -61,6 +61,6 @@ export async function tailorResume({
   return applyValidatedResumeReplacements(
     sourceResume,
     result.replacements,
-    1,
+    minimumChanges,
   );
 }

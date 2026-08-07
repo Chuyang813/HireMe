@@ -35,7 +35,7 @@ describe("resume format preservation", () => {
         kind: "bullet",
         section: "experience",
         context: "Senior Designer | Acme | 2022 - Present",
-        maxCharacters: 62,
+        maxCharacters: 70,
       },
       {
         id: "L0007",
@@ -43,14 +43,14 @@ describe("resume format preservation", () => {
         kind: "bullet",
         section: "experience",
         context: "Senior Designer | Acme | 2022 - Present",
-        maxCharacters: 61,
+        maxCharacters: 69,
       },
       {
         id: "L0010",
         text: "Figma, prototyping, user research",
         kind: "prose",
         section: "skills",
-        maxCharacters: 33,
+        maxCharacters: 41,
       },
     ]);
   });
@@ -104,14 +104,14 @@ describe("resume format preservation", () => {
         text: "Built a reusable design system used across four product teams.",
         kind: "bullet",
         section: "experience",
-        maxCharacters: 62,
+        maxCharacters: 70,
       },
       {
         id: "L0013",
         text: "Languages & Fundamentals: TypeScript, JavaScript, Python, algorithms and data structures",
         kind: "prose",
         section: "skills",
-        maxCharacters: 88,
+        maxCharacters: 97,
       },
     ]);
   });
@@ -153,6 +153,43 @@ describe("resume format preservation", () => {
     })).toContain("experienced in PCSWMM drainage design");
   });
 
+  it("uses skills from the same job context without moving metrics between bullets", () => {
+    const contextual = [
+      "Alex Chen",
+      "alex@example.com | Toronto, ON",
+      "",
+      "EXPERIENCE",
+      "Analyst | Acme | 2024 - Present",
+      "- Built data pipelines for weekly reporting.",
+      "- Automated SQL queries and reduced processing time by 40%.",
+    ].join("\n");
+
+    expect(applyResumeReplacements(contextual, {
+      L0006: "Built SQL data pipelines for weekly reporting.",
+    })).toContain("Built SQL data pipelines");
+    expect(applyResumeReplacements(contextual, {
+      L0006: "Built data pipelines improving reporting by 40%.",
+    })).toBe(contextual);
+  });
+
+  it("moves only verified skills across existing categorized rows", () => {
+    const categorized = [
+      "Alex Chen",
+      "alex@example.com | Toronto, ON",
+      "",
+      "SKILLS",
+      "Languages: Python, SQL",
+      "Tools: Docker, Git",
+    ].join("\n");
+
+    expect(applyResumeReplacements(categorized, {
+      L0006: "Tools: Docker, Git, SQL",
+    })).toContain("Tools: Docker, Git, SQL");
+    expect(applyResumeReplacements(categorized, {
+      L0006: "Tools: Docker, Git, Kubernetes",
+    })).toBe(categorized);
+  });
+
   it("requires material changes in proportion to the available editable lines", () => {
     expect(minimumResumeTailoringChanges(0)).toBe(0);
     expect(minimumResumeTailoringChanges(3)).toBe(1);
@@ -183,6 +220,16 @@ describe("resume format preservation", () => {
     expect(best.content).toContain("role-specific onboarding flows");
   });
 
+  it("prioritizes changes that explicitly match verified JD skills", () => {
+    const best = bestResumeTailoring(source, [
+      { L0006: "Built reusable design patterns for product operations teams." },
+      { L0007: "Led user research for role-specific onboarding experiences." },
+    ], ["user research"]);
+
+    expect(best.jdMatchedChanges).toBe(1);
+    expect(best.content).toContain("user research");
+  });
+
   it("labels custom sections and rejects replacements that cannot fit the source line", () => {
     const customSource = [
       "Alex Chen",
@@ -195,7 +242,7 @@ describe("resume format preservation", () => {
 
     expect(candidate).toEqual(expect.objectContaining({
       section: "summary of qualifications",
-      maxCharacters: 76,
+      maxCharacters: 84,
     }));
     expect(applyResumeReplacements(customSource, {
       L0005: "Civil engineer experienced in municipal drainage design, PCSWMM modelling, construction inspection, reporting, and project coordination.",

@@ -17,6 +17,13 @@ export interface ResumeFormatTemplate {
   candidates: ResumeReplacementCandidate[];
 }
 
+export interface ResumeTailoringSelection {
+  content: string;
+  appliedChanges: number;
+  jdMatchedChanges: number;
+  verifiedJdTargets: number;
+}
+
 export interface CoverLetterDraft {
   date: string;
   recipient: string[];
@@ -98,10 +105,22 @@ function factualAnchors(value: string): string[] {
   ) ?? [];
 }
 
-function introducesUnsupportedFactualAnchor(evidence: string, replacement: string): boolean {
-  const originalAnchors = new Set(factualAnchors(evidence).map((value) => value.toLocaleLowerCase()));
+function introducesUnsupportedFactualAnchor(
+  exactEvidence: string,
+  contextualEvidence: string,
+  replacement: string,
+): boolean {
+  const exactAnchors = new Set(factualAnchors(exactEvidence).map((value) => value.toLocaleLowerCase()));
+  const contextualAnchors = new Set(
+    factualAnchors(contextualEvidence).map((value) => value.toLocaleLowerCase()),
+  );
   return factualAnchors(replacement).some(
-    (value) => !originalAnchors.has(value.toLocaleLowerCase()),
+    (value) => {
+      const normalized = value.toLocaleLowerCase();
+      return /^\d/.test(value)
+        ? !exactAnchors.has(normalized)
+        : !contextualAnchors.has(normalized);
+    },
   );
 }
 
@@ -129,6 +148,19 @@ function normalizedSkillItems(value: string): string[] {
     .split(/[,;|]/)
     .map((item) => item.normalize("NFKC").toLocaleLowerCase().replace(/\s+/g, " ").trim())
     .filter(Boolean);
+}
+
+function normalizedMatchText(value: string): string {
+  return value
+    .normalize("NFKC")
+    .toLocaleLowerCase()
+    .replace(/[^\p{L}\p{N}+#.]+/gu, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+export function resumeReplacementCharacterLimit(text: string): number {
+  return text.length + Math.max(8, Math.ceil(text.length * 0.1));
 }
 
 function looksLikeHeading(line: string): boolean {
@@ -184,7 +216,7 @@ export function createResumeFormatTemplate(rawResumeText: string): ResumeFormatT
         text: trimmed,
         kind: "prose",
         section: currentSection,
-        maxCharacters: trimmed.length,
+        maxCharacters: resumeReplacementCharacterLimit(trimmed),
       });
       return;
     }
@@ -207,7 +239,7 @@ export function createResumeFormatTemplate(rawResumeText: string): ResumeFormatT
       kind: BULLET_RE.test(line) ? "bullet" : "prose",
       section: currentSection || "resume body",
       ...(currentContext ? { context: currentContext } : {}),
-      maxCharacters: text.length,
+      maxCharacters: resumeReplacementCharacterLimit(text),
     });
   });
 
@@ -221,8 +253,12 @@ export function applyResumeReplacements(
   if (!replacements) return rawResumeText;
 
   const lines = splitLines(rawResumeText);
-  const allowed = new Map(
-    createResumeFormatTemplate(rawResumeText).candidates.map((candidate) => [candidate.id, candidate]),
+  const candidates = createResumeFormatTemplate(rawResumeText).candidates;
+  const allowed = new Map(candidates.map((candidate) => [candidate.id, candidate]));
+  const verifiedSkills = new Set(
+    candidates
+      .filter((candidate) => SKILLS_SECTIONS.has(candidate.section))
+      .flatMap((candidate) => normalizedSkillItems(candidate.text)),
   );
 
   for (const [id, replacementValue] of Object.entries(replacements)) {
@@ -234,16 +270,23 @@ export function applyResumeReplacements(
     const lineIndex = Number(id.slice(1)) - 1;
     const original = lines[lineIndex];
     if (original === undefined) continue;
-    const factualEvidence = canUseResumeWideEvidence(candidate.section)
+    const contextualEvidence = canUseResumeWideEvidence(candidate.section)
+      || SKILLS_SECTIONS.has(candidate.section)
       ? rawResumeText
-      : candidate.text;
-    if (introducesUnsupportedFactualAnchor(factualEvidence, replacement)) continue;
+      : candidate.context
+        ? candidates
+          .filter((other) => (
+            other.section === candidate.section && other.context === candidate.context
+          ))
+          .map((other) => other.text)
+          .join(" ")
+        : candidate.text;
+    if (introducesUnsupportedFactualAnchor(candidate.text, contextualEvidence, replacement)) continue;
 
     if (SKILLS_SECTIONS.has(candidate.section)) {
       const originalCategory = skillCategoryPrefix(candidate.text);
       if (originalCategory && skillCategoryPrefix(replacement) !== originalCategory) continue;
-      const originalSkills = new Set(normalizedSkillItems(candidate.text));
-      if (normalizedSkillItems(replacement).some((skill) => !originalSkills.has(skill))) continue;
+      if (normalizedSkillItems(replacement).some((skill) => !verifiedSkills.has(skill))) continue;
     }
 
     const bullet = original.match(BULLET_RE);
@@ -309,14 +352,39 @@ export function applyValidatedResumeReplacements(
 export function bestResumeTailoring(
   sourceResume: string,
   replacementMaps: Array<Record<string, unknown>>,
-): { content: string; appliedChanges: number } {
-  return replacementMaps.reduce<{ content: string; appliedChanges: number }>(
+  jdSkillTargets: string[] = [],
+): ResumeTailoringSelection {
+  const normalizedSource = normalizedMatchText(sourceResume);
+  const verifiedTargets = Array.from(new Set(
+    jdSkillTargets
+      .map(normalizedMatchText)
+      .filter((target) => target.length >= 2 && normalizedSource.includes(target)),
+  ));
+  return replacementMaps.reduce<ResumeTailoringSelection>(
     (best, replacements) => {
       const content = applyResumeReplacements(sourceResume, replacements);
-      const appliedChanges = diffResumeReplacements(sourceResume, content).length;
-      return appliedChanges > best.appliedChanges ? { content, appliedChanges } : best;
+      const changes = diffResumeReplacements(sourceResume, content);
+      const appliedChanges = changes.length;
+      const jdMatchedChanges = changes.filter((change) => {
+        const normalizedReplacement = normalizedMatchText(change.replacementText);
+        return verifiedTargets.some((target) => normalizedReplacement.includes(target));
+      }).length;
+      return jdMatchedChanges > best.jdMatchedChanges
+        || (jdMatchedChanges === best.jdMatchedChanges && appliedChanges > best.appliedChanges)
+        ? {
+          content,
+          appliedChanges,
+          jdMatchedChanges,
+          verifiedJdTargets: verifiedTargets.length,
+        }
+        : best;
     },
-    { content: sourceResume, appliedChanges: 0 },
+    {
+      content: sourceResume,
+      appliedChanges: 0,
+      jdMatchedChanges: 0,
+      verifiedJdTargets: verifiedTargets.length,
+    },
   );
 }
 

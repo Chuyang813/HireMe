@@ -350,26 +350,41 @@ function paintReplacement(
     ? replacementText
     : restoreInlineBulletPrefix(lines[0].text, replacementText);
 
-  const fontSize = median(lines.map((line) => line.height)) || 10 * page.scale;
+  const sourceFontSize = median(lines.map((line) => line.height)) || 10 * page.scale;
   const fontName = lines[0].fontName || lines[0].fontFamily || "serif";
   context.save();
-  context.font = `${fontSize}px "${fontName}", "${lines[0].fontFamily}", serif`;
-  const wrapped = wrapCanvasText(context, drawableText, width);
-  const lineHeight = fontSize * 1.18;
-  const availableHeight = Math.max(height, lines.length * lineHeight) + 2;
-  if (!wrapped.length || wrapped.length > lines.length || wrapped.length * lineHeight > availableHeight) {
+  let fitted: { fontSize: number; lineHeight: number; wrapped: string[] } | null = null;
+  for (const scale of [1, 0.97, 0.94, 0.91, 0.88, 0.85]) {
+    const fontSize = sourceFontSize * scale;
+    const lineHeight = fontSize * 1.18;
+    context.font = `${fontSize}px "${fontName}", "${lines[0].fontFamily}", serif`;
+    const wrapped = wrapCanvasText(context, drawableText, width);
+    const availableHeight = Math.max(height, lines.length * sourceFontSize * 1.18) + 2;
+    if (
+      wrapped.length
+      && wrapped.length <= lines.length
+      && wrapped.length * lineHeight <= availableHeight
+    ) {
+      fitted = { fontSize, lineHeight, wrapped };
+      break;
+    }
+  }
+  if (!fitted) {
     context.restore();
     return false;
   }
 
+  context.font = `${fitted.fontSize}px "${fontName}", "${lines[0].fontFamily}", serif`;
   context.fillStyle = `rgb(${background.join(",")})`;
   // Keep the erase rectangle inside the source glyph bounds so adjacent rules,
   // borders, and section dividers remain untouched.
   context.fillRect(x - 1, top, width + 2, height);
   context.fillStyle = `rgb(${foreground.join(",")})`;
   context.textBaseline = "alphabetic";
-  const firstBaseline = top + fontSize * 0.92;
-  wrapped.forEach((line, index) => context.fillText(line, x, firstBaseline + index * lineHeight));
+  const firstBaseline = top + fitted.fontSize * 0.92;
+  fitted.wrapped.forEach((line, index) => (
+    context.fillText(line, x, firstBaseline + index * fitted.lineHeight)
+  ));
   context.restore();
   return true;
 }

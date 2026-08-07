@@ -58,6 +58,15 @@ function auditNote(
   return `provider=${AI_PROVIDER} model=${model} prompt_type=${promptType} prompt_version=${PROMPT_VERSIONS[promptType]}`;
 }
 
+function collectJobSkillTargets(job: ParsedJob): string[] {
+  return Array.from(new Set([
+    ...(job.key_skills ?? []),
+    ...(job.required_skills ?? []),
+    ...(job.desired_skills ?? []),
+    ...(job.keywords ?? []),
+  ].filter((value): value is string => typeof value === "string" && Boolean(value.trim()))));
+}
+
 function resumeReplacementMapFromOutput(output: string): Record<string, unknown> {
   try {
     const result = extractJson<{ replacements?: unknown }>(output);
@@ -170,12 +179,7 @@ async function buildPrompt(
   const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
   const resumeJson = JSON.stringify(resume, null, 2);
   const jobJson = JSON.stringify(job, null, 2);
-  const jobSkillTargets = Array.from(new Set([
-    ...(job.key_skills ?? []),
-    ...(job.required_skills ?? []),
-    ...(job.desired_skills ?? []),
-    ...(job.keywords ?? []),
-  ].filter((value): value is string => typeof value === "string" && Boolean(value.trim()))));
+  const jobSkillTargets = collectJobSkillTargets(job);
   if (documentType === "tailored_resume") {
     const sourceResume = adjust?.currentContent?.trim()
       ? adjust.currentContent
@@ -468,9 +472,14 @@ export async function POST(req: NextRequest) {
             ? 1
             : minimumResumeTailoringChanges(template.candidates.length);
           const firstMap = resumeReplacementMapFromOutput(content);
-          let best = bestResumeTailoring(sourceResume, [firstMap]);
+          const resumeJobSkillTargets = collectJobSkillTargets(job);
+          let best = bestResumeTailoring(sourceResume, [firstMap], resumeJobSkillTargets);
+          const needsVerifiedJdMatch = best.verifiedJdTargets > 0;
 
-          if (best.appliedChanges < targetChanges) {
+          if (
+            best.appliedChanges < targetChanges
+            || (needsVerifiedJdMatch && best.jdMatchedChanges < 1)
+          ) {
             send({
               type: "progress",
               stage: "generating",
@@ -484,8 +493,8 @@ export async function POST(req: NextRequest) {
                   role: "user",
                   content: [
                     prompt.userMessage,
-                    `The previous replacement map produced only ${best.appliedChanges} accepted change(s); the target is ${targetChanges}. Return a corrected COMPLETE replacement map.`,
-                    "Validator requirements: use only supplied IDs; keep every value on one line and at or below its maxCharacters; omit bullet glyphs; keep each Skills category label exact and only reorder or omit skills already in that same row; never add a named tool, acronym, metric, or fact to an Experience/Project line unless that exact line supports it.",
+                    `The previous replacement map produced ${best.appliedChanges} accepted change(s), including ${best.jdMatchedChanges} that explicitly match verified JD skills; the target is ${targetChanges} total${needsVerifiedJdMatch ? " with at least 1 verified JD-skill match" : " using the closest truthful JD language available"}. Return a corrected COMPLETE replacement map.`,
+                    "Validator requirements: use only supplied IDs; keep every value on one line and at or below its maxCharacters; omit bullet glyphs; keep each Skills category label exact and use only skills verified somewhere in the resume; a named skill in Experience/Projects must be supported within that same job/project context; metrics remain tied to their exact source bullet.",
                     `Previous model output:\n${contentFromModel}`,
                     "Return only the corrected replacement-map JSON.",
                   ].join("\n\n"),
@@ -502,13 +511,16 @@ export async function POST(req: NextRequest) {
                 repairedMap,
                 { ...firstMap, ...repairedMap },
                 { ...repairedMap, ...firstMap },
-              ]);
+              ], resumeJobSkillTargets);
             } catch (repairError) {
               if (best.appliedChanges < 1) throw repairError;
             }
           }
 
-          if (best.appliedChanges < 1) {
+          if (
+            best.appliedChanges < targetChanges
+            || (needsVerifiedJdMatch && best.jdMatchedChanges < 1)
+          ) {
             throw new Error("Resume tailoring did not produce enough supported changes.");
           }
           content = best.content;
