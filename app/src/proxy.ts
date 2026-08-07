@@ -4,6 +4,8 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 
+const ADMIN_EMAIL = "lcy080813@gmail.com";
+
 // ---------------------------------------------------------------------------
 // Request logger — structured JSON, easy to pipe to any log aggregator
 // ---------------------------------------------------------------------------
@@ -61,6 +63,14 @@ export async function proxy(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   const { pathname } = request.nextUrl;
+
+  // Admin area must be invisible to everyone but the admin: respond with a
+  // plain 404 directly, never a login redirect that would reveal the route
+  // exists. (NextResponse.rewrite to a nonexistent pathname does not work
+  // here — Next still resolves and renders the original route.)
+  if (pathname.startsWith("/admin") && user?.email !== ADMIN_EMAIL) {
+    return new NextResponse("Not Found", { status: 404 });
+  }
 
   const isAppArea =
     pathname.startsWith("/dashboard") ||
