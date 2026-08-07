@@ -279,15 +279,18 @@ function findBestLineRange(
     const page = pages[pageIndex];
     for (let start = 0; start < page.lines.length; start += 1) {
       for (let end = start; end < Math.min(page.lines.length, start + 4); end += 1) {
-        const key = `${pageIndex}:${start}:${end}`;
-        if (used.has(key)) continue;
+        const lineKeys = Array.from(
+          { length: end - start + 1 },
+          (_, offset) => `${pageIndex}:${start + offset}`,
+        );
+        if (lineKeys.some((key) => used.has(key))) continue;
         const text = page.lines.slice(start, end + 1).map((line) => line.text).join(" ");
         const score = sourceTextMatchScore(text, originalText);
         if (!best || score > best.score) best = { pageIndex, start, end, score };
       }
     }
   }
-  return best && best.score >= 0.62 ? best : null;
+  return best && best.score >= 0.82 ? best : null;
 }
 
 function wrapCanvasText(
@@ -324,9 +327,9 @@ function paintReplacement(
   page: RenderedPdfPage,
   lines: PdfTextLine[],
   replacementText: string,
-) {
+): boolean {
   const context = page.canvas.getContext("2d");
-  if (!context || !lines.length) return;
+  if (!context || !lines.length) return false;
 
   const firstLineItems = lines[0].items;
   const markerItems = firstLineItems.filter((item) => BULLET_ONLY_RE.test(item.text));
@@ -345,26 +348,28 @@ function paintReplacement(
     ? replacementText
     : restoreInlineBulletPrefix(lines[0].text, replacementText);
 
-  context.save();
-  context.fillStyle = `rgb(${background.join(",")})`;
-  context.fillRect(x - 1.5, top - 1.5, width + 3, height + 3);
-
-  let fontSize = median(lines.map((line) => line.height)) || 10 * page.scale;
+  const fontSize = median(lines.map((line) => line.height)) || 10 * page.scale;
   const fontName = lines[0].fontName || lines[0].fontFamily || "serif";
-  let wrapped: string[] = [];
-  while (fontSize >= 6 * page.scale) {
-    context.font = `${fontSize}px "${fontName}", "${lines[0].fontFamily}", serif`;
-    wrapped = wrapCanvasText(context, drawableText, width);
-    const lineHeight = fontSize * 1.18;
-    if (wrapped.length * lineHeight <= Math.max(height, lines.length * lineHeight) + 2) break;
-    fontSize -= 0.5;
+  context.save();
+  context.font = `${fontSize}px "${fontName}", "${lines[0].fontFamily}", serif`;
+  const wrapped = wrapCanvasText(context, drawableText, width);
+  const lineHeight = fontSize * 1.18;
+  const availableHeight = Math.max(height, lines.length * lineHeight) + 2;
+  if (!wrapped.length || wrapped.length > lines.length || wrapped.length * lineHeight > availableHeight) {
+    context.restore();
+    return false;
   }
+
+  context.fillStyle = `rgb(${background.join(",")})`;
+  // Keep the erase rectangle inside the source glyph bounds so adjacent rules,
+  // borders, and section dividers remain untouched.
+  context.fillRect(x - 1, top, width + 2, height);
   context.fillStyle = `rgb(${foreground.join(",")})`;
   context.textBaseline = "alphabetic";
-  const lineHeight = fontSize * 1.18;
   const firstBaseline = top + fontSize * 0.92;
   wrapped.forEach((line, index) => context.fillText(line, x, firstBaseline + index * lineHeight));
   context.restore();
+  return true;
 }
 
 function pdfSearchLines(text: string): string[] {
@@ -437,12 +442,15 @@ async function createTailoredPdfFromSource(
   replacements.forEach((replacement) => {
     const match = findBestLineRange(pages, replacement.originalText, used);
     if (!match) return;
-    used.add(`${match.pageIndex}:${match.start}:${match.end}`);
-    paintReplacement(
+    const applied = paintReplacement(
       pages[match.pageIndex],
       pages[match.pageIndex].lines.slice(match.start, match.end + 1),
       replacement.replacementText,
     );
+    if (!applied) return;
+    for (let lineIndex = match.start; lineIndex <= match.end; lineIndex += 1) {
+      used.add(`${match.pageIndex}:${lineIndex}`);
+    }
   });
   return canvasesToPdf(pages, title, content);
 }
@@ -597,31 +605,13 @@ function replaceParagraphText(paragraph: Element, original: string, replacement:
     return;
   }
 
-  const weights = affected.map((span) => Math.max(
-    1,
-    Math.min(span.end, replaceEnd) - Math.max(span.start, replaceStart),
-  ));
-  const totalWeight = weights.reduce((sum, weight) => sum + weight, 0);
-  let replacementCursor = 0;
-  affected.forEach((span, affectedIndex) => {
-    const targetEnd = affectedIndex === affected.length - 1
-      ? replacement.length
-      : Math.round(
-        replacement.length
-        * weights.slice(0, affectedIndex + 1).reduce((sum, weight) => sum + weight, 0)
-        / totalWeight,
-      );
-    const prefix = affectedIndex === 0
-      ? span.text.slice(0, Math.max(0, replaceStart - span.start))
-      : "";
-    const suffix = affectedIndex === affected.length - 1
-      ? span.text.slice(Math.max(0, replaceEnd - span.start))
-      : "";
-    setTextNodeValue(
-      nodes[span.index],
-      `${prefix}${replacement.slice(replacementCursor, targetEnd)}${suffix}`,
-    );
-    replacementCursor = targetEnd;
+  const first = affected[0];
+  const last = affected[affected.length - 1];
+  const prefix = first.text.slice(0, Math.max(0, replaceStart - first.start));
+  const suffix = last.text.slice(Math.max(0, replaceEnd - last.start));
+  setTextNodeValue(nodes[first.index], `${prefix}${replacement}${first === last ? suffix : ""}`);
+  affected.slice(1).forEach((span) => {
+    setTextNodeValue(nodes[span.index], span === last ? suffix : "");
   });
 }
 
@@ -636,7 +626,7 @@ function findBestParagraph(
     const score = sourceTextMatchScore(paragraphText(paragraph), originalText);
     if (!best || score > best.score) best = { paragraph, score };
   }
-  return best && best.score >= 0.62 ? best.paragraph : null;
+  return best && best.score >= 0.82 ? best.paragraph : null;
 }
 
 async function loadDocx(bytes: ArrayBuffer) {

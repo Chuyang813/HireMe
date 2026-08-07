@@ -21,5 +21,14 @@ describe("resume tailoring prompt", () => {
     expect(RESUME_TAILOR_SYSTEM_PROMPT).toContain(
       "skills as compact labeled category rows",
     );
+    expect(RESUME_TAILOR_SYSTEM_PROMPT).toContain(
+      '"section" and optional "context" as a hard semantic boundary',
+    );
+    expect(RESUME_TAILOR_SYSTEM_PROMPT).toContain(
+      '"maxCharacters" value is a hard output limit',
+    );
+    expect(RESUME_TAILOR_SYSTEM_PROMPT).toContain(
+      "unless it is already present in that exact source line",
+    );
   });
 });

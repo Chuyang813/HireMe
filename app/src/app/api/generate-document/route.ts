@@ -1,4 +1,5 @@
 export const runtime = "edge";
+export const maxDuration = 180;
 
 import { type NextRequest } from "next/server";
 import { getOptionalUser } from "@/lib/auth/current-user";
@@ -12,6 +13,7 @@ import { PROMPT_VERSIONS, type PromptType } from "@/lib/ai/prompt-versions";
 import { selectResumeEvidenceSemantic, resumeToText, jobToText } from "@/lib/ai/evidence";
 import { INTERVIEW_PREP_SYSTEM } from "@/lib/ai/interview-prep";
 import { RESUME_TAILOR_SYSTEM_PROMPT } from "@/lib/ai/resume-tailor-prompt";
+import { encodeGenerationStreamEvent } from "@/lib/ai/generation-stream";
 import {
   applyResumeReplacements,
   createResumeFormatTemplate,
@@ -34,7 +36,7 @@ import { getClientIpFromHeaders } from "@/lib/security/request";
 import type { DocumentType, ParsedJob, ParsedResume } from "@/lib/db/types";
 import { assertDemoDocumentAvailable } from "@/lib/demo";
 
-const AI_TIMEOUT_MS = 115_000;
+const AI_TIMEOUT_MS = 145_000;
 function docTypeToPromptType(dt: DocumentType): PromptType {
   if (dt === 'tailored_resume') return 'resume-tailor';
   if (dt === 'cover_letter') return 'cover-letter';
@@ -54,9 +56,7 @@ function getDocumentAiOptions(): {
   model?: string;
   thinkingMode?: "enabled" | "disabled";
 } {
-  // Document output is constrained text/JSON. A reasoning model can spend the
-  // whole output budget on hidden reasoning and return an empty final answer.
-  return { model: DEFAULT_DOCUMENT_TEXT_MODEL, thinkingMode: "disabled" };
+  return { model: DEFAULT_DOCUMENT_TEXT_MODEL, thinkingMode: "enabled" };
 }
 
 // ---------------------------------------------------------------------------
@@ -160,10 +160,6 @@ async function buildPrompt(
   const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
   const resumeJson = JSON.stringify(resume, null, 2);
   const jobJson = JSON.stringify(job, null, 2);
-  const matchedEvidence = (
-    await selectResumeEvidenceSemantic(resumeToText(resume), rawJobText ?? jobToText(job))
-  ).join('\n\n');
-
   if (documentType === "tailored_resume") {
     const sourceResume = adjust?.currentContent?.trim()
       ? adjust.currentContent
@@ -177,12 +173,15 @@ async function buildPrompt(
       userMessage: [
         `Editable source lines (JSON):\n${JSON.stringify(template.candidates, null, 2)}`,
         `Parsed job posting (JSON):\n${jobJson}`,
-        `Most relevant candidate evidence selected for this job:\n${matchedEvidence}`,
         adjust ? `User's requested adjustment (apply this to the editable lines above, changing only what it asks for):\n${adjust.instruction}` : "",
         "Return only the replacement-map JSON. Preserve the source format and structure exactly.",
       ].filter(Boolean).join("\n\n"),
     };
   }
+
+  const matchedEvidence = (
+    await selectResumeEvidenceSemantic(resumeToText(resume), rawJobText ?? jobToText(job))
+  ).join('\n\n');
 
   if (documentType === "cover_letter") {
     const sourceResume = rawResumeText?.trim() ? rawResumeText : resumeToText(resume);
@@ -352,35 +351,70 @@ export async function POST(req: NextRequest) {
     ? adjust.currentContent
     : rawResumeText;
 
-  const prompt = await buildPrompt(
-    documentType,
-    parsedResume,
-    job,
-    app.raw_job_text,
-    rawResumeText,
-    style,
-    adjust,
-  );
-  if (!prompt) {
-    return Response.json({ error: `Unsupported document type: ${documentType}` }, { status: 400 });
-  }
-
   const encoder = new TextEncoder();
 
   const readable = new ReadableStream({
     async start(controller) {
+      const startedAt = Date.now();
+      let closed = false;
+      let heartbeat: ReturnType<typeof setInterval> | null = null;
+      const send = (event: Parameters<typeof encodeGenerationStreamEvent>[0]) => {
+        if (closed) return;
+        try {
+          controller.enqueue(encoder.encode(encodeGenerationStreamEvent(event)));
+        } catch {
+          closed = true;
+        }
+      };
+      const close = () => {
+        if (closed) return;
+        closed = true;
+        controller.close();
+      };
       const timer = setTimeout(() => {
         console.error(`[generate-document] Timeout after ${AI_TIMEOUT_MS}ms`);
-        controller.enqueue(encoder.encode("\n\n[Error: Generation timed out. Please try again.]"));
-        controller.close();
+        send({
+          type: "error",
+          message: "High-quality generation timed out. Please try again.",
+        });
+        close();
       }, AI_TIMEOUT_MS);
 
       const aiOptions = getDocumentAiOptions();
       const usedModel = aiOptions.model ?? DEFAULT_DOCUMENT_TEXT_MODEL;
+      let aiStartedAt = startedAt;
 
       try {
+        send({ type: "progress", stage: "preparing", percent: 8, elapsedMs: 0 });
+        const prompt = await buildPrompt(
+          documentType,
+          parsedResume,
+          job,
+          app.raw_job_text,
+          rawResumeText,
+          style,
+          adjust,
+        );
+        if (!prompt) throw new Error(`Unsupported document type: ${documentType}`);
+
+        send({
+          type: "progress",
+          stage: "generating",
+          percent: 24,
+          elapsedMs: Date.now() - startedAt,
+        });
         console.log(`[generate-document] Starting ${AI_PROVIDER}:${usedModel} generation for ${documentType} (thinking=${aiOptions.thinkingMode ?? "env-default"})`);
-        const aiStartedAt = Date.now();
+        aiStartedAt = Date.now();
+        let generationPercent = 24;
+        heartbeat = setInterval(() => {
+          generationPercent = Math.min(74, generationPercent + 3);
+          send({
+            type: "progress",
+            stage: "generating",
+            percent: generationPercent,
+            elapsedMs: Date.now() - startedAt,
+          });
+        }, 4_000);
 
         const contentFromModel = await aiText({
           system: prompt.system,
@@ -388,6 +422,16 @@ export async function POST(req: NextRequest) {
           maxTokens: prompt.maxTokens,
           model: aiOptions.model,
           thinkingMode: aiOptions.thinkingMode,
+          allowFallback: false,
+        });
+        if (heartbeat) clearInterval(heartbeat);
+        heartbeat = null;
+        if (closed) return;
+        send({
+          type: "progress",
+          stage: "validating",
+          percent: 80,
+          elapsedMs: Date.now() - startedAt,
         });
         let content = contentFromModel;
 
@@ -408,7 +452,13 @@ export async function POST(req: NextRequest) {
           );
         }
 
-        controller.enqueue(encoder.encode(content));
+        send({
+          type: "progress",
+          stage: "finalizing",
+          percent: 94,
+          elapsedMs: Date.now() - startedAt,
+        });
+        send({ type: "content", content });
 
         clearTimeout(timer);
 
@@ -433,8 +483,16 @@ export async function POST(req: NextRequest) {
           new_value: documentType,
           note: auditNote(pt, usedModel),
         });
+        send({
+          type: "progress",
+          stage: "finalizing",
+          percent: 100,
+          elapsedMs: Date.now() - startedAt,
+        });
       } catch (e) {
         clearTimeout(timer);
+        if (heartbeat) clearInterval(heartbeat);
+        heartbeat = null;
         const msg = e instanceof Error ? e.message : String(e);
         console.error("[generate-document] Streaming error:", msg, e);
         const pt = docTypeToPromptType(documentType);
@@ -450,18 +508,18 @@ export async function POST(req: NextRequest) {
           success: false,
           error_message: msg,
         });
-        controller.enqueue(
-          encoder.encode("\n\n[Error: Generation failed. Please try again shortly.]"),
-        );
+        send({ type: "error", message: "High-quality generation failed. Please try again." });
       } finally {
-        controller.close();
+        if (heartbeat) clearInterval(heartbeat);
+        clearTimeout(timer);
+        close();
       }
     },
   });
 
   return new Response(readable, {
     headers: {
-      "Content-Type": "text/plain; charset=utf-8",
+      "Content-Type": "application/x-ndjson; charset=utf-8",
       "Cache-Control": "no-store",
       "X-Content-Type-Options": "nosniff",
     },

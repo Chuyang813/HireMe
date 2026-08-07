@@ -1,4 +1,4 @@
-import { aiText } from "./provider";
+import { aiText, DEFAULT_DOCUMENT_TEXT_MODEL } from "./provider";
 import { selectResumeEvidenceSemantic, resumeToText, jobToText } from "./evidence";
 import type { ParsedJob, ParsedResume } from "@/lib/db/types";
 
@@ -96,5 +96,8 @@ export async function generateInterviewPrep({
       },
     ],
     maxTokens: 4000,
+    model: DEFAULT_DOCUMENT_TEXT_MODEL,
+    thinkingMode: "enabled",
+    allowFallback: false,
   });
 }

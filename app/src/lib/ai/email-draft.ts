@@ -1,4 +1,4 @@
-import { aiJson } from "./provider";
+import { aiJson, DEFAULT_DOCUMENT_TEXT_MODEL } from "./provider";
 import { selectResumeEvidenceSemantic, resumeToText, jobToText } from "./evidence";
 import type { ParsedJob, ParsedResume } from "@/lib/db/types";
 
@@ -63,5 +63,7 @@ export async function generateEmailDraft({
       },
     ],
     maxTokens: 1500,
+    model: DEFAULT_DOCUMENT_TEXT_MODEL,
+    allowFallback: false,
   });
 }

@@ -14,17 +14,17 @@ export const metadata = { title: "New application" };
 export default async function NewApplicationPage() {
   const { supabase, user } = await requireUser();
   const t = await getTranslations("Applications");
-  const { data: defaultResume } = await supabase
+  const { data: resumes } = await supabase
     .from("base_resumes")
-    .select("id")
+    .select("id, title, is_default")
     .eq("user_id", user.id)
-    .eq("is_default", true)
-    .limit(1)
-    .maybeSingle();
+    .order("is_default", { ascending: false })
+    .order("created_at", { ascending: true });
 
-  if (!defaultResume) {
+  if (!resumes?.length) {
     redirect("/onboarding");
   }
+  const defaultResumeId = resumes.find((resume) => resume.is_default)?.id ?? resumes[0].id;
 
   const demoUsage = isDemoUser(user) ? await getDemoUsage(supabase, user.id) : null;
   const demoLimitReached =
@@ -48,7 +48,11 @@ export default async function NewApplicationPage() {
           </div>
         ) : null}
         <div className="mt-10">
-          <NewApplicationForm demoLimitReached={demoLimitReached} />
+          <NewApplicationForm
+            demoLimitReached={demoLimitReached}
+            resumes={resumes.map((resume) => ({ id: resume.id, title: resume.title }))}
+            defaultResumeId={defaultResumeId}
+          />
         </div>
       </div>
     </div>

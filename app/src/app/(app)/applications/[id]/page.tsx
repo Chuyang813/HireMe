@@ -173,7 +173,7 @@ export default async function ApplicationPage({
       .order("created_at", { ascending: false }),
     supabase
       .from("base_resumes")
-      .select("id, parsed_resume_json")
+      .select("id, title, parsed_resume_json")
       .eq("user_id", user.id)
       .eq("is_default", true)
       .single(),
@@ -200,7 +200,7 @@ export default async function ApplicationPage({
   if (application.base_resume_id && resume?.id !== application.base_resume_id) {
     const { data: pinnedResume } = await supabase
       .from("base_resumes")
-      .select("id, parsed_resume_json")
+      .select("id, title, parsed_resume_json")
       .eq("id", application.base_resume_id)
       .eq("user_id", user.id)
       .single();
@@ -293,6 +293,7 @@ export default async function ApplicationPage({
                 roleTitle={application.role_title ?? undefined}
                 userFirstName={userFirstName}
                 companyName={application.company_name ?? undefined}
+                sourceResumeTitle={applicationResume?.title ?? undefined}
                 statusLabel={statusLabel(t, application.current_status)}
                 isDemo={isDemo}
                 demoDocumentUsage={demoUsage?.documents}

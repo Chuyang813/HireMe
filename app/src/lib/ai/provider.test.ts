@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { extractJson, resolveDocumentTextModel } from "./provider";
+import {
+  extractJson,
+  resolveDocumentTextModel,
+  resolveFastTextModel,
+} from "./provider";
 
 describe("extractJson", () => {
   it("parses fenced JSON", () => {
@@ -18,21 +22,15 @@ describe("extractJson", () => {
 });
 
 describe("resolveDocumentTextModel", () => {
-  it("uses non-reasoning chat generation for DeepSeek documents", () => {
-    expect(resolveDocumentTextModel("deepseek", "deepseek-v4-pro")).toBe(
-      "deepseek-chat",
-    );
+  it("uses the configured high-quality default for generated documents", () => {
+    expect(resolveDocumentTextModel("deepseek-v4-pro")).toBe("deepseek-v4-pro");
   });
 
-  it("keeps the provider default for non-DeepSeek documents", () => {
-    expect(resolveDocumentTextModel("gemini", "gemini-3.1-flash-lite")).toBe(
-      "gemini-3.1-flash-lite",
-    );
+  it("uses non-reasoning chat generation for fast DeepSeek parsing", () => {
+    expect(resolveFastTextModel("deepseek", "deepseek-v4-pro")).toBe("deepseek-chat");
   });
 
   it("honors an explicit document model override", () => {
-    expect(
-      resolveDocumentTextModel("deepseek", "deepseek-v4-pro", " custom-model "),
-    ).toBe("custom-model");
+    expect(resolveDocumentTextModel("deepseek-v4-pro", " custom-model ")).toBe("custom-model");
   });
 });

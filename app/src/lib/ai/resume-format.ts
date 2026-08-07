@@ -2,6 +2,9 @@ export interface ResumeReplacementCandidate {
   id: string;
   text: string;
   kind: "bullet" | "prose";
+  section: string;
+  context?: string;
+  maxCharacters: number;
 }
 
 export interface AppliedResumeReplacement {
@@ -88,6 +91,19 @@ function contentWithoutPrefix(line: string): string {
   return line.trimStart();
 }
 
+function factualAnchors(value: string): string[] {
+  return value.match(
+    /\b(?:[A-Z]{2,}[A-Za-z0-9+.#/-]*|[A-Z][a-z]+[A-Z][A-Za-z0-9+.#/-]*|\d+(?:[.,]\d+)?%?)\b/g,
+  ) ?? [];
+}
+
+function introducesUnsupportedFactualAnchor(original: string, replacement: string): boolean {
+  const originalAnchors = new Set(factualAnchors(original).map((value) => value.toLocaleLowerCase()));
+  return factualAnchors(replacement).some(
+    (value) => !originalAnchors.has(value.toLocaleLowerCase()),
+  );
+}
+
 function looksLikeHeading(line: string): boolean {
   const trimmed = line.trim().replace(/[:|]$/, "");
   if (!trimmed || trimmed.length > 64) return false;
@@ -101,7 +117,8 @@ function sectionNameFromLine(line: string): string | null {
   const trimmed = line.trim().replace(/[:|]$/, "");
   if (SECTION_RE.test(trimmed)) return trimmed.toLocaleLowerCase();
   const inlineSkills = line.trim().match(/^(technical skills|skills)\s*:/i);
-  return inlineSkills?.[1].toLocaleLowerCase() ?? null;
+  if (inlineSkills?.[1]) return inlineSkills[1].toLocaleLowerCase();
+  return looksLikeHeading(line) ? trimmed.toLocaleLowerCase() : null;
 }
 
 function isEditableLine(line: string, lineIndex: number, nonEmptyIndex: number): boolean {
@@ -122,16 +139,34 @@ export function createResumeFormatTemplate(rawResumeText: string): ResumeFormatT
   const candidates: ResumeReplacementCandidate[] = [];
   let nonEmptyIndex = 0;
   let currentSection = "";
+  let currentContext = "";
 
   lines.forEach((line, lineIndex) => {
-    if (line.trim()) nonEmptyIndex += 1;
-    currentSection = sectionNameFromLine(line) ?? currentSection;
+    const trimmed = line.trim();
+    if (!trimmed) {
+      currentContext = "";
+      return;
+    }
+    nonEmptyIndex += 1;
+    const nextSection = sectionNameFromLine(line);
+    if (nextSection) {
+      currentSection = nextSection;
+      currentContext = "";
+      return;
+    }
     if (PROTECTED_DETAIL_SECTIONS.has(currentSection)) return;
-    if (!isEditableLine(line, lineIndex, nonEmptyIndex)) return;
+    if (!isEditableLine(line, lineIndex, nonEmptyIndex)) {
+      if (!CONTACT_RE.test(trimmed) && trimmed.length <= 180) currentContext = trimmed;
+      return;
+    }
+    const text = contentWithoutPrefix(line).trim();
     candidates.push({
       id: `L${String(lineIndex + 1).padStart(4, "0")}`,
-      text: contentWithoutPrefix(line),
+      text,
       kind: BULLET_RE.test(line) ? "bullet" : "prose",
+      section: currentSection || "resume body",
+      ...(currentContext ? { context: currentContext } : {}),
+      maxCharacters: text.length,
     });
   });
 
@@ -145,25 +180,31 @@ export function applyResumeReplacements(
   if (!replacements) return rawResumeText;
 
   const lines = splitLines(rawResumeText);
-  const allowed = new Set(
-    createResumeFormatTemplate(rawResumeText).candidates.map((candidate) => candidate.id),
+  const allowed = new Map(
+    createResumeFormatTemplate(rawResumeText).candidates.map((candidate) => [candidate.id, candidate]),
   );
 
   for (const [id, replacementValue] of Object.entries(replacements)) {
-    if (!allowed.has(id) || typeof replacementValue !== "string") continue;
+    const candidate = allowed.get(id);
+    if (!candidate || typeof replacementValue !== "string") continue;
     const replacement = replacementValue.trim();
     if (!replacement || /[\r\n]/.test(replacement)) continue;
 
     const lineIndex = Number(id.slice(1)) - 1;
     const original = lines[lineIndex];
     if (original === undefined) continue;
+    if (introducesUnsupportedFactualAnchor(candidate.text, replacement)) continue;
 
     const bullet = original.match(BULLET_RE);
     if (bullet) {
       const replacementBody = replacement.replace(BULLET_RE, "$2").trim();
-      if (replacementBody) lines[lineIndex] = `${bullet[1]}${replacementBody}`;
+      if (replacementBody && replacementBody.length <= candidate.maxCharacters) {
+        lines[lineIndex] = `${bullet[1]}${replacementBody}`;
+      }
       continue;
     }
+
+    if (replacement.length > candidate.maxCharacters) continue;
 
     const leadingWhitespace = original.match(/^\s*/)?.[0] ?? "";
     lines[lineIndex] = `${leadingWhitespace}${replacement}`;

@@ -10,6 +10,8 @@ The uploaded resume is the sole formatting authority. Its page layout, section a
 - Never change, add, remove, merge, split, or reorder a section, sub-heading, job, project, degree, bullet, or line.
 - Never rename a heading or reproduce visual styling. Existing styling, including colored sub-headings and bullet glyphs, is restored by the application from the source resume.
 - Preserve the exact one-to-one mapping: one source line ID may produce at most one replacement line.
+- Treat each line's "section" and optional "context" as a hard semantic boundary. Never move a fact, tool, skill, metric, or responsibility from another section, employer, role, or project into that line.
+- The "maxCharacters" value is a hard output limit for that replacement. Shorter is preferred. The application rejects any replacement that exceeds it.
 - Never turn a prose line into a bullet or a bullet into prose. The supplied "kind" field tells you which existing lines are bullets.
 - If a requested wording change would require a layout or structural change, omit that ID.
 - Education and Skills are protected factual sections and are not editable line candidates. The application renders each education entry as separate program, school, and date lines, and renders skills as compact labeled category rows. Never attempt to merge or rewrite those facts elsewhere.
@@ -26,6 +28,7 @@ For every candidate whose "kind" is "bullet":
 
 Additional absolute rules:
 - Never invent employers, schools, dates, titles, degrees, certifications, tools, metrics, or accomplishments.
+- Do not introduce a named tool, software product, skill, metric, or proper noun unless it is already present in that exact source line. Job-posting language may only be used to rephrase an existing fact, never to add a new fact.
 - Never return a replacement for an ID that was not supplied.
 - Keep every factual claim intact. Rephrase only when it improves alignment with the job.
 - Do not include indentation, Markdown, headings, colors, styling instructions, or line breaks inside replacement values.

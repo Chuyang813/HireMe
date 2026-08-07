@@ -3,7 +3,8 @@ export const PROMPT_VERSION = "2.1";
 const DEEPSEEK_API_BASE = process.env.DEEPSEEK_API_BASE || "https://api.deepseek.com";
 const GLM_API_BASE = "https://api.z.ai/api/paas/v4";
 const GEMINI_API_BASE = "https://generativelanguage.googleapis.com/v1beta";
-const AI_TIMEOUT_MS = 60_000;
+const DEFAULT_AI_TIMEOUT_MS = 60_000;
+const DEEPSEEK_PRO_TIMEOUT_MS = 110_000;
 const RETRYABLE_STATUS = new Set([429, 500, 502, 503, 504]);
 
 const DEFAULT_DEEPSEEK_MODEL =
@@ -22,7 +23,7 @@ const DEFAULT_GEMINI_FALLBACK_MODELS = [
 
 type ProviderName = "deepseek" | "glm" | "gemini";
 
-export function resolveDocumentTextModel(
+export function resolveFastTextModel(
   provider: ProviderName,
   defaultModel: string,
   configuredModel?: string,
@@ -30,6 +31,13 @@ export function resolveDocumentTextModel(
   const configured = configuredModel?.trim();
   if (configured) return configured;
   return provider === "deepseek" ? "deepseek-chat" : defaultModel;
+}
+
+export function resolveDocumentTextModel(
+  defaultModel: string,
+  configuredModel?: string,
+): string {
+  return configuredModel?.trim() || defaultModel;
 }
 
 function getRequestedProvider(): ProviderName {
@@ -58,10 +66,14 @@ export const DEFAULT_MODEL =
     : AI_PROVIDER === "glm"
       ? DEFAULT_GLM_MODEL
       : DEFAULT_GEMINI_MODEL;
-export const DEFAULT_DOCUMENT_TEXT_MODEL = resolveDocumentTextModel(
+export const DEFAULT_FAST_TEXT_MODEL = resolveFastTextModel(
   AI_PROVIDER,
   DEFAULT_MODEL,
-  process.env.DOCUMENT_AI_MODEL,
+  process.env.FAST_TEXT_AI_MODEL,
+);
+export const DEFAULT_DOCUMENT_TEXT_MODEL = resolveDocumentTextModel(
+  DEFAULT_MODEL,
+  process.env.HIGH_QUALITY_DOCUMENT_AI_MODEL,
 );
 
 export type AiTextMessage = {
@@ -333,6 +345,12 @@ function getDeepSeekJsonThinkingMode(): "enabled" | "disabled" {
   return process.env.DEEPSEEK_JSON_THINKING === "enabled" ? "enabled" : "disabled";
 }
 
+function deepSeekTimeoutMs(model: string): number {
+  return /(?:v4-pro|reasoner)/i.test(model)
+    ? DEEPSEEK_PRO_TIMEOUT_MS
+    : DEFAULT_AI_TIMEOUT_MS;
+}
+
 async function generateDeepSeek({
   system,
   messages,
@@ -349,10 +367,11 @@ async function generateDeepSeek({
   thinkingMode?: "enabled" | "disabled";
 }): Promise<string> {
   let lastError: Error | null = null;
+  const timeoutMs = deepSeekTimeoutMs(model);
 
   for (let attempt = 1; attempt <= 3; attempt++) {
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), AI_TIMEOUT_MS);
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
 
     try {
       const res = await fetch(`${DEEPSEEK_API_BASE}/chat/completions`, {
@@ -394,7 +413,7 @@ async function generateDeepSeek({
       lastError =
         err instanceof Error ? err : new Error("DeepSeek API request failed.");
       if (lastError.name === "AbortError") {
-        lastError = new Error("AI request timed out after 60s.");
+        lastError = new Error(`AI request timed out after ${Math.round(timeoutMs / 1000)}s.`);
       }
 
       const status =
@@ -429,7 +448,7 @@ async function generateGlm({
 
   for (let attempt = 1; attempt <= 3; attempt++) {
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), AI_TIMEOUT_MS);
+    const timer = setTimeout(() => controller.abort(), DEFAULT_AI_TIMEOUT_MS);
 
     try {
       const res = await fetch(`${GLM_API_BASE}/chat/completions`, {
@@ -506,7 +525,7 @@ async function generateGemini({
 
   for (let attempt = 1; attempt <= 3; attempt++) {
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), AI_TIMEOUT_MS);
+    const timer = setTimeout(() => controller.abort(), DEFAULT_AI_TIMEOUT_MS);
 
     try {
       const contents = parts
@@ -587,15 +606,18 @@ export async function aiJson<T>({
   messages,
   model = DEFAULT_MODEL,
   maxTokens = 4096,
+  allowFallback = true,
 }: {
   system: string;
   messages: AiTextMessage[];
   model?: string;
   maxTokens?: number;
+  allowFallback?: boolean;
 }): Promise<T> {
   let lastError: Error | null = null;
 
-  for (const candidate of getProviderChain(model, AI_PROVIDER as ProviderName)) {
+  const candidates = getProviderChain(model, AI_PROVIDER as ProviderName);
+  for (const candidate of allowFallback ? candidates : candidates.slice(0, 1)) {
     try {
       const isGemini = candidate.provider === "gemini";
       const isGemma = isGemini && isGemmaModel(candidate.model);
@@ -655,16 +677,19 @@ export async function aiText({
   model = DEFAULT_MODEL,
   maxTokens = 4096,
   thinkingMode,
+  allowFallback = true,
 }: {
   system: string;
   messages: AiTextMessage[];
   model?: string;
   maxTokens?: number;
   thinkingMode?: "enabled" | "disabled";
+  allowFallback?: boolean;
 }): Promise<string> {
   let lastError: Error | null = null;
 
-  for (const candidate of getProviderChain(model, AI_PROVIDER as ProviderName)) {
+  const candidates = getProviderChain(model, AI_PROVIDER as ProviderName);
+  for (const candidate of allowFallback ? candidates : candidates.slice(0, 1)) {
     try {
       if (candidate.provider === "deepseek") {
         return await generateDeepSeek({

@@ -59,6 +59,7 @@ export async function generateCoverLetter({
     ],
     model: DEFAULT_DOCUMENT_TEXT_MODEL,
     maxTokens: 2048,
+    allowFallback: false,
   });
 
   return renderCoverLetterWithResumeFormat(sourceResume, draft);

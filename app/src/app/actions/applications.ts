@@ -143,14 +143,18 @@ export async function analyzeJobAction(
   const { supabase, user } = await requireUser();
   const demoLimitError = await assertDemoApplicationAvailable(supabase, user);
   if (demoLimitError) return { error: demoLimitError };
-  const { data: defaultResume } = await supabase
+  const requestedResumeId = String(formData.get("base_resume_id") || "");
+  if (requestedResumeId && !uuidSchema.safeParse(requestedResumeId).success) {
+    return { error: "Please select a valid base resume." };
+  }
+  const resumeQuery = supabase
     .from("base_resumes")
     .select("id, parsed_resume_json, raw_text")
-    .eq("user_id", user.id)
-    .eq("is_default", true)
-    .limit(1)
-    .maybeSingle();
-  if (!defaultResume) {
+    .eq("user_id", user.id);
+  const { data: selectedResume } = requestedResumeId
+    ? await resumeQuery.eq("id", requestedResumeId).maybeSingle()
+    : await resumeQuery.eq("is_default", true).limit(1).maybeSingle();
+  if (!selectedResume) {
     return { error: "Please upload a base resume before creating an application." };
   }
 
@@ -180,8 +184,8 @@ export async function analyzeJobAction(
   try {
     const parsed = await parseJobPosting(rawJobText);
     const skillMatch = computeSkillMatch(
-      defaultResume.parsed_resume_json,
-      defaultResume.raw_text,
+      selectedResume.parsed_resume_json,
+      selectedResume.raw_text,
       parsed,
       rawJobText,
     );
@@ -213,14 +217,18 @@ export async function createApplicationAction(
   const demoLimitError = await assertDemoApplicationAvailable(supabase, user);
   if (demoLimitError) return { error: demoLimitError };
 
-  const { data: defaultResume } = await supabase
+  const requestedResumeId = String(formData.get("base_resume_id") || "");
+  if (requestedResumeId && !uuidSchema.safeParse(requestedResumeId).success) {
+    return { error: "Please select a valid base resume." };
+  }
+  const resumeQuery = supabase
     .from("base_resumes")
     .select("id")
-    .eq("user_id", user.id)
-    .eq("is_default", true)
-    .limit(1)
-    .maybeSingle();
-  if (!defaultResume) {
+    .eq("user_id", user.id);
+  const { data: selectedResume } = requestedResumeId
+    ? await resumeQuery.eq("id", requestedResumeId).maybeSingle()
+    : await resumeQuery.eq("is_default", true).limit(1).maybeSingle();
+  if (!selectedResume) {
     return { error: "Please upload a base resume before creating an application." };
   }
 
@@ -265,7 +273,7 @@ export async function createApplicationAction(
       user_id: user.id,
       company_name: companyName || parsedJob?.company_name || null,
       role_title: roleTitle || parsedJob?.role_title || null,
-      base_resume_id: defaultResume.id,
+      base_resume_id: selectedResume.id,
       location: parsedJob?.location ?? null,
       job_url: jobUrl || null,
       raw_job_text: rawJobText,

@@ -20,6 +20,10 @@ import type {
   DocumentType,
 } from "@/lib/db/types";
 import type { GroundingWarning } from "@/lib/ai/grounding";
+import type {
+  GenerationStage,
+  GenerationStreamEvent,
+} from "@/lib/ai/generation-stream";
 import {
   SourceDocumentPreview,
   type SourceDocumentPreviewHandle,
@@ -64,6 +68,96 @@ function sanitizeName(s: string) {
     .trim()
     .replace(/\s+/g, "_")
     .slice(0, 40);
+}
+
+type GenerationProgressState = {
+  stage: GenerationStage;
+  percent: number;
+  startedAt: number;
+};
+
+async function readGenerationStream(
+  response: Response,
+  onProgress: (stage: GenerationStage, percent: number) => void,
+): Promise<string> {
+  const reader = response.body?.getReader();
+  if (!reader) throw new Error("Streaming is not supported by this browser.");
+
+  const decoder = new TextDecoder();
+  let buffer = "";
+  let content = "";
+
+  const processLine = (line: string) => {
+    if (!line.trim()) return;
+    const event = JSON.parse(line) as GenerationStreamEvent;
+    if (event.type === "progress") onProgress(event.stage, event.percent);
+    if (event.type === "content") content = event.content;
+    if (event.type === "error") throw new Error(event.message);
+  };
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split("\n");
+    buffer = lines.pop() ?? "";
+    lines.forEach(processLine);
+  }
+  buffer += decoder.decode();
+  processLine(buffer);
+  if (!content.trim()) throw new Error("Generation returned no content.");
+  return content;
+}
+
+function GenerationProgressCard({ progress }: { progress: GenerationProgressState }) {
+  const t = useTranslations("Workspace");
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+
+  useEffect(() => {
+    const update = () => setElapsedSeconds(Math.floor((Date.now() - progress.startedAt) / 1000));
+    update();
+    const timer = setInterval(update, 1_000);
+    return () => clearInterval(timer);
+  }, [progress.startedAt]);
+
+  const stageLabel: Record<GenerationStage, string> = {
+    preparing: t("progressPreparing"),
+    generating: t("progressGenerating"),
+    validating: t("progressValidating"),
+    finalizing: t("progressFinalizing"),
+  };
+
+  return (
+    <div className="rounded-lg border border-border bg-background px-4 py-4" role="status" aria-live="polite">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <p className="text-sm font-medium text-foreground">{stageLabel[progress.stage]}</p>
+          <p className="mt-1 text-xs leading-5 text-muted-foreground">
+            {t("progressEstimate")}
+          </p>
+        </div>
+        <span className="font-mono text-xs tabular-nums text-muted-foreground">
+          {t("progressElapsed", { seconds: elapsedSeconds })}
+        </span>
+      </div>
+      <div
+        className="mt-3 h-1.5 overflow-hidden rounded-sm bg-muted"
+        role="progressbar"
+        aria-label={t("progressLabel")}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={progress.percent}
+      >
+        <div
+          className="h-full rounded-sm bg-accent transition-[width] duration-700 ease-out"
+          style={{ width: `${progress.percent}%` }}
+        />
+      </div>
+      {elapsedSeconds >= 90 ? (
+        <p className="mt-2 text-xs leading-5 text-muted-foreground">{t("progressLongWait")}</p>
+      ) : null}
+    </div>
+  );
 }
 
 // MarkdownViewer — renders markdown as formatted HTML
@@ -582,6 +676,7 @@ function DocumentPanel({
   const [sourceType, setSourceType] = useState<ResumeSourceType | null>(null);
   const [adjustText, setAdjustText] = useState("");
   const [adjusting, setAdjusting] = useState(false);
+  const [generationProgress, setGenerationProgress] = useState<GenerationProgressState | null>(null);
   const [quotaConsumed, setQuotaConsumed] = useState((demoUsed ?? 0) >= 1);
   const canAdjust = documentType === "tailored_resume" || documentType === "cover_letter";
   const isDemoLimited = demoUsed != null;
@@ -631,27 +726,14 @@ function DocumentPanel({
       throw new Error(json.error ?? t("generationFailed"));
     }
 
-    const reader = res.body?.getReader();
-    if (!reader) throw new Error(t("streamingUnsupported"));
-
-    const decoder = new TextDecoder();
-    let accumulated = "";
-    let rafId: ReturnType<typeof requestAnimationFrame> | null = null;
-
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      accumulated += decoder.decode(value, { stream: true });
-
-      // Throttle state updates with requestAnimationFrame
-      if (rafId) cancelAnimationFrame(rafId);
-      const snapshot = accumulated;
-      rafId = requestAnimationFrame(() => setContent(snapshot));
-    }
-    // Final flush
-    if (rafId) cancelAnimationFrame(rafId);
+    const accumulated = await readGenerationStream(res, (stage, percent) => {
+      setGenerationProgress((current) => ({
+        stage,
+        percent,
+        startedAt: current?.startedAt ?? Date.now(),
+      }));
+    });
     setContent(accumulated);
-    if (accumulated.includes("[Error:")) throw new Error(t("generationFailed"));
     return accumulated;
   }
 
@@ -674,6 +756,7 @@ function DocumentPanel({
     setSaveStatus("idle");
     setContent("");
     setGenerating(true);
+    setGenerationProgress({ stage: "preparing", percent: 4, startedAt: Date.now() });
     try {
       if (documentType === "tailored_resume" || documentType === "cover_letter") {
         await getApplicationResumeSourceAction(applicationId);
@@ -686,6 +769,7 @@ function DocumentPanel({
       setGenerateError(e instanceof Error ? e.message : t("generationFailed"));
     } finally {
       setGenerating(false);
+      setGenerationProgress(null);
     }
   }
 
@@ -695,6 +779,7 @@ function DocumentPanel({
     setGenerateError("");
     setSaveStatus("idle");
     setAdjusting(true);
+    setGenerationProgress({ stage: "preparing", percent: 4, startedAt: Date.now() });
     try {
       const accumulated = await streamGeneratedDocument({ adjust_instruction: instruction });
       if (isDemoLimited) setQuotaConsumed(true);
@@ -705,6 +790,7 @@ function DocumentPanel({
       setGenerateError(e instanceof Error ? e.message : t("generationFailed"));
     } finally {
       setAdjusting(false);
+      setGenerationProgress(null);
     }
   }
 
@@ -786,6 +872,7 @@ function DocumentPanel({
           </p>
         )}
         <GroundingWarnings warnings={groundingWarnings} />
+        {generationProgress ? <GenerationProgressCard progress={generationProgress} /> : null}
 
         <div className="relative">
           {content ? (
@@ -797,18 +884,6 @@ function DocumentPanel({
                 <p className="text-sm text-muted-foreground">
                   {t("emailEmptyBody")}
                 </p>
-              </div>
-            </div>
-          )}
-          {generating && (
-            <div className="absolute inset-0 flex items-center justify-center rounded-xl bg-background/85 backdrop-blur-sm">
-              <div className="flex flex-col items-center gap-3">
-                <div className="flex items-center gap-1.5">
-                  <span className="h-2.5 w-2.5 animate-bounce rounded-full bg-accent [animation-delay:-0.3s]" />
-                  <span className="h-2.5 w-2.5 animate-bounce rounded-full bg-accent [animation-delay:-0.15s]" />
-                  <span className="h-2.5 w-2.5 animate-bounce rounded-full bg-accent" />
-                </div>
-                <p className="text-sm font-medium text-accent">{t("generating")}</p>
               </div>
             </div>
           )}
@@ -906,6 +981,7 @@ function DocumentPanel({
         </p>
       )}
       <GroundingWarnings warnings={groundingWarnings} />
+      {generationProgress ? <GenerationProgressCard progress={generationProgress} /> : null}
 
       <div className="relative">
         <SourceDocumentPreview
@@ -1318,6 +1394,7 @@ function InterviewPrepPanel({
   const [saveStatus, setSaveStatus] = useState<"idle" | "saved" | "error">("idle");
   const [autoSaving, setAutoSaving] = useState(false);
   const [generating, setGenerating] = useState(false);
+  const [generationProgress, setGenerationProgress] = useState<GenerationProgressState | null>(null);
   const [quotaConsumed, setQuotaConsumed] = useState((demoUsed ?? 0) >= 1);
   const isDemoLimited = demoUsed != null;
 
@@ -1350,6 +1427,7 @@ function InterviewPrepPanel({
     setSaveStatus("idle");
     setContent("");
     setGenerating(true);
+    setGenerationProgress({ stage: "preparing", percent: 4, startedAt: Date.now() });
     try {
       const res = await fetch("/api/generate-document", {
         method: "POST",
@@ -1366,37 +1444,21 @@ function InterviewPrepPanel({
         return;
       }
 
-      const reader = res.body?.getReader();
-      if (!reader) {
-        setError(t("streamingUnsupported"));
-        return;
-      }
-
-      const decoder = new TextDecoder();
-      let accumulated = "";
-      let rafId: ReturnType<typeof requestAnimationFrame> | null = null;
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        accumulated += decoder.decode(value, { stream: true });
-
-        if (rafId) cancelAnimationFrame(rafId);
-        const snapshot = accumulated;
-        rafId = requestAnimationFrame(() => setContent(snapshot));
-      }
-      if (rafId) cancelAnimationFrame(rafId);
+      const accumulated = await readGenerationStream(res, (stage, percent) => {
+        setGenerationProgress((current) => ({
+          stage,
+          percent,
+          startedAt: current?.startedAt ?? Date.now(),
+        }));
+      });
       setContent(accumulated);
-      if (accumulated.includes("[Error:")) {
-        setError(t("generationFailed"));
-        return;
-      }
       if (isDemoLimited) setQuotaConsumed(true);
       await saveContent(accumulated);
     } catch (e) {
       setError(e instanceof Error ? e.message : t("generationFailed"));
     } finally {
       setGenerating(false);
+      setGenerationProgress(null);
     }
   }
 
@@ -1443,21 +1505,10 @@ function InterviewPrepPanel({
       {autoSaving && <p className="text-xs text-muted-foreground">{t("saving")}</p>}
       {saveStatus === "saved" && <p className="text-xs text-success">{t("saved")}</p>}
       {saveStatus === "error" && <p className="text-xs text-danger">{t("saveFailed")}</p>}
+      {generationProgress ? <GenerationProgressCard progress={generationProgress} /> : null}
 
       <div className="relative">
         <InterviewPrepViewer content={content} isStreaming={generating} />
-        {generating && (
-          <div className="absolute inset-0 flex items-center justify-center rounded-xl bg-background/85 backdrop-blur-sm">
-            <div className="flex flex-col items-center gap-3">
-              <div className="flex items-center gap-1.5">
-                <span className="h-2.5 w-2.5 animate-bounce rounded-full bg-accent [animation-delay:-0.3s]" />
-                <span className="h-2.5 w-2.5 animate-bounce rounded-full bg-accent [animation-delay:-0.15s]" />
-                <span className="h-2.5 w-2.5 animate-bounce rounded-full bg-accent" />
-              </div>
-              <p className="text-sm font-medium text-accent">{t("generating")}</p>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );
@@ -1474,6 +1525,7 @@ export function WorkspaceTabs({
   roleTitle,
   userFirstName,
   companyName,
+  sourceResumeTitle,
   statusLabel,
   isDemo = false,
   demoDocumentUsage,
@@ -1489,6 +1541,7 @@ export function WorkspaceTabs({
   roleTitle?: string;
   userFirstName?: string;
   companyName?: string;
+  sourceResumeTitle?: string;
   statusLabel?: string;
   isDemo?: boolean;
   demoDocumentUsage?: DemoUsage["documents"];
@@ -1536,6 +1589,11 @@ export function WorkspaceTabs({
           <p className="mt-1 truncate text-xs text-muted-foreground">
             {companyName || t("workspaceUnknownCompany")}
           </p>
+          {sourceResumeTitle ? (
+            <p className="mt-2 text-xs text-muted-foreground">
+              {t("sourceResumeLabel")}: <span className="font-medium text-foreground">{sourceResumeTitle}</span>
+            </p>
+          ) : null}
         </div>
         {statusLabel ? (
           <span className="badge badge-saved mt-3">{statusLabel}</span>

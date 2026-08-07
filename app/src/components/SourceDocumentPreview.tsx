@@ -70,28 +70,14 @@ export const SourceDocumentPreview = forwardRef<
     void getApplicationResumeSourceAction(applicationId)
       .then(async (source) => {
         if (!source.ok) throw new Error(source.error);
-        let nextArtifact: SourceFormattedArtifact;
-        try {
-          nextArtifact = await createSourceFormattedArtifact({
-            sourceType: source.sourceType,
-            sourceUrl: source.url,
-            rawSourceText: source.rawText,
-            content,
-            documentType,
-            title,
-          });
-        } catch (error) {
-          if (source.sourceType === "txt") throw error;
-          nextArtifact = await createSourceFormattedArtifact({
-            sourceType: "txt",
-            sourceUrl: null,
-            rawSourceText: source.rawText,
-            content,
-            documentType,
-            title,
-          });
-          if (active) setPreviewWarning(t("sourcePreviewRecovered"));
-        }
+        const nextArtifact: SourceFormattedArtifact = await createSourceFormattedArtifact({
+          sourceType: source.sourceType,
+          sourceUrl: source.url,
+          rawSourceText: source.rawText,
+          content,
+          documentType,
+          title,
+        });
         if (!active) return;
         if (nextArtifact.pdfBlob) {
           objectUrl = URL.createObjectURL(nextArtifact.pdfBlob);

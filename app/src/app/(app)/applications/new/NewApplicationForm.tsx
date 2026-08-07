@@ -86,7 +86,17 @@ function ScoreHero({ match, summary }: { match: SkillMatch; summary: string }) {
   );
 }
 
-export function NewApplicationForm({ demoLimitReached = false }: { demoLimitReached?: boolean }) {
+type ResumeOption = { id: string; title: string };
+
+export function NewApplicationForm({
+  demoLimitReached = false,
+  resumes,
+  defaultResumeId,
+}: {
+  demoLimitReached?: boolean;
+  resumes: ResumeOption[];
+  defaultResumeId: string;
+}) {
   const demoT = useTranslations("Demo");
 
   if (demoLimitReached) {
@@ -97,10 +107,16 @@ export function NewApplicationForm({ demoLimitReached = false }: { demoLimitReac
     );
   }
 
-  return <NewApplicationFormContent />;
+  return <NewApplicationFormContent resumes={resumes} defaultResumeId={defaultResumeId} />;
 }
 
-function NewApplicationFormContent() {
+function NewApplicationFormContent({
+  resumes,
+  defaultResumeId,
+}: {
+  resumes: ResumeOption[];
+  defaultResumeId: string;
+}) {
   const t = useTranslations("Applications");
 
   const [step, setStep] = useState<Step>("input");
@@ -111,6 +127,7 @@ function NewApplicationFormContent() {
 
   const [jobUrl, setJobUrl] = useState("");
   const [rawJobText, setRawJobText] = useState("");
+  const [selectedResumeId, setSelectedResumeId] = useState(defaultResumeId);
 
   const [parsedCompany, setParsedCompany] = useState("");
   const [parsedRole, setParsedRole] = useState("");
@@ -136,6 +153,7 @@ function NewApplicationFormContent() {
     const fd = new FormData();
     fd.set("raw_job_text", usingUrl ? "" : rawJobText);
     fd.set("job_url", usingUrl ? jobUrl : "");
+    fd.set("base_resume_id", selectedResumeId);
     startAnalyze(async () => {
       const result = await analyzeJobAction(undefined, fd);
       if (result?.error) {
@@ -166,6 +184,7 @@ function NewApplicationFormContent() {
     fd.set("job_url", tab === "url" ? jobUrl : "");
     fd.set("raw_job_text", rawJobText);
     fd.set("parsed_job_json", JSON.stringify(mergedJob));
+    fd.set("base_resume_id", selectedResumeId);
     startSave(async () => {
       const result = await createApplicationAction(undefined, fd);
       if (result?.error) setError(result.error);
@@ -378,6 +397,41 @@ function NewApplicationFormContent() {
 
   return (
     <form onSubmit={handleAnalyze} className="flex flex-col gap-6">
+      <fieldset className={`rise-enter p-5 ${cardPanel}`}>
+        <legend className="label-caps px-1">{t("baseResumeSelectorLabel")}</legend>
+        <p className="mb-3 text-xs leading-5 text-muted-foreground">
+          {t("baseResumeSelectorHint")}
+        </p>
+        <div className="grid gap-2 sm:grid-cols-2">
+          {resumes.map((resume) => {
+            const selected = resume.id === selectedResumeId;
+            return (
+              <label
+                key={resume.id}
+                className={`flex cursor-pointer items-center gap-3 rounded-lg border px-3.5 py-3 text-sm transition-colors ${
+                  selected
+                    ? "border-accent bg-[var(--accent-light)] text-foreground"
+                    : "border-border bg-background text-muted-foreground hover:bg-[var(--bg-hover)]"
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="base_resume_id"
+                  value={resume.id}
+                  checked={selected}
+                  onChange={() => setSelectedResumeId(resume.id)}
+                  className="h-4 w-4 accent-[var(--accent)]"
+                />
+                <span className="min-w-0 truncate font-medium">{resume.title}</span>
+              </label>
+            );
+          })}
+        </div>
+        <a href="/resumes" className="mt-3 inline-block text-xs font-medium text-accent hover:underline">
+          {t("manageBaseResumes")}
+        </a>
+      </fieldset>
+
       {/* Pill segment control — macOS style: gray track, white active pill */}
       <div className="rise-enter flex justify-center">
         <div className="inline-flex rounded-full border border-border bg-muted p-1">

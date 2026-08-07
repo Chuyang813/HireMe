@@ -30,19 +30,25 @@ describe("resume format preservation", () => {
         id: "L0006",
         text: "Built a reusable design system used across four product teams.",
         kind: "bullet",
+        section: "experience",
+        context: "Senior Designer | Acme | 2022 - Present",
+        maxCharacters: 62,
       },
       {
         id: "L0007",
         text: "Led user research and shipped a faster onboarding experience.",
         kind: "bullet",
+        section: "experience",
+        context: "Senior Designer | Acme | 2022 - Present",
+        maxCharacters: 61,
       },
     ]);
   });
 
   it("keeps line endings, indentation, bullets, blank lines, and headings unchanged", () => {
     const result = applyResumeReplacements(source, {
-      L0006: "• Built a reusable design system aligned with product operations.",
-      L0007: "Led research for a faster role-specific onboarding experience.",
+      L0006: "• Built reusable design patterns for product operations teams.",
+      L0007: "Led research that improved the role-specific onboarding flow.",
       L0004: "WORK HISTORY",
       L9999: "Injected line",
     });
@@ -51,8 +57,8 @@ describe("resume format preservation", () => {
     const after = result.split("\r\n");
     expect(after).toHaveLength(before.length);
     expect(after[3]).toBe("EXPERIENCE");
-    expect(after[5]).toBe("  • Built a reusable design system aligned with product operations.");
-    expect(after[6]).toBe("  • Led research for a faster role-specific onboarding experience.");
+    expect(after[5]).toBe("  • Built reusable design patterns for product operations teams.");
+    expect(after[6]).toBe("  • Led research that improved the role-specific onboarding flow.");
     expect(after[7]).toBe("");
   });
 
@@ -86,17 +92,41 @@ describe("resume format preservation", () => {
       id: "L0005",
       text: "Built a reusable design system used across four product teams.",
       kind: "bullet",
+      section: "experience",
+      maxCharacters: 62,
     }]);
+  });
+
+  it("labels custom sections and rejects replacements that cannot fit the source line", () => {
+    const customSource = [
+      "Alex Chen",
+      "alex@example.com | Toronto, ON",
+      "",
+      "SUMMARY OF QUALIFICATIONS",
+      "Civil engineer experienced in municipal drainage design and field reporting.",
+    ].join("\n");
+    const [candidate] = createResumeFormatTemplate(customSource).candidates;
+
+    expect(candidate).toEqual(expect.objectContaining({
+      section: "summary of qualifications",
+      maxCharacters: 76,
+    }));
+    expect(applyResumeReplacements(customSource, {
+      L0005: "Civil engineer experienced in municipal drainage design, PCSWMM modelling, construction inspection, reporting, and project coordination.",
+    })).toBe(customSource);
+    expect(applyResumeReplacements(customSource, {
+      L0005: "Civil engineer experienced in PCSWMM drainage design and field reporting.",
+    })).toBe(customSource);
   });
 
   it("derives only the changed source lines for format-preserving document edits", () => {
     const tailored = applyResumeReplacements(source, {
-      L0006: "Built a role-specific design system without changing the document layout.",
+      L0006: "Built a role-specific design system for product operations.",
     });
     expect(diffResumeReplacements(source, tailored)).toEqual([{
       id: "L0006",
       originalText: "Built a reusable design system used across four product teams.",
-      replacementText: "Built a role-specific design system without changing the document layout.",
+      replacementText: "Built a role-specific design system for product operations.",
     }]);
   });
 
