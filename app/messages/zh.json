@@ -463,7 +463,7 @@
     "progressGenerating": "正在使用高质量模型生成",
     "progressValidating": "正在检查内容与格式限制",
     "progressFinalizing": "正在完成文件",
-    "progressEstimate": "通常需要约 45–90 秒；生成期间会锁定并保护原始版式。",
+    "progressEstimate": "通常需要约 45–150 秒。",
     "progressElapsed": "已等待 {seconds} 秒",
     "progressLongWait": "仍在生成中。复杂的原始文件可能需要更长时间才能安全完成检查。",
     "copied": "已复制！",

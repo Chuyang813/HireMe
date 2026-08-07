@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   extractJson,
+  resolveDeepSeekThinkingPayload,
   resolveDocumentTextModel,
   resolveFastTextModel,
 } from "./provider";
@@ -32,5 +33,17 @@ describe("resolveDocumentTextModel", () => {
 
   it("honors an explicit document model override", () => {
     expect(resolveDocumentTextModel("deepseek-v4-pro", " custom-model ")).toBe("custom-model");
+  });
+});
+
+describe("resolveDeepSeekThinkingPayload", () => {
+  it("explicitly disables default thinking for V4 document generation", () => {
+    expect(resolveDeepSeekThinkingPayload("deepseek-v4-pro", "disabled")).toEqual({
+      thinking: { type: "disabled" },
+    });
+  });
+
+  it("does not add an unsupported disabled field to legacy chat aliases", () => {
+    expect(resolveDeepSeekThinkingPayload("deepseek-chat", "disabled")).toEqual({});
   });
 });

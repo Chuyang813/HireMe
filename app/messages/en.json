@@ -463,7 +463,7 @@
     "progressGenerating": "Generating with the high-quality model",
     "progressValidating": "Checking content and format limits",
     "progressFinalizing": "Finalizing the document",
-    "progressEstimate": "Usually takes about 45–90 seconds. The original layout remains locked while we work.",
+    "progressEstimate": "Usually takes about 45–150 seconds.",
     "progressElapsed": "{seconds}s elapsed",
     "progressLongWait": "Still working. Complex source files can take a little longer to validate safely.",
     "copied": "Copied!",

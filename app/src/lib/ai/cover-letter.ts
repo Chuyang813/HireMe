@@ -1,5 +1,5 @@
 import { aiJson, DEFAULT_DOCUMENT_TEXT_MODEL } from "./provider";
-import { COVER_LETTER_MAX_OUTPUT_TOKENS } from "./document-generation-config";
+import { DOCUMENT_OUTPUT_TOKEN_LIMITS } from "./document-generation-config";
 import { selectResumeEvidenceSemantic, resumeToText, jobToText } from "./evidence";
 import {
   extractResumeHeader,
@@ -59,7 +59,7 @@ export async function generateCoverLetter({
       },
     ],
     model: DEFAULT_DOCUMENT_TEXT_MODEL,
-    maxTokens: COVER_LETTER_MAX_OUTPUT_TOKENS,
+    maxTokens: DOCUMENT_OUTPUT_TOKEN_LIMITS.cover_letter,
     allowFallback: false,
   });
 

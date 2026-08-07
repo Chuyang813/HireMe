@@ -1,4 +1,5 @@
 import { aiJson, DEFAULT_DOCUMENT_TEXT_MODEL } from "./provider";
+import { DOCUMENT_OUTPUT_TOKEN_LIMITS } from "./document-generation-config";
 import { selectResumeEvidenceSemantic, resumeToText, jobToText } from "./evidence";
 import type { ParsedJob, ParsedResume } from "@/lib/db/types";
 
@@ -62,7 +63,7 @@ export async function generateEmailDraft({
         ].filter(Boolean).join("\n\n"),
       },
     ],
-    maxTokens: 1500,
+    maxTokens: DOCUMENT_OUTPUT_TOKEN_LIMITS.email_draft,
     model: DEFAULT_DOCUMENT_TEXT_MODEL,
     allowFallback: false,
   });

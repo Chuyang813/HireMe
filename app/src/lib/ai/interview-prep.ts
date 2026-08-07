@@ -1,4 +1,5 @@
 import { aiText, DEFAULT_DOCUMENT_TEXT_MODEL } from "./provider";
+import { DOCUMENT_OUTPUT_TOKEN_LIMITS } from "./document-generation-config";
 import { selectResumeEvidenceSemantic, resumeToText, jobToText } from "./evidence";
 import type { ParsedJob, ParsedResume } from "@/lib/db/types";
 
@@ -95,9 +96,9 @@ export async function generateInterviewPrep({
         ].join("\n\n"),
       },
     ],
-    maxTokens: 4000,
+    maxTokens: DOCUMENT_OUTPUT_TOKEN_LIMITS.interview_prep,
     model: DEFAULT_DOCUMENT_TEXT_MODEL,
-    thinkingMode: "enabled",
+    thinkingMode: "disabled",
     allowFallback: false,
   });
 }

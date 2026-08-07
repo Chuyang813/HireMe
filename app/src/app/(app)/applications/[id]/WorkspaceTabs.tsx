@@ -152,7 +152,7 @@ function GenerationProgressCard({ progress }: { progress: GenerationProgressStat
           style={{ width: `${progress.percent}%` }}
         />
       </div>
-      {elapsedSeconds >= 90 ? (
+      {elapsedSeconds >= 120 ? (
         <p className="mt-2 text-xs leading-5 text-muted-foreground">{t("progressLongWait")}</p>
       ) : null}
     </div>

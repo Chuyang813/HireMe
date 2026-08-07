@@ -1,5 +1,5 @@
 export const runtime = "edge";
-export const maxDuration = 180;
+export const maxDuration = 300;
 
 import { type NextRequest } from "next/server";
 import { getOptionalUser } from "@/lib/auth/current-user";
@@ -15,7 +15,8 @@ import { INTERVIEW_PREP_SYSTEM } from "@/lib/ai/interview-prep";
 import { RESUME_TAILOR_SYSTEM_PROMPT } from "@/lib/ai/resume-tailor-prompt";
 import { encodeGenerationStreamEvent } from "@/lib/ai/generation-stream";
 import {
-  COVER_LETTER_MAX_OUTPUT_TOKENS,
+  DOCUMENT_OUTPUT_TOKEN_LIMITS,
+  DOCUMENT_STREAM_TIMEOUT_MS,
   createDocumentAiOptions,
   documentGenerationErrorMessage,
 } from "@/lib/ai/document-generation-config";
@@ -41,7 +42,6 @@ import { getClientIpFromHeaders } from "@/lib/security/request";
 import type { DocumentType, ParsedJob, ParsedResume } from "@/lib/db/types";
 import { assertDemoDocumentAvailable, isDemoUser } from "@/lib/demo";
 
-const AI_TIMEOUT_MS = 145_000;
 function docTypeToPromptType(dt: DocumentType): PromptType {
   if (dt === 'tailored_resume') return 'resume-tailor';
   if (dt === 'cover_letter') return 'cover-letter';
@@ -167,7 +167,7 @@ async function buildPrompt(
       system: adjust
         ? `${RESUME_TAILOR_SYSTEM_PROMPT}${ADJUST_MODE_ADDENDUM}`
         : RESUME_TAILOR_SYSTEM_PROMPT,
-      maxTokens: 4096,
+      maxTokens: DOCUMENT_OUTPUT_TOKEN_LIMITS.tailored_resume,
       userMessage: [
         `Editable source lines (JSON):\n${JSON.stringify(template.candidates, null, 2)}`,
         `Parsed job posting (JSON):\n${jobJson}`,
@@ -188,7 +188,7 @@ async function buildPrompt(
     const styleInstruction = COVER_LETTER_STYLE_INSTRUCTIONS[styleKey];
     return {
       system: `${COVER_LETTER_SYSTEM}${adjust ? ADJUST_MODE_ADDENDUM : ""}\n\nToday's date is ${today}. Use this exact date.\n\nTone instruction: ${styleInstruction}`,
-      maxTokens: COVER_LETTER_MAX_OUTPUT_TOKENS,
+      maxTokens: DOCUMENT_OUTPUT_TOKEN_LIMITS.cover_letter,
       userMessage: [
         `Exact source-resume header to be reused by the application (JSON):\n${JSON.stringify(resumeHeader)}`,
         `Candidate parsed resume (JSON):\n${resumeJson}`,
@@ -203,7 +203,7 @@ async function buildPrompt(
   if (documentType === "email_draft") {
     return {
       system: `${EMAIL_SYSTEM}\n\nToday's date is ${today}. Use this date if the email requires a date.`,
-      maxTokens: 512,
+      maxTokens: DOCUMENT_OUTPUT_TOKEN_LIMITS.email_draft,
       userMessage: [
         `Candidate parsed resume (JSON):\n${resumeJson}`,
         `Parsed job posting (JSON):\n${jobJson}`,
@@ -217,7 +217,7 @@ async function buildPrompt(
   if (documentType === "interview_prep") {
     return {
       system: `${INTERVIEW_PREP_SYSTEM}\n\nToday's date is ${today}.`,
-      maxTokens: 6000,
+      maxTokens: DOCUMENT_OUTPUT_TOKEN_LIMITS.interview_prep,
       userMessage: [
         `Candidate parsed resume (JSON):\n${resumeJson}`,
         `Parsed job posting (JSON):\n${jobJson}`,
@@ -371,13 +371,13 @@ export async function POST(req: NextRequest) {
         controller.close();
       };
       const timer = setTimeout(() => {
-        console.error(`[generate-document] Timeout after ${AI_TIMEOUT_MS}ms`);
+        console.error(`[generate-document] Timeout after ${DOCUMENT_STREAM_TIMEOUT_MS}ms`);
         send({
           type: "error",
           message: "High-quality generation timed out. Please try again.",
         });
         close();
-      }, AI_TIMEOUT_MS);
+      }, DOCUMENT_STREAM_TIMEOUT_MS);
 
       const aiOptions = createDocumentAiOptions(DEFAULT_DOCUMENT_TEXT_MODEL);
       const usedModel = aiOptions.model;
@@ -406,14 +406,14 @@ export async function POST(req: NextRequest) {
         aiStartedAt = Date.now();
         let generationPercent = 24;
         heartbeat = setInterval(() => {
-          generationPercent = Math.min(74, generationPercent + 3);
+          generationPercent = Math.min(74, generationPercent + 2);
           send({
             type: "progress",
             stage: "generating",
             percent: generationPercent,
             elapsedMs: Date.now() - startedAt,
           });
-        }, 4_000);
+        }, 6_000);
 
         const contentFromModel = await aiText({
           system: prompt.system,

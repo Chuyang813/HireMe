@@ -463,7 +463,7 @@
     "progressGenerating": "Génération avec le modèle haute qualité",
     "progressValidating": "Vérification du contenu et des limites de mise en page",
     "progressFinalizing": "Finalisation du document",
-    "progressEstimate": "Le traitement prend généralement 45 à 90 secondes. La mise en page d’origine reste verrouillée.",
+    "progressEstimate": "Le traitement prend généralement 45 à 150 secondes.",
     "progressElapsed": "{seconds} s écoulées",
     "progressLongWait": "Génération toujours en cours. Les fichiers complexes demandent parfois plus de temps pour une vérification sûre.",
     "copied": "Copié !",

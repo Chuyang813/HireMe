@@ -3,7 +3,16 @@ export type DocumentAiOptions = {
   thinkingMode: "disabled";
 };
 
-export const COVER_LETTER_MAX_OUTPUT_TOKENS = 8_192;
+export const DOCUMENT_MAX_OUTPUT_TOKENS = 8_192;
+export const DOCUMENT_MODEL_TIMEOUT_MS = 240_000;
+export const DOCUMENT_STREAM_TIMEOUT_MS = 270_000;
+
+export const DOCUMENT_OUTPUT_TOKEN_LIMITS = {
+  tailored_resume: DOCUMENT_MAX_OUTPUT_TOKENS,
+  cover_letter: DOCUMENT_MAX_OUTPUT_TOKENS,
+  email_draft: DOCUMENT_MAX_OUTPUT_TOKENS,
+  interview_prep: DOCUMENT_MAX_OUTPUT_TOKENS,
+} as const;
 
 export function createDocumentAiOptions(model: string): DocumentAiOptions {
   return {

@@ -1,10 +1,11 @@
+import { DOCUMENT_MODEL_TIMEOUT_MS } from "./document-generation-config";
+
 export const PROMPT_VERSION = "2.1";
 
 const DEEPSEEK_API_BASE = process.env.DEEPSEEK_API_BASE || "https://api.deepseek.com";
 const GLM_API_BASE = "https://api.z.ai/api/paas/v4";
 const GEMINI_API_BASE = "https://generativelanguage.googleapis.com/v1beta";
 const DEFAULT_AI_TIMEOUT_MS = 60_000;
-const DEEPSEEK_PRO_TIMEOUT_MS = 110_000;
 const RETRYABLE_STATUS = new Set([429, 500, 502, 503, 504]);
 
 const DEFAULT_DEEPSEEK_MODEL =
@@ -347,8 +348,18 @@ function getDeepSeekJsonThinkingMode(): "enabled" | "disabled" {
 
 function deepSeekTimeoutMs(model: string): number {
   return /(?:v4-pro|reasoner)/i.test(model)
-    ? DEEPSEEK_PRO_TIMEOUT_MS
+    ? DOCUMENT_MODEL_TIMEOUT_MS
     : DEFAULT_AI_TIMEOUT_MS;
+}
+
+export function resolveDeepSeekThinkingPayload(
+  model: string,
+  thinkingMode: "enabled" | "disabled",
+): { thinking?: { type: "enabled" | "disabled" } } {
+  if (thinkingMode === "enabled" || /^deepseek-v4-/i.test(model)) {
+    return { thinking: { type: thinkingMode } };
+  }
+  return {};
 }
 
 async function generateDeepSeek({
@@ -387,10 +398,9 @@ async function generateDeepSeek({
             ...messages,
           ],
           max_tokens: maxTokens,
-          // Only send the thinking field when explicitly enabled.
-          // Reasoning models (e.g. deepseek-v4-pro) reject thinking:disabled;
-          // omitting the field lets the model use its own default.
-          ...(thinkingMode === "enabled" ? { thinking: { type: "enabled" } } : {}),
+          // V4 thinking defaults to enabled, so generated documents must send
+          // the disabled mode explicitly to reserve the full output budget.
+          ...resolveDeepSeekThinkingPayload(model, thinkingMode),
           response_format:
             responseMimeType === "application/json"
               ? { type: "json_object" }

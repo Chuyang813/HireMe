@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
-  COVER_LETTER_MAX_OUTPUT_TOKENS,
+  DOCUMENT_MAX_OUTPUT_TOKENS,
+  DOCUMENT_MODEL_TIMEOUT_MS,
+  DOCUMENT_OUTPUT_TOKEN_LIMITS,
+  DOCUMENT_STREAM_TIMEOUT_MS,
   createDocumentAiOptions,
   documentGenerationErrorMessage,
 } from "./document-generation-config";
@@ -33,7 +36,16 @@ describe("document generation configuration", () => {
     );
   });
 
-  it("gives cover letters enough output room while the prompt controls length", () => {
-    expect(COVER_LETTER_MAX_OUTPUT_TOKENS).toBe(8_192);
+  it("gives every generated document the provider's full output allowance", () => {
+    expect(new Set(Object.values(DOCUMENT_OUTPUT_TOKEN_LIMITS))).toEqual(
+      new Set([DOCUMENT_MAX_OUTPUT_TOKENS]),
+    );
+    expect(DOCUMENT_MAX_OUTPUT_TOKENS).toBe(8_192);
+  });
+
+  it("keeps the model timeout below the stream and function ceilings", () => {
+    expect(DOCUMENT_MODEL_TIMEOUT_MS).toBe(240_000);
+    expect(DOCUMENT_STREAM_TIMEOUT_MS).toBe(270_000);
+    expect(DOCUMENT_MODEL_TIMEOUT_MS).toBeLessThan(DOCUMENT_STREAM_TIMEOUT_MS);
   });
 });
