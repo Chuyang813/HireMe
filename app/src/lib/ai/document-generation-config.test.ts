@@ -14,10 +14,6 @@ describe("document generation configuration", () => {
       model: "deepseek-v4-pro",
       thinkingMode: "disabled",
     });
-    expect(createDocumentAiOptions("deepseek-v4-pro", "enabled")).toEqual({
-      model: "deepseek-v4-pro",
-      thinkingMode: "enabled",
-    });
   });
 
   it("mentions allowances only for demo users", () => {

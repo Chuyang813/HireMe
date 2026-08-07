@@ -54,7 +54,7 @@ export async function tailorResume({
     ],
     model: DEFAULT_DOCUMENT_TEXT_MODEL,
     maxTokens: DOCUMENT_OUTPUT_TOKEN_LIMITS.tailored_resume,
-    thinkingMode: "enabled",
+    thinkingMode: "disabled",
     allowFallback: false,
   });
 

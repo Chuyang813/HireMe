@@ -20,8 +20,8 @@ export function createDocumentAiOptions(
 ): DocumentAiOptions {
   return {
     model,
-    // Resume tailoring can opt into reasoning; other document types reserve
-    // the full output budget for the visible document body.
+    // Explicitly selecting disabled reserves the full provider budget for the
+    // visible document instead of letting hidden reasoning truncate the result.
     thinkingMode,
   };
 }

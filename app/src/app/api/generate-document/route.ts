@@ -395,10 +395,7 @@ export async function POST(req: NextRequest) {
         close();
       }, DOCUMENT_STREAM_TIMEOUT_MS);
 
-      const aiOptions = createDocumentAiOptions(
-        DEFAULT_DOCUMENT_TEXT_MODEL,
-        documentType === "tailored_resume" ? "enabled" : "disabled",
-      );
+      const aiOptions = createDocumentAiOptions(DEFAULT_DOCUMENT_TEXT_MODEL, "disabled");
       const usedModel = aiOptions.model;
       let aiStartedAt = startedAt;
 
